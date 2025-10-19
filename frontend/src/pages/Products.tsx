@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Box, Flex, Title, TextInput, Button } from "@mantine/core";
-import { FiSearch, FiPlus } from "react-icons/fi";
+import { Box, Title} from "@mantine/core";
+
 import ModalWrapper from "@/components/Common/ModalWrapper";
 import ProductForm from "@/components/Products/ProductForm";
 import ProductTable from "@/components/Products/ProductTable";
