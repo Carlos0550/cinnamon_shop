@@ -14,6 +14,16 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum ProductState {
+  active
+  inactive
+  draft
+  out_stock
+  discontinued
+  archived
+  deleted
+}
+
 model User {
   id          Int      @id @default(autoincrement())
   email       String   @unique
@@ -40,9 +50,11 @@ model Products {
   price       Float       @default(0.00)
   description String  
   is_active   Boolean     @default(true)
+  state       ProductState @default(active)
   created_at  DateTime    @default(now())
   images      Json        @default("[]")
   categoryId  String?
   tags        Json?       @default("[]")
+  stock       Int         @default(1)
   category   Categories? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 }

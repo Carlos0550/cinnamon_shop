@@ -3,14 +3,21 @@ import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, G
 import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiEdit, FiTrash, FiEye } from 'react-icons/fi';
-import { useGetAllProducts, type GetProductsParams, type Product } from '@/components/Api/ProductsApi';
+import { deleteProduct, useGetAllProducts, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
 import ModalWrapper from '@/components/Common/ModalWrapper';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { showNotification } from '@mantine/notifications';
+import dummyImage from '@/assets/dummy_image.png';
+import ProductForm from './ProductForm';
+
 
 function ProductTable({
-    setAddOpened
+  setAddOpened
 }: {
-    setAddOpened: (opened: boolean) => void;
+  setAddOpened: (opened: boolean) => void;
 }) {
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState<string>("");
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints?.sm || '768px'})`);
 
@@ -21,6 +28,8 @@ function ProductTable({
     page: 1,
     limit: 10,
   });
+
+  const [editing, setEditing] = useState<Product | null>(null);
 
   useEffect(() => {
     setSearchParams(prev => {
@@ -35,9 +44,50 @@ function ProductTable({
   }, [search]);
 
   const { data, isLoading, isError } = useGetAllProducts(searchParams);
+  console.log(data)
   const products: Product[] = data?.products ?? [];
   const pagination = data?.pagination;
 
+  const deleteImage = useMutation({
+    mutationFn: (id: string) => deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] }),
+      setSearchParams(prev => ({ ...prev, page: 1 }));
+      showNotification({
+        message: 'Producto eliminado con éxito',
+        color: 'green',
+        autoClose: 3000,
+      });
+    },
+    onError: (error: Error) => {
+      showNotification({
+        message: error.message || 'Error al eliminar el producto',
+        color: 'red',
+        autoClose: 3000,
+      });
+    },
+  })
+
+  const renderBadgeByState = (state: ProductState) => {
+    switch (state) {
+      case 'active':
+        return <Badge variant="light" color="green">Activo</Badge>;
+      case 'inactive':
+        return <Badge variant="light" color="gray">Inactivo</Badge>;
+      case 'draft':
+        return <Badge variant="light" color="orange">Borrador</Badge>;
+      case 'out_stock':
+        return <Badge variant="light" color="red">Agotado</Badge>;
+      case 'discontinued':
+        return <Badge variant="light" color="yellow">Obsoleto</Badge>;
+      case 'archived':
+        return <Badge variant="light" color="blue">Archivado</Badge>;
+      case 'deleted':
+        return <Badge variant="light" color="red">Eliminado</Badge>;
+      default:
+        return null;
+    }
+  }
   return (
     <Box>
       <Flex gap={"md"} align="center" mb="md" wrap="wrap">
@@ -67,23 +117,24 @@ function ProductTable({
             <Paper key={p.id} withBorder p="sm" radius="md">
               <Group justify="space-between" align="flex-start">
                 <Group gap="sm" wrap="nowrap">
-                  <Image src={p.images?.[0] || ""} alt={p.title} w={64} h={64} radius="sm" fit="cover" />
+                  <Image src={p.images?.[0] || dummyImage} alt={p.title} w={64} h={64} radius="sm" fit="cover" />
                   <Box>
                     <Group gap="xs">
-                      <Text fw={600} style={{ textTransform: 'capitalize' }}>{p.title}</Text>
-                      {p.active === false && <Badge variant="light" color="gray">Inactivo</Badge>}
+                      {renderBadgeByState(p.state)}
                     </Group>
                     <Text c="dimmed">{typeof p.price === 'number' ? `Precio: $${p.price}` : "Precio: —"}</Text>
                   </Box>
                 </Group>
                 <Group gap="xs">
-                  <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
+                  <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p), setViewOpened(true); }}>
                     <FiEye />
                   </ActionIcon>
                   <ActionIcon color="red" variant="light" aria-label="Eliminar">
                     <FiTrash />
                   </ActionIcon>
-                  <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar">
+                  <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
+                    onClick={() => { setEditing(p), setViewOpened(true) }}
+                  >
                     Editar
                   </Button>
                 </Group>
@@ -109,7 +160,7 @@ function ProductTable({
                 {products.map((p) => (
                   <Table.Tr key={p.id}>
                     <Table.Td>
-                      <Image src={p.images?.[0] || ""} alt={p.title} w={48} h={48} radius="sm" fit="cover" />
+                      <Image src={p.images?.[0] || dummyImage} alt={p.title} w={48} h={48} radius="sm" fit="cover" />
                     </Table.Td>
                     <Table.Td>
                       <Text fw={600} style={{ textTransform: 'capitalize' }}>{p.title}</Text>
@@ -118,11 +169,8 @@ function ProductTable({
                       {typeof p.price === 'number' ? `$${p.price}` : '—'}
                     </Table.Td>
                     <Table.Td>
-                      {p.active === false ? (
-                        <Badge variant="light" color="gray">Inactivo</Badge>
-                      ) : (
-                        <Badge variant="light">Activo</Badge>
-                      )}
+                      
+                      {renderBadgeByState(p.state)}
                     </Table.Td>
                     <Table.Td>
                       {p.created_at ? (
@@ -136,10 +184,12 @@ function ProductTable({
                         <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
                           <FiEye />
                         </ActionIcon>
-                        <ActionIcon color="red" variant="light" aria-label="Eliminar">
+                        <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => deleteImage.mutate(p.id)}>
                           <FiTrash />
                         </ActionIcon>
-                        <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar">
+                         <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
+                          onClick={() => { setEditing(p), setViewOpened(true) }}
+                        >
                           Editar
                         </Button>
                       </Group>
@@ -152,26 +202,22 @@ function ProductTable({
         </Paper>
       )}
 
-      {pagination && (
+      {pagination && !editing && (
         <Flex justify="center" mt="md" gap="md">
           <Text>
             Página {pagination.currentPage} de {pagination.totalPages} ({pagination.totalItems} productos)
           </Text>
         </Flex>
       )}
-      <ModalWrapper opened={viewOpened} onClose={() => setViewOpened(false)} title={selected ? selected.title : 'Ver producto'} size="md">
+      <ModalWrapper opened={viewOpened} onClose={() => {setViewOpened(false), setEditing(null)}} title={selected ? selected.title : 'Ver producto'} size="md">
         {selected && (
           <Stack>
             <Group align="flex-start" gap="md" wrap="nowrap">
-              <Image src={selected.images?.[0] || ''} alt={selected.title} w={128} h={128} radius="md" fit="cover" />
+              <Image src={selected.images?.[0] || dummyImage} alt={selected.title} w={128} h={128} radius="md" fit="cover" />
               <Box>
                 <Group gap="xs">
                   <Text fw={700} size="lg">{selected.title}</Text>
-                  {selected.active === false ? (
-                    <Badge variant="light" color="gray">Inactivo</Badge>
-                  ) : (
-                    <Badge variant="light">Activo</Badge>
-                  )}
+                  {renderBadgeByState(selected.state)}
                 </Group>
                 <Text c="dimmed">Precio: {typeof selected.price === 'number' ? `$${selected.price}` : '—'}</Text>
                 <Text c="dimmed">Categoría: {selected.category?.title || '—'}</Text>
@@ -195,6 +241,17 @@ function ProductTable({
             )}
           </Stack>
         )}
+        {editing && (
+          <ProductForm
+            product={editing}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['products'] });
+              setEditing(null);
+              setViewOpened(false);
+            }}
+          />
+        )}
+
       </ModalWrapper>
     </Box>
   );

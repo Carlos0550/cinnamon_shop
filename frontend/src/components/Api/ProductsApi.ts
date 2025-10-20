@@ -8,8 +8,19 @@ export type Category_info = {
   image: string;
   created_at: string | number | Date;
 }
+
+export type ProductState =
+  | 'active'
+  | 'inactive'
+  | 'draft'
+  | 'out_stock'
+  | 'discontinued'
+  | 'archived'
+  | 'deleted';
+
 export type Product = {
   id: string;
+  state: ProductState;
   title: string;
   name: string;
   price: number;
@@ -33,20 +44,22 @@ export type GetProductsResponse = {
 
 type SaveProductPayload = {
   title: string;
-  name: string;
   price: string | number;
   tags?: string[];
   active: boolean;
   category?: string;
   description?: string;
   images: File[];
+  // Nuevos campos para edición
+  existingImageUrls?: string[];
+  deletedImageUrls?: string[];
+  productId?: string;
 };
 
 export const saveProduct = async (value: SaveProductPayload) => {
   try {
     const formData = new FormData();
     formData.append("title", value.title);
-    formData.append("name", value.name);
     formData.append("price", String(value.price));
     formData.append("active", String(value.active));
     if (value.tags) {
@@ -57,6 +70,15 @@ export const saveProduct = async (value: SaveProductPayload) => {
     }
     if (value.description) {
       formData.append("description", value.description);
+    }
+    if (value.productId) {
+      formData.append("product_id", value.productId);
+    }
+    if (Array.isArray(value.existingImageUrls)) {
+      formData.append("existing_image_urls", JSON.stringify(value.existingImageUrls));
+    }
+    if (Array.isArray(value.deletedImageUrls)) {
+      formData.append("deleted_image_urls", JSON.stringify(value.deletedImageUrls));
     }
     value.images.forEach((image: File) => {
       formData.append("productImages", image);
@@ -147,6 +169,71 @@ export const getAllProducts = async (
       undefined;
 
     return { products, pagination };
+  } catch (error: unknown) {
+    console.log(error);
+    if (error instanceof Error) throw error;
+    throw new Error(String(error));
+  }
+};
+
+export const deleteProduct = async (id: string) => {
+  try {
+    const res = await fetch(`${baseUrl}/products/${id}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error || "Error eliminando el producto");
+    }
+    return json;
+  } catch (error: unknown) {
+    console.log(error);
+    if (error instanceof Error) throw error;
+    throw new Error(String(error));
+  }
+};
+
+
+export const updateProduct = async (value: SaveProductPayload) => {
+  try {
+    const formData = new FormData();
+    formData.append("title", value.title);
+    formData.append("price", String(value.price));
+    formData.append("active", String(value.active));
+    if (value.tags) {
+      formData.append("tags", JSON.stringify(value.tags));
+    }
+    if (value.category) {
+      formData.append("category_id", value.category);
+    }
+    if (value.description) {
+      formData.append("description", value.description);
+    }
+    if (value.productId) {
+      formData.append("product_id", value.productId);
+    }
+    if (Array.isArray(value.existingImageUrls)) {
+      formData.append("existing_image_urls", JSON.stringify(value.existingImageUrls));
+    }
+    if (Array.isArray(value.deletedImageUrls)) {
+      formData.append("deleted_image_urls", JSON.stringify(value.deletedImageUrls));
+    }
+    value.images.forEach((image: File) => {
+      formData.append("productImages", image);
+    });
+
+    console.log("Actualizando producto...")
+    const res = await fetch(baseUrl + "/update-product/" + value.productId, {
+      method: "PUT",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData?.error || "Error actualizando el producto");
+    }
+    console.log("Actualizacion exitosa", res)
+    return res.json();
   } catch (error: unknown) {
     console.log(error);
     if (error instanceof Error) throw error;

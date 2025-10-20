@@ -101,3 +101,50 @@ export const getAllProducts = async (req:Request, res: Response, next: NextFunct
         })
     }
 }
+
+export const updateProductController = async (req: Request, res: Response, next: NextFunction) => {
+    const {
+        title,
+        description,
+        price,
+        tags,
+        category_id,
+        existing_image_urls,
+        deleted_image_urls,
+    } = req.body;
+
+    const {
+        product_id,
+    } = req.params;
+    console.log(deleted_image_urls)
+    try {
+        if (!title || !price || !category_id){
+            return res.status(400).json({
+                ok: false,
+                error: "Uno o más campos obligatorios están vacios."
+            })
+        }
+
+        if(!product_id){
+            return res.status(400).json({
+                ok: false,
+                error: "Faltan parametros obligatorios: product_id."
+            })
+        }
+
+        if(!existing_image_urls){
+            return res.status(400).json({
+                ok: false,
+                error: "Faltan parametros obligatorios: existingImageUrls."
+            })
+        }
+        
+        next()
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            ok: false,
+            error: "Error interno del servidor al validar la actualización del producto, por favor intente nuevamente."
+        })
+    }
+}

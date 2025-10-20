@@ -1,38 +1,61 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Button, Group, Stack, Switch, TextInput, Textarea, Badge, Image, TagsInput, Select } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { baseUrl } from "@/components/Api";
-import { getAllProducts, saveProduct } from "../Api/ProductsApi";
+import {  saveProduct, updateProduct, type Product } from "../Api/ProductsApi";
 
 export type ProductFormValues = {
   title: string;
-  name: string;
   price: string;
   tags?: string[];
   active: boolean;
   category?: string;
   description?: string;
   images: File[];
+  existingImageUrls: string[];
+  deletedImageUrls: string[];
+  productId?: string;
 };
 
 type ProductFormProps = {
   onCancel?: () => void;
+  onSuccess?: () => void;
 };
 
-export default function ProductForm({ onCancel }: ProductFormProps) {
+export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps & { product?: Product | null }) {
   const queryClient = useQueryClient();
   const [formValues, setFormValues] = useState<ProductFormValues>({
     title: "",
-    name: "",
     price: "",
     active: true,
     tags: [],
     category: "",
     description: "",
     images: [],
+    existingImageUrls: [],
+    deletedImageUrls: [],
+    productId: undefined,
   });
+
+  useEffect(() => {
+    if (product) {
+      setFormValues(prev => ({
+        ...prev,
+        title: product.title || "",
+        price: product.price != null ? String(product.price) : "",
+        active: product.active ?? true,
+        tags: prev.tags ?? [],
+        category: product.category?.id ?? "",
+        description: product.description ?? "",
+        images: [],
+        existingImageUrls: Array.isArray(product.images) ? product.images : [],
+        deletedImageUrls: [],
+        productId: product.id,
+      }));
+    }
+  }, [product]);
 
   const handleChangeValues = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -51,7 +74,9 @@ export default function ProductForm({ onCancel }: ProductFormProps) {
   };
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['categoriess'],
+    
+    queryKey: ['categories_product'],
+    staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       try {
         const res = await fetch(`${baseUrl}/categories`)
@@ -84,7 +109,7 @@ export default function ProductForm({ onCancel }: ProductFormProps) {
   });
 
   const handleSubmit = useMutation({
-    mutationFn: saveProduct,
+    mutationFn: product ? updateProduct : saveProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       notifications.show({
@@ -93,10 +118,11 @@ export default function ProductForm({ onCancel }: ProductFormProps) {
         color: "green",
         autoClose: 3000,
       });
-      queryClient.prefetchQuery({
-        queryKey: ["products"],
-        queryFn: () => getAllProducts({ page: 1, limit: 10 })
-      });
+      // queryClient.prefetchQuery({
+      //   queryKey: ["products"],
+      //   queryFn: () => getAllProducts({ page: 1, limit: 10 })
+      // });
+      onSuccess?.();
       onCancel?.();
     },
     onError: (error: unknown) => {
@@ -114,6 +140,17 @@ export default function ProductForm({ onCancel }: ProductFormProps) {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
+  const removeExistingImage = (index: number) => {
+    setFormValues(prev => ({
+      ...prev,
+      existingImageUrls: prev.existingImageUrls.filter((_, i) => i !== index),
+      deletedImageUrls: [...prev.deletedImageUrls, prev.existingImageUrls[index]]
+    }));
+  }
+
+  useEffect(() => {
+    console.log("formValues:", formValues);
+  },[formValues])
   return (
     <Stack>
       <Group grow>
@@ -174,8 +211,22 @@ export default function ProductForm({ onCancel }: ProductFormProps) {
             ))}
           </Group>
         </Stack>
-      )}
-
+       )}
+       {formValues.existingImageUrls.length > 0 && (
+         <Stack>
+           <Group>
+             <Badge variant="light">Imágenes existentes: {formValues.existingImageUrls.length}</Badge>
+           </Group>
+           <Group gap="sm">
+             {formValues.existingImageUrls.map((url, idx) => (
+               <Box key={`${url}-${idx}`}>
+                 <Image src={url} alt={`Imagen ${idx + 1}`} w={96} h={96} radius="sm" fit="cover" />
+                 <Button mt={6} size="xs" variant="light" color="red" onClick={() => removeExistingImage(idx)}>Eliminar</Button>
+               </Box>
+             ))}
+           </Group>
+         </Stack>
+       )}
       <Group justify="flex-end" mt="md">
         <Button onClick={() => handleSubmit.mutate(formValues)} loading={handleSubmit.isPending}>
           {handleSubmit.isPending ? "Guardando..." : "Guardar"}
