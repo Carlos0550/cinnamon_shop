@@ -57,7 +57,10 @@ export const getAllProducts = async (req:Request, res: Response, next: NextFunct
             limit,
             title,
             categoryId,
-            isActive
+            isActive,
+            state,
+            sortBy,
+            sortOrder,
         } = req.query
 
         if(!page || !limit){

@@ -32,9 +32,12 @@ export type Product = {
 };
 
 export type Pagination = {
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
+  hasNextPage: boolean
+  hasPrevPage: boolean
+  limit: number
+  page: number
+  total: number
+  totalPages: number
 };
 
 export type GetProductsResponse = {
@@ -112,10 +115,11 @@ export type GetProductsParams = {
   isActive?: boolean;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  state: ProductState;
 };
 
 export const useGetAllProducts = (
-  params: GetProductsParams = { page: 1, limit: 10 }
+  params: GetProductsParams = { page: 1, limit: 10, state: 'active' }
 ) => {
   return useQuery<GetProductsResponse, Error>({
     queryKey: ["products", params],
@@ -127,6 +131,7 @@ const buildQueryString = (queryParams: GetProductsParams): string => {
   const qs = new URLSearchParams();
   qs.set("page", String(queryParams.page));
   qs.set("limit", String(queryParams.limit));
+  qs.set("state", queryParams.state);
   if (queryParams.title) qs.set("title", queryParams.title);
   if (queryParams.categoryId) qs.set("categoryId", queryParams.categoryId);
   if (typeof queryParams.minPrice === "number")

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Group, Stack, Switch, TextInput, Textarea, Badge, Image, TagsInput, Select } from "@mantine/core";
+import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { baseUrl } from "@/components/Api";
-import {  saveProduct, updateProduct, type Product } from "../Api/ProductsApi";
+import {  getAllProducts, saveProduct, updateProduct, type Product, type ProductState } from "../Api/ProductsApi";
 
 export type ProductFormValues = {
   title: string;
@@ -17,6 +17,7 @@ export type ProductFormValues = {
   existingImageUrls: string[];
   deletedImageUrls: string[];
   productId?: string;
+  state: ProductState;
 };
 
 type ProductFormProps = {
@@ -24,8 +25,23 @@ type ProductFormProps = {
   onSuccess?: () => void;
 };
 
+const PRODUCT_STATE_META: Record<ProductState, { label: string; color: string }> = {
+  active: { label: "Activo", color: "green" },
+  inactive: { label: "Inactivo", color: "gray" },
+  draft: { label: "Borrador", color: "orange" },
+  out_stock: { label: "Agotado", color: "red" },
+  discontinued: { label: "Obsoleto", color: "yellow" },
+  archived: { label: "Archivado", color: "blue" },
+  deleted: { label: "Eliminado", color: "red" },
+};
+
+const PRODUCT_STATE_OPTIONS: { value: ProductState; label: string }[] = (
+  Object.keys(PRODUCT_STATE_META) as ProductState[]
+).map((value) => ({ value, label: PRODUCT_STATE_META[value].label }));
+
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps & { product?: Product | null }) {
   const queryClient = useQueryClient();
+  // Eliminar intento anterior de useState con ProductState como objeto
   const [formValues, setFormValues] = useState<ProductFormValues>({
     title: "",
     price: "",
@@ -37,6 +53,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     existingImageUrls: [],
     deletedImageUrls: [],
     productId: undefined,
+    state: 'active',
   });
 
   useEffect(() => {
@@ -53,6 +70,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         existingImageUrls: Array.isArray(product.images) ? product.images : [],
         deletedImageUrls: [],
         productId: product.id,
+        state: product.state || 'active',
       }));
     }
   }, [product]);
@@ -118,10 +136,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         color: "green",
         autoClose: 3000,
       });
-      // queryClient.prefetchQuery({
-      //   queryKey: ["products"],
-      //   queryFn: () => getAllProducts({ page: 1, limit: 10 })
-      // });
+      queryClient.prefetchQuery({
+        queryKey: ["products"],
+        queryFn: ({ pageParam = 1 }) => getAllProducts({ page: pageParam as number, limit: 10, state: 'active' })
+      });
       onSuccess?.();
       onCancel?.();
     },
@@ -155,7 +173,14 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     <Stack>
       <Group grow>
         <TextInput label="Título" name="title" placeholder="Ej. Auriculares Kuromi" value={formValues.title} onChange={handleChangeValues} required />
-        <Switch name="active" checked={formValues.active} onChange={handleChangeValues} label="Producto activo" />
+        <Select
+          label="Estado"
+          name="state" 
+          placeholder="Selecciona el estado"
+          data={PRODUCT_STATE_OPTIONS}
+          value={formValues.state}
+          onChange={(value) => setFormValues(prev => ({ ...prev, state: (value as ProductState) || 'active' }))}
+        />
       </Group>
       <Group grow>
         <TextInput label="Precio" name="price" placeholder="Ej. 59.99" value={formValues.price} onChange={handleChangeValues} required />

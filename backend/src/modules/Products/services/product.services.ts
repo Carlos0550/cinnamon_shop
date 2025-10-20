@@ -132,6 +132,10 @@ class ProductServices {
             const title = req.query.title as string;
             const categoryId = req.query.categoryId as string;
 
+            const state = req.query.state as ProductState;
+            const sortBy = req.query.sortBy as string;
+            const sortOrder = req.query.sortOrder as "asc" | "desc";
+
             const isActive = req.query.isActive === 'true' ? true :
                 req.query.isActive === 'false' ? false : undefined;
 
@@ -152,6 +156,11 @@ class ProductServices {
                 where.is_active = isActive;
             }
 
+            console.log(state)
+            if (state) {
+                where.state = state;
+            }
+            console.log("Filtros:", where)
             const [totalProducts, products] = await Promise.all([
                 prisma.products.count({ where }),
 
@@ -163,7 +172,7 @@ class ProductServices {
                         category: true
                     },
                     orderBy: [{
-                        state: "asc"
+                        ...(sortBy && { [sortBy]: sortOrder || 'asc' as "asc" | "desc" }),
                     }]
                 })
             ])

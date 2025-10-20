@@ -1,5 +1,5 @@
 import { theme } from '@/theme';
-import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table } from '@mantine/core';
+import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table, Select } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiEdit, FiTrash, FiEye } from 'react-icons/fi';
@@ -27,9 +27,23 @@ function ProductTable({
   const [searchParams, setSearchParams] = useState<GetProductsParams>({
     page: 1,
     limit: 10,
+    state: 'active',
+    sortBy: 'title',
+    sortOrder: 'asc',
+    isActive: undefined,
+    categoryId: undefined,
   });
 
   const [editing, setEditing] = useState<Product | null>(null);
+
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  useEffect(() => {
+    setSearchParams(prev => ({
+      ...prev,
+      page: currentPage,
+    }));
+  }, [currentPage]);
 
   useEffect(() => {
     setSearchParams(prev => {
@@ -52,7 +66,7 @@ function ProductTable({
     mutationFn: (id: string) => deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      setSearchParams(prev => ({ ...prev, page: 1 }));
+      setSearchParams(prev => ({ ...prev }));
       showNotification({
         message: 'Producto eliminado con éxito',
         color: 'green',
@@ -101,6 +115,51 @@ function ProductTable({
         <Button leftSection={<FiPlus />} onClick={() => setAddOpened(true)}>
           Añadir producto
         </Button>
+
+        <Select
+          value={String(searchParams.limit)}
+          onChange={(value) => setSearchParams(prev => ({ ...prev, limit: Number(value) }))}
+          
+          data={[
+            { value: '5', label: '5 por página' },
+            { value: '10', label: '10 por página' },
+            { value: "20", label: '20 por página' },
+            { value: "50", label: '50 por página' },
+          ]}
+        />
+
+        <Select
+          value={String(searchParams.state)}
+          onChange={(value) => setSearchParams(prev => ({ ...prev, state: value as ProductState }))}
+          data={[
+            { value: 'active', label: 'Activo' },
+            { value: 'inactive', label: 'Inactivo' },
+            { value: 'draft', label: 'Borrador' },
+            { value: 'out_stock', label: 'Agotado' },
+            { value: 'discontinued', label: 'Obsoleto' },
+            { value: 'archived', label: 'Archivado' },
+            { value: 'deleted', label: 'Eliminado' },
+          ]}
+        />
+
+        <Select
+          value={searchParams.sortBy || 'title'}
+          onChange={(value) => setSearchParams(prev => ({ ...prev, sortBy: value || undefined }))}
+          data={[
+            { value: 'title', label: 'Nombre' },
+            { value: 'price', label: 'Precio' },
+            { value: 'created_at', label: 'Fecha de creación' },
+          ]}
+        />
+
+        <Select
+          value={searchParams.sortOrder || 'asc'}
+          onChange={(value) => setSearchParams(prev => ({ ...prev, sortOrder: value as "asc" | "desc" }))}
+          data={[
+            { value: 'asc', label: 'Ascendente' },
+            { value: 'desc', label: 'Descendente' },
+          ]}
+        />
       </Flex>
 
       {isLoading ? (
@@ -202,11 +261,33 @@ function ProductTable({
         </Paper>
       )}
 
-      {pagination && !editing && (
+      {pagination && (
         <Flex justify="center" mt="md" gap="md">
           <Text>
-            Página {pagination.currentPage} de {pagination.totalPages} ({pagination.totalItems} productos)
+            Página {pagination.page} de {pagination.totalPages} ({pagination.total} productos)
           </Text>
+          <Group gap="xs">
+            <Button
+              onClick={() => {
+                if (pagination.hasPrevPage) {
+                  setCurrentPage(pagination.page - 1);
+                }
+              }}
+              disabled={!pagination.hasPrevPage}
+            >
+              Anterior
+            </Button>
+            <Button
+              onClick={() => {
+                if (pagination.hasNextPage) {
+                  setCurrentPage(pagination.page + 1);
+                }
+              }}
+              disabled={!pagination.hasNextPage}
+            >
+              Siguiente
+            </Button>
+          </Group>
         </Flex>
       )}
       <ModalWrapper opened={viewOpened} onClose={() => { setViewOpened(false); setEditing(null); }} title={selected ? selected.title : 'Ver producto'} size="md">
