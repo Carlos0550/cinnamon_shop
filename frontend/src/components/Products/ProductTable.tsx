@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiEdit, FiTrash, FiEye } from 'react-icons/fi';
 import { deleteProduct, useGetAllProducts, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
 import ModalWrapper from '@/components/Common/ModalWrapper';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { showNotification } from '@mantine/notifications';
 import dummyImage from '@/assets/dummy_image.png';
 import ProductForm from './ProductForm';
@@ -51,7 +51,7 @@ function ProductTable({
   const deleteImage = useMutation({
     mutationFn: (id: string) => deleteProduct(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] }),
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setSearchParams(prev => ({ ...prev, page: 1 }));
       showNotification({
         message: 'Producto eliminado con éxito',
@@ -126,14 +126,14 @@ function ProductTable({
                   </Box>
                 </Group>
                 <Group gap="xs">
-                  <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p), setViewOpened(true); }}>
+                  <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
                     <FiEye />
                   </ActionIcon>
                   <ActionIcon color="red" variant="light" aria-label="Eliminar">
                     <FiTrash />
                   </ActionIcon>
                   <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
-                    onClick={() => { setEditing(p), setViewOpened(true) }}
+                    onClick={() => { setEditing(p); setViewOpened(true); }}
                   >
                     Editar
                   </Button>
@@ -188,7 +188,7 @@ function ProductTable({
                           <FiTrash />
                         </ActionIcon>
                          <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
-                          onClick={() => { setEditing(p), setViewOpened(true) }}
+                          onClick={() => { setEditing(p); setViewOpened(true); }}
                         >
                           Editar
                         </Button>
@@ -209,7 +209,7 @@ function ProductTable({
           </Text>
         </Flex>
       )}
-      <ModalWrapper opened={viewOpened} onClose={() => {setViewOpened(false), setEditing(null)}} title={selected ? selected.title : 'Ver producto'} size="md">
+      <ModalWrapper opened={viewOpened} onClose={() => { setViewOpened(false); setEditing(null); }} title={selected ? selected.title : 'Ver producto'} size="md">
         {selected && (
           <Stack>
             <Group align="flex-start" gap="md" wrap="nowrap">
