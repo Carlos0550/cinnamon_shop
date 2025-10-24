@@ -53,7 +53,7 @@ export function UsersTable({
             hasNextPage: data?.pagination?.hasNextPage || false,
             hasPrevPage: data?.pagination?.hasPrevPage || false,
         })
-    },[isLoading, data])
+    },[isLoading, data, currentPage, pagination])
 
     const capitalizeNames = (names: string) => {
         return names.split(' ').map((name) => name.charAt(0).toUpperCase() + name.slice(1)).join(' ');

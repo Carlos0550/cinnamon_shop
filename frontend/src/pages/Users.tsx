@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Badge, Box, Group, Title, TextInput, useMantineTheme, Button } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { Box, Group, Title, TextInput, Button } from "@mantine/core";
+
 import { FiSearch } from "react-icons/fi";
 import ModalWrapper from "@/components/Common/ModalWrapper";
 import { UsersForm } from "@/components/Users/UsersForm";
@@ -8,9 +8,9 @@ import { UsersTable } from "@/components/Users/UsersTable";
 
 export default function Users() {
 
-  const theme = useMantineTheme();
-  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
-  const [search, setSearch] = useState<string>('');
+  //const theme = useMantineTheme();
+  //const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  const [search] = useState<string>('');
 
   const [opened, setOpened] = useState<boolean>(false)
   return (
