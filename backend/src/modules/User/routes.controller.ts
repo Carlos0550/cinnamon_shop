@@ -24,3 +24,17 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 
     next()
 }
+
+export const CreateUserController = async(req:Request, res: Response, pass: NextFunction) => {
+    const {
+        name,
+        email,
+        role_id
+    } = req.body
+
+    if(!name || !email || !role_id){
+        return res.status(400).json({ ok: false, error: 'Faltan campos obligatorios' });
+    }
+
+    pass()
+}

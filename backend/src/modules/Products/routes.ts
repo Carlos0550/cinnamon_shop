@@ -7,7 +7,7 @@ const router = Router();
 const product_service = new ProductServices
 
 router.post(
-    "/save-product",
+    "product/save-product",
      uploadMultipleImages('productImages', 10),
      handleImageUploadError, 
      saveProduct,
@@ -22,7 +22,7 @@ router.get("/products", getAllProducts, (req, res) => product_service.getAllProd
 router.delete("/products/:product_id", (req, res) => product_service.deleteProduct(req, res))
 
 router.put(
-    "/update-product/:product_id",
+    "product/update-product/:product_id",
     uploadMultipleImages('productImages', 10),
     handleImageUploadError,
     updateProductController,

@@ -32,10 +32,10 @@ export default function Layout() {
       <AppShell.Navbar p="md" style={{ background: 'var(--mantine-color-body)' }}>
         <Stack gap="sm" onClick={close}>
           {/* <ColorSchemeToggle /> */}
-          <Anchor component={Link} to="/">Home</Anchor>
-          <Anchor component={Link} to="/products">Products</Anchor>
-          <Anchor component={Link} to="/categories">Categories</Anchor>
-          <Anchor component={Link} to="/users">Users</Anchor>
+          <Anchor component={Link} to="/">Inicio</Anchor>
+          <Anchor component={Link} to="/products">Productos</Anchor>
+          <Anchor component={Link} to="/categories">Categorias</Anchor>
+          <Anchor component={Link} to="/users">Usuarios</Anchor>
         </Stack>
       </AppShell.Navbar>
 

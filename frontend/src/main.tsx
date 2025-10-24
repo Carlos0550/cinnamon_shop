@@ -15,7 +15,7 @@ import { theme } from '@/theme'
 function PrimaryColorProvider({ children }: { children: React.ReactNode }) {
   const { colorScheme } = useMantineColorScheme();
   return (
-    <MantineProvider theme={{ ...theme, primaryColor: colorScheme === 'dark' ? 'kuromi' : 'rose' }}>
+    <MantineProvider theme={{ ...theme, primaryColor: colorScheme === 'dark' ? 'rose' : 'rose'}}>
       {children}
     </MantineProvider>
   );

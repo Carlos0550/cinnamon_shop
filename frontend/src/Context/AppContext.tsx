@@ -42,5 +42,4 @@ export function useAppContext() {
   return ctx;
 }
 
-// Exporta más hooks desde aquí según tu patrón de trabajo
 export { AppContext };
