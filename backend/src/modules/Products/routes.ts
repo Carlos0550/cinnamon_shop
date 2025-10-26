@@ -7,7 +7,7 @@ const router = Router();
 const product_service = new ProductServices
 
 router.post(
-    "product/save-product",
+    "/save-product",
      uploadMultipleImages('productImages', 10),
      handleImageUploadError, 
      saveProduct,
@@ -17,12 +17,12 @@ router.post(
 router.post("/categories", uploadSingleImage("image"), saveCategory, (req, res) => product_service.saveCategory(req, res))
 router.get("/categories", (req, res) => product_service.getAllCategories(req, res))
 
-router.get("/products", getAllProducts, (req, res) => product_service.getAllProducts(req, res))
+router.get("/", getAllProducts, (req, res) => product_service.getAllProducts(req, res))
 
-router.delete("/products/:product_id", (req, res) => product_service.deleteProduct(req, res))
+router.delete("/:product_id", (req, res) => product_service.deleteProduct(req, res))
 
 router.put(
-    "product/update-product/:product_id",
+    "/:product_id",
     uploadMultipleImages('productImages', 10),
     handleImageUploadError,
     updateProductController,

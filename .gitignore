@@ -26,3 +26,6 @@ dist-ssr
 *.sw?
 backend/.env
 frontend/.env
+backend/scripts/run-seed.js
+backend/docs/Guia-Endpoints-OpenAPI-Zod-Prisma.md
+backend/README.md

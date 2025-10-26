@@ -10,7 +10,15 @@ if (!fs.existsSync(imageUploadDir)) {
 
 const imageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, imageUploadDir);
+    try {
+      // Asegurar que el directorio exista en cada request (por si el cleanup lo borró)
+      if (!fs.existsSync(imageUploadDir)) {
+        fs.mkdirSync(imageUploadDir, { recursive: true });
+      }
+      cb(null, imageUploadDir);
+    } catch (err) {
+      cb(err as any, imageUploadDir);
+    }
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

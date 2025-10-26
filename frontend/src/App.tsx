@@ -6,6 +6,7 @@ import Products from '@/pages/Products'
 import Categories from '@/pages/Categories'
 import Users from '@/pages/Users'
 import Login from './pages/Login'
+import { Promos } from './pages/Promos'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="products" element={<Products />} />
           <Route path="categories" element={<Categories />} />
           <Route path="users" element={<Users />} />
+          <Route path="promos" element={<Promos />} />
         </Route>
       </Routes>
     </BrowserRouter>

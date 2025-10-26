@@ -8,9 +8,8 @@ import { UsersTable } from "@/components/Users/UsersTable";
 
 export default function Users() {
 
-  //const theme = useMantineTheme();
-  //const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
-  const [search] = useState<string>('');
+  
+  const [search, setSearch] = useState<string>("");
 
   const [opened, setOpened] = useState<boolean>(false)
   return (
@@ -22,6 +21,8 @@ export default function Users() {
           placeholder="Buscar por nombre o email"
           leftSection={<FiSearch />}
           style={{ flex: "1 1 280px", minWidth: 260, maxWidth: 520 }}
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
         />
         <Button onClick={() => setOpened(true)}>Nuevo usuario</Button>
       </Group>

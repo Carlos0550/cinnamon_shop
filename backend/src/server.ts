@@ -5,6 +5,10 @@ import { prisma } from '@/config/prisma';
 import { pingRedis } from '@/config/redis';
 import UserRouter from '@/modules/User/routes';
 import ProductRouter from '@/modules/Products/routes';
+import PromoRouter from '@/modules/Promos/routes';
+import { initUploadsCleanupJob } from './jobs/cleanupUploads';
+import swaggerUi from 'swagger-ui-express';
+import spec from './docs/openapi';
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -12,7 +16,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.use(cors());
 app.use(express.json());
 
-app.get('/health', async (_req, res) => {
+app.get('/api/health', async (_req, res) => {
   try {
     await prisma.$connect();
     const pong = await pingRedis();
@@ -25,8 +29,12 @@ app.get('/health', async (_req, res) => {
 });
 
 app.use('/api', UserRouter);
-app.use("/api", ProductRouter)
+app.use("/api/products", ProductRouter)
+app.use("/api/promos", PromoRouter)
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
+app.get('/docs.json', (_req, res) => res.json(spec));
 
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);
+  initUploadsCleanupJob();
 });

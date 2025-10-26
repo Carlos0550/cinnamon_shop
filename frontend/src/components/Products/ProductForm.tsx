@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useGetAllCategories } from "../Api/CategoriesApi";
 import { notifications } from "@mantine/notifications";
-import { baseUrl } from "@/components/Api";
+
 import {  getAllProducts, saveProduct, updateProduct, type Product, type ProductState } from "../Api/ProductsApi";
 
 export type ProductFormValues = {
@@ -41,7 +42,7 @@ const PRODUCT_STATE_OPTIONS: { value: ProductState; label: string }[] = (
 
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps & { product?: Product | null }) {
   const queryClient = useQueryClient();
-  // Eliminar intento anterior de useState con ProductState como objeto
+  const {data: categories = []} = useGetAllCategories();
   const [formValues, setFormValues] = useState<ProductFormValues>({
     title: "",
     price: "",
@@ -91,41 +92,6 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     }));
   };
 
-  const { data: categories = [] } = useQuery({
-    
-    queryKey: ['categories_product'],
-    staleTime: 1000 * 60 * 5,
-    queryFn: async () => {
-      try {
-        const res = await fetch(`${baseUrl}/categories`)
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json?.error || "No se pudieron obtener las categorías");
-        }
-        console.log("Response format:", json);
-        if (json.data && json.data.categories) {
-          return json.data.categories;
-        } else if (json.categories) {
-          return json.categories;
-        } else if (Array.isArray(json)) {
-          return json;
-        } else {
-          console.log("Unexpected API response format:", json);
-          return [];
-        }
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        notifications.show({
-          title: "Error",
-          message: message || "No se pudieron obtener las categorías",
-          color: "red",
-          autoClose: 3000,
-        });
-        return [];
-      }
-    }
-  });
-
   const handleSubmit = useMutation({
     mutationFn: product ? updateProduct : saveProduct,
     onSuccess: () => {
@@ -167,8 +133,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   }
 
   useEffect(() => {
-    console.log("formValues:", formValues);
-  },[formValues])
+    console.log("categories:", categories);
+  },[categories])
   return (
     <Stack>
       <Group grow>
@@ -188,10 +154,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           label="Categoría"
           name="category" 
           placeholder="Selecciona una categoría"
-          data={categories.map((cat: { id: string; title: string }) => ({ 
+          data={Array.isArray(categories?.categories) ? categories.categories.map((cat: { id: string; title: string }) => ({ 
             value: cat.id, 
             label: capitalizeFirstLetter(cat.title)
-          }))}
+          })) : []}
           value={formValues.category}
           onChange={(value) => setFormValues(prev => ({ ...prev, category: value || "" }))}
         />

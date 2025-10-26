@@ -228,7 +228,7 @@ export const updateProduct = async (value: SaveProductPayload) => {
     });
 
     console.log("Actualizando producto...")
-    const res = await fetch(baseUrl + "/update-product/" + value.productId, {
+    const res = await fetch(baseUrl + "/products/" + value.productId, {
       method: "PUT",
       body: formData,
     });
