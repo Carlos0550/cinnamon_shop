@@ -4,9 +4,9 @@ import AuthServices from './services/auth_services';
 const authServices = new AuthServices();
 const router = Router();
 
-router.post('/users/login', login, authServices.login);
-router.post('/users/register', createUser, authServices.createUser);
-router.post("/users/new", CreateUserController, authServices.newUser)
-router.get("/users", (req, res) => authServices.getUsers(req, res))
+router.post('/login', login, authServices.login);
+router.post('/register', createUser, authServices.createUser);
+router.post("/new", CreateUserController, authServices.newUser)
+router.get("/", (req, res) => authServices.getUsers(req, res))
 
 export default router;
