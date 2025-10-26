@@ -17,12 +17,10 @@ import {
     Paper,
     Divider,
     FileInput,
-    Badge,
     rem,
     Loader,
     Container,
-    Textarea,
-    Checkbox
+    Textarea
 } from "@mantine/core"
 import { DatePickerInput } from "@mantine/dates"
 import { MdUpload, MdPhoto, MdCalendarToday } from "react-icons/md"

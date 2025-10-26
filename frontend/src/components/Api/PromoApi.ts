@@ -33,7 +33,7 @@ export const useSubmitPromo = () => {
   return useMutation({
     mutationKey: ["submitPromo"],
     retryDelay: 1000,
-    retry: (failureCount, error) => failureCount < 1,
+    retry: (failureCount) => failureCount < 1,
     mutationFn: async ({ values, image }: { values: PromoRequest; image?: File }) => {
       const formData = new FormData();
 
