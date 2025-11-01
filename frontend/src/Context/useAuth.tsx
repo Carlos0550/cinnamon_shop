@@ -56,8 +56,10 @@ export function useAuth() {
             return data
         },
         enabled: !!token, 
-        retry: false, 
+        retry: false,
         staleTime: 5 * 60 * 1000, 
+        refetchInterval: 5 * 60 * 1000, 
+        refetchIntervalInBackground: true, 
     })
 
     useEffect(() => {

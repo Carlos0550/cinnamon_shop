@@ -1,8 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import { useUtils } from './useUtils';
 import { useAuth } from './useAuth';
-import { useNavigate } from 'react-router-dom';
 import Loading from '@/components/Loader/Loading';
 
 type AppContextValue = {
