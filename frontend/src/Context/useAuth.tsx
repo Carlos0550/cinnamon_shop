@@ -83,6 +83,10 @@ export function useAuth() {
         }
     }, [error, navigate])
 
+    useEffect(()=>{
+        console.log("session data:", session)
+    },[session])
+
     return {
         session,
         setSession,
