@@ -24,4 +24,9 @@ export const PromoCreateRequestSchema = z.object({
   products: z.array(z.string()).optional(),
 }).openapi({ description: 'Body para crear una promoción' });
 
+export const DeletePromoRequestSchema = z.object({
+  id: z.string(),
+}).openapi({ description: 'Body para eliminar una promoción' });
+
 export type PromoCreateRequest = z.infer<typeof PromoCreateRequestSchema>;
+export type DeletePromoRequest = z.infer<typeof DeletePromoRequestSchema>;

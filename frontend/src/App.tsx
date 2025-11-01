@@ -1,5 +1,5 @@
 import './App.css'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Layout from '@/layout/Layout'
 import Home from '@/pages/Home'
 import Products from '@/pages/Products'
@@ -10,7 +10,6 @@ import { Promos } from './pages/Promos'
 
 export default function App() {
   return (
-    <BrowserRouter>
       <Routes>
         <Route path='/auth' element={<Login />} />
         <Route path="/" element={<Layout />}> 
@@ -21,6 +20,5 @@ export default function App() {
           <Route path="promos" element={<Promos />} />
         </Route>
       </Routes>
-    </BrowserRouter>
   )
 }

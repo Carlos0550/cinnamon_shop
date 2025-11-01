@@ -23,3 +23,6 @@ export type PromoRequest = {
     products?: string[]
 }
 
+export type DeletePromoRequest = {
+    id: string
+}

@@ -48,3 +48,25 @@ export const useGetUsers = (page: number, limit: number, search?: string) => {
         },
     })
 }
+
+export const useLogin = () => {
+    return useMutation({
+        mutationKey: ["login"],
+        mutationFn: async ({ email, password }: { email: string, password: string }) => {
+            const response = await fetch(`${baseUrl}/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                }),
+            });
+
+            const data = await response.json();
+            console.log("Response:", data);
+            return data;
+        },
+    })
+}

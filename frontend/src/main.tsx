@@ -12,11 +12,12 @@ import App from '@/App'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppContextProvider } from '@/Context/AppContext'
 import { theme } from '@/theme'
+import { BrowserRouter } from 'react-router-dom'
 
 function PrimaryColorProvider({ children }: { children: React.ReactNode }) {
   const { colorScheme } = useMantineColorScheme();
   return (
-    <MantineProvider theme={{ ...theme, primaryColor: colorScheme === 'dark' ? 'rose' : 'rose'}}>
+    <MantineProvider theme={{ ...theme, primaryColor: colorScheme === 'dark' ? 'rose' : 'rose' }}>
       {children}
     </MantineProvider>
   );
@@ -29,11 +30,13 @@ createRoot(document.getElementById('root')!).render(
       <PrimaryColorProvider>
         <ModalsProvider>
           <Notifications position="top-right" />
-          <AppContextProvider>
+          <BrowserRouter>
             <QueryClientProvider client={new QueryClient()}>
-              <App />
+              <AppContextProvider>
+                <App />
+              </AppContextProvider>
             </QueryClientProvider>
-          </AppContextProvider>
+          </BrowserRouter>
         </ModalsProvider>
       </PrimaryColorProvider>
     </MantineProvider>

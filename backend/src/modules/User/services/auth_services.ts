@@ -29,13 +29,19 @@ class AuthServices {
             sub: user.id.toString(),
             email: user.email,
             name: user.name,
+            role: user.role,
         }
         const token = signToken(payload);
 
         await redis.set(`user:${token}`, JSON.stringify(payload), 'EX', 60 * 5);
+        const user_without_password = {
+            ...user,
+            password: undefined,
+        }
 
-        return res.status(200).json({ ok: true, token, user });
+        return res.status(200).json({ ok: true, token, user: user_without_password });
     }
+
 
     async createUser(req: Request, res: Response) {
         const { email, password, name } = req.body;

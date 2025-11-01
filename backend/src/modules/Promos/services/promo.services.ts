@@ -116,6 +116,72 @@ class PromoServices {
       }
     }
   }
+
+  async getPromos(req: Request, res: Response) {
+    try {
+      const result = await prisma.promos.findMany({
+        include: {
+          categories: true,
+          products: true
+        }
+      })
+
+      if (result.length > 0) {
+        return res.status(200).json({ ok: true, promos: result });
+      }
+      return res.status(404).json({ ok: false, error: "No se encontraron promociones" });
+    } catch (error) {
+      console.log(error)
+      return res.status(500).json({ ok: false, error: "Error al obtener las promociones" });
+    }
+  }
+  extractPathFromPublicUrl = (url: string): string | null => {
+    try {
+      const u = new URL(url);
+      const match = u.pathname.match(/\/storage\/v1\/object\/(?:public|authenticated)\/([^/]+)\/(.+)/);
+      if (!match) return null;
+      const bucket = match[1];
+      const path = match[2];
+      const envBucket = process.env.SUPABASE_BUCKET || "images";
+      if (bucket !== envBucket) {
+        console.warn(`Bucket en URL (${bucket}) difiere del configurado (${envBucket}). Intentando eliminar por path relativo.`);
+      }
+      return path;
+    } catch {
+      return typeof url === "string" && url.length > 0 ? url : null;
+    }
+  };
+  async deletePromo(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const promoInfo = await prisma.promos.findUnique({
+        where: {
+          id: id as string,
+        }
+      })
+
+      if (!promoInfo) {
+        return res.status(404).json({ ok: true, error: "Promoción no encontrada" });
+      }
+
+      if (![null, "", undefined].includes(promoInfo.image)) {
+        const imagePath = this.extractPathFromPublicUrl(promoInfo.image!);
+        if (imagePath) {
+          await deleteImage(imagePath);
+          console.log("Imagen eliminada de Supabase:", imagePath);
+        }
+      }
+      const promo = await prisma.promos.delete({
+        where: {
+          id: id as string,
+        },
+      });
+      return res.status(200).json({ ok: true, promo });
+    } catch (error) {
+      console.log(error)
+      return res.status(500).json({ ok: false, error: "Error al eliminar la promoción" });
+    }
+  }
 }
 
 export default PromoServices;

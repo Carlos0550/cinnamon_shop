@@ -9,12 +9,19 @@ import PromoRouter from '@/modules/Promos/routes';
 import { initUploadsCleanupJob } from './jobs/cleanupUploads';
 import swaggerUi from 'swagger-ui-express';
 import spec from './docs/openapi';
+import morgan from 'morgan';
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
+  stream: {
+    write: (msg) => console.log(msg.trim()),
+  },
+}));
+
 
 app.get('/api/health', async (_req, res) => {
   try {
