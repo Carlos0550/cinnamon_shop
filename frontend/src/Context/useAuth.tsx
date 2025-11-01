@@ -60,7 +60,6 @@ export function useAuth() {
             }
             
             const data = await response.json()
-            console.log("Token validation successful:", data)
             return data
         },
         enabled: !!token, 
@@ -90,10 +89,6 @@ export function useAuth() {
             })
         }
     }, [error, navigate])
-
-    useEffect(()=>{
-        console.log("session data:", session)
-    },[session])
 
     return {
         session,

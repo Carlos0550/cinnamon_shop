@@ -11,7 +11,6 @@ router.post("/new", CreateUserController, authServices.newUser)
 router.get("/", requireAuth, requireRole([1]), (req, res) => authServices.getUsers(req, res))
 router.get('/validate-token', requireAuth, (req, res) => {
     const user = (req as any).user;
-    console.log("User:", user)
     res.json({ 
         ok: true, 
         id: user.id,

@@ -22,7 +22,7 @@ class AuthServices {
 
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ ok: false, error: 'invalid_password' });
+            return res.status(401).json({ ok: false, error: 'invalid_password' });
         }
 
         const payload = {

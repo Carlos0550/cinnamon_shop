@@ -1,9 +1,8 @@
 import { Badge, Box, Button, Group, Image, Stack, TextInput } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
-import { useEffect, useState } from "react";
-import { baseUrl } from "../Api";
 import { notifications } from "@mantine/notifications";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCreateCategory } from "../Api/CategoriesApi";
+import { useState } from "react";
 
 type CategoryFormValue = {
     title: string,
@@ -19,62 +18,21 @@ function CategoriesForm({
     initialValues,
     closeForm
 }: ProductFormProps) {
-    const queryClient = useQueryClient();
     const [title, setTitle] = useState<string>(initialValues?.title ?? "")
     const [image, setImage] = useState<File | null>(initialValues?.images ?? null)
-    const [loading, setLoading] = useState<boolean>(false)
+    const { mutate, isPending } = useCreateCategory()
 
-    useEffect(() => {
-        console.log(image)
-        console.log(title)
-    }, [image, title])
-
-    const handleSubmit = async () => {
-        try {
-            setLoading(true)
-            const url = `${baseUrl}/categories`
-
-            const formData = new FormData()
-
-            formData.append("title", title)
-            formData.append("image", image ?? new File([], ""))
-            
-            const result = await fetch(url, {
-                method: "POST",
-                body: formData
-            })
-
-            const data = await result.json()
-
-            if (result.ok) {
-                await queryClient.invalidateQueries({ queryKey: ["categories"] })
-                closeForm()
-                notifications.show({
-                    title: "Categoría creada",
-                    message: "La categoría se ha creado exitosamente",
-                    color: "green",
-                    autoClose: 3000,
-                })
-            } else {
-                notifications.show({
-                    title: "No se ha podido crear la categoría",
-                    message: data.error,
-                    color: "red",
-                    autoClose: 3000,
-                })
-            }
-        } catch (error) {
-            console.log(error)
+    const handleSubmit = () => {
+        if (!title || !image) {
             notifications.show({
-                title: "Error",
-                message: "No se ha podido crear la categoría",
-                color: "red",
-                autoClose: 3000,
+                message: "Por favor, complete todos los campos",
+                color: "red"
             })
-        } finally {
-            setLoading(false)
+            return
         }
+        mutate({ title, images: image, closeForm })
     }
+    
     return (
         <Stack>
             <Group grow>
@@ -104,7 +62,7 @@ function CategoriesForm({
             </Stack>
 
             <Group justify="flex-end" mt="md">
-                <Button onClick={handleSubmit} loading={loading} disabled={loading}>Guardar</Button>
+                <Button onClick={handleSubmit} loading={isPending} disabled={isPending}>Guardar</Button>
             </Group>
         </Stack>
     )

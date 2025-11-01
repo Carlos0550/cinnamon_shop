@@ -20,7 +20,6 @@ export const useCreateUser = () => {
             });
 
             const data = await response.json();
-            console.log("Response:", data);
             return data;
         },
     })
@@ -43,7 +42,6 @@ export const useGetUsers = (page: number, limit: number, search?: string) => {
             });
 
             const data = await response.json();
-            console.log("Response:", data);
             return data;
         },
     })
@@ -63,9 +61,13 @@ export const useLogin = () => {
                     password,
                 }),
             });
-
+            if (!response.ok && response.status !== 401) {
+                throw new Error('Error al iniciar sesión')
+            }
+            if (response.status === 401) {
+                throw new Error('Credenciales inválidas')
+            }
             const data = await response.json();
-            console.log("Response:", data);
             return data;
         },
     })
