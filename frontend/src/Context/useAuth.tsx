@@ -21,6 +21,11 @@ export function useAuth() {
         const storedToken = localStorage.getItem('auth_token')
         if (![null, "", undefined].includes(storedToken)) {
             setToken(storedToken)
+        }else{
+            navigate("/auth")
+            localStorage.removeItem('auth_token')
+            setToken(null)
+            setSession(null)
         }
     }, [])
 
@@ -38,6 +43,7 @@ export function useAuth() {
         queryKey: ['validateToken', token],
         queryFn: async () => {
             if (!token) {
+                console.log("No token available")
                 throw new Error('No token available')
             }
 
@@ -49,10 +55,12 @@ export function useAuth() {
             })
             
             if (!response.ok) {
+                console.log("Token validation failed:", response.status, response.statusText)
                 throw new Error('Token validation failed')
             }
             
             const data = await response.json()
+            console.log("Token validation successful:", data)
             return data
         },
         enabled: !!token, 
