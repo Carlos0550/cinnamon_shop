@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select, Switch } from "@mantine/core";
+import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select, Switch, Text } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { useGetAllCategories } from "../Api/CategoriesApi";
 
@@ -192,17 +192,71 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       )}
 
       <Stack>
+        {/* Input nativo oculto */}
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          id="file-input"
+          onChange={(e) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length > 0) {
+              setFormValues(prev => ({ ...prev, images: [...prev.images, ...files] }));
+            }
+          }}
+        />
+        
+        {/* Dropzone para desktop */}
         <Dropzone
           name="images"
           onDrop={(files) => setFormValues(prev => ({ ...prev, images: [...prev.images, ...files] }))}
           accept={IMAGE_MIME_TYPE}
           maxSize={10 * 1024 * 1024}
+          activateOnClick={true}
+          styles={{
+            root: {
+              cursor: 'pointer',
+              minHeight: '120px',
+              border: '2px dashed #ced4da',
+              borderRadius: '8px',
+              '&:hover': {
+                backgroundColor: '#f8f9fa',
+                borderColor: '#868e96'
+              }
+            }
+          }}
+          onReject={(files) => {
+            console.log('Archivos rechazados:', files);
+          }}
         >
-          <Group justify="center" gap="sm" style={{ pointerEvents: "none" }}>
-            <Badge variant="light">Arrastra y suelta imágenes aquí</Badge>
-            <TextInput disabled placeholder="o haz click para seleccionar" style={{ maxWidth: 240 }} />
-          </Group>
+          <Stack align="center" gap="sm">
+            <Text size="lg">📷</Text>
+            <Text size="sm" ta="center">
+              Arrastra y suelta imágenes aquí o haz clic para seleccionar
+            </Text>
+            <Badge variant="light" size="sm">
+              Máximo 10MB por imagen
+            </Badge>
+          </Stack>
         </Dropzone>
+        
+        {/* Botón alternativo para móviles */}
+        <Button
+          variant="filled"
+          size="lg"
+          onClick={() => document.getElementById('file-input')?.click()}
+          leftSection="📱"
+          styles={{
+            root: {
+              '@media (min-width: 768px)': {
+                display: 'none'
+              }
+            }
+          }}
+        >
+          Seleccionar imágenes desde galería
+        </Button>
       </Stack>
 
       {formValues.images.length > 0 && (
