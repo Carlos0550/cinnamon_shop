@@ -7,15 +7,36 @@ export const saveProduct = async (req: Request, res: Response, next: NextFunctio
         description,
         price,
         tags,
-        category_id
+        category_id,
+        fillWithAI
     } = req.body
 
     try {
-        if (!title || !price || !category_id){
-            return res.status(400).json({
-                ok: false,
-                error: "Uno o más campos obligatorios están vacios."
-            })
+        console.log("fillWithAI:", fillWithAI)
+        if (fillWithAI === true || fillWithAI === 'true') {
+            if (!category_id) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "La categoría es obligatoria para completar con IA."
+                })
+            }
+            
+            // Check if images are provided for AI processing
+            const productImages = req.files;
+            if (!productImages || !Array.isArray(productImages) || productImages.length === 0) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "Se requieren imágenes para completar con IA."
+                })
+            }
+        } else {
+            // Normal validation for manual product creation
+            if (!title || !price || !category_id) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "Uno o más campos obligatorios están vacios."
+                })
+            }
         }
         
         next()

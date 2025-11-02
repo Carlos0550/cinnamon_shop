@@ -14,6 +14,8 @@ export const SaveProductRequestSchema = z.object({
   tags: z.array(z.string()).optional(),
   category_id: z.string().min(1),
   productImages: z.array(BinaryFileSchema).optional(),
+  fillWithAI: z.boolean().optional(),
+  state: z.enum(['active','inactive','draft','out_stock','discontinued','archived','deleted']).optional(),
 }).openapi({ description: 'Body multipart para crear producto' });
 
 export const SaveCategoryRequestSchema = z.object({
@@ -41,6 +43,8 @@ export const UpdateProductRequestSchema = z.object({
   existingImageUrls: z.array(z.string()).optional(),
   deletedImageUrls: z.array(z.string()).optional(),
   productImages: z.array(BinaryFileSchema).optional(),
+  fillWithAI: z.boolean().optional(),
+  state: z.enum(['active','inactive','draft','out_stock','discontinued','archived','deleted']).optional(),
 }).openapi({ description: 'Body multipart para actualizar producto' });
 
 export const UpdateCategoryStatusSchema = z.object({

@@ -3,7 +3,8 @@ import { uploadImage, deleteImage } from "@/config/supabase";
 import fs from "fs";
 import { prisma } from "@/config/prisma";
 import { CategoryStatus, ProductState } from "@prisma/client";
-import { UpdateCategoryStatusSchema } from "./product.zod";
+import { UpdateCategoryStatusSchema, UpdateProductRequest } from "./product.zod";
+import { analyzeProductImages } from "@/config/openai";
 class ProductServices {
     async saveProduct(req: Request, res: Response) {
         const {
@@ -12,6 +13,7 @@ class ProductServices {
             price,
             tags,
             category_id,
+            fillWithAI,
         } = req.body
 
         const productImages = req.files
@@ -37,20 +39,52 @@ class ProductServices {
             }
         }
 
+        let finalTitle = title;
+        let finalDescription = description ?? "";
+        let finalPrice = price ? parseFloat(price) : 0;
+        let finalTags = Array.isArray(tags) ? tags : [];
+        let productState: ProductState = ProductState.active;
+
+        // If AI completion is requested
+        if (fillWithAI === true || fillWithAI === 'true') {
+            if (imageUrls.length === 0) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "Se requieren imágenes para completar con IA"
+                });
+            }
+
+            try {
+                const aiResult = await analyzeProductImages(imageUrls);
+                finalTitle = aiResult.title;
+                finalDescription = aiResult.description;
+                finalPrice = 0; // Default price for AI-generated products
+                finalTags = []; // Default empty tags for AI-generated products
+                productState = ProductState.draft; // Set as draft for AI-generated products
+            } catch (error) {
+                console.error('Error al procesar con IA:', error);
+                return res.status(500).json({
+                    ok: false,
+                    error: "Error al procesar las imágenes con IA"
+                });
+            }
+        }
+
         const product = await prisma.products.create({
             data: {
-                title,
-                description: description ?? "",
-                price: parseFloat(price),
-                tags: Array.isArray(tags) ? tags : [],
+                title: finalTitle,
+                description: finalDescription,
+                price: finalPrice,
+                tags: finalTags,
                 categoryId: category_id,
                 images: imageUrls,
+                state: productState,
             }
         });
 
         return res.status(201).json({
             ok: true,
-            message: "Producto creado exitosamente",
+            message: fillWithAI ? "Producto generado con IA exitosamente" : "Producto creado exitosamente",
             product
         });
 
@@ -319,9 +353,10 @@ class ProductServices {
                 category_id,
                 existingImageUrls,
                 deletedImageUrls,
-            } = req.body;
+                state
+            } = req.body as UpdateProductRequest;
+            console.log("Estatus actual:", state);
 
-            // Normalizar arrays provenientes de multipart/form-data (strings JSON)
             const rawExisting = existingImageUrls ?? (req.body as any).existing_image_urls;
             const rawDeleted = deletedImageUrls ?? (req.body as any).deleted_image_urls;
 
@@ -397,7 +432,8 @@ class ProductServices {
                     price: typeof price === 'string' ? parseFloat(price) : price,
                     tags: Array.isArray(tags) ? tags : (typeof tags === 'string' ? JSON.parse(tags) : []),
                     categoryId: category_id,
-                    images: updatedImages
+                    images: updatedImages,
+                    state: state || ProductState.active
                 }
             });
 

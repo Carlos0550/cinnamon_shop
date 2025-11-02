@@ -119,7 +119,7 @@ export function CategoriesTable({setAddOpened}: Props) {
                                                 label: value
                                             }))}
                                         />
-                                        <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar">
+                                        <Button onClick={() => handleEdit(c)}  size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar">
                                             Editar
                                         </Button>
                                     </Group>

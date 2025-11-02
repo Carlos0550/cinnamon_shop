@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select } from "@mantine/core";
+import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select, Switch } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { useGetAllCategories } from "../Api/CategoriesApi";
 
@@ -17,6 +17,7 @@ export type ProductFormValues = {
   deletedImageUrls: string[];
   productId?: string;
   state: ProductState;
+  fillWithAI?: boolean;
 };
 
 type ProductFormProps = {
@@ -42,6 +43,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const {data: categories = []} = useGetAllCategories();
   const saveProductMutation = useSaveProduct();
   const updateProductMutation = useUpdateProduct();
+  const [fillWithAI, setFillWithAI] = useState(false);
   const [formValues, setFormValues] = useState<ProductFormValues>({
     title: "",
     price: "",
@@ -54,6 +56,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     deletedImageUrls: [],
     productId: undefined,
     state: 'active',
+    fillWithAI: false,
   });
 
   useEffect(() => {
@@ -93,7 +96,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
 
   const handleSubmit = () => {
     const mutation = product ? updateProductMutation : saveProductMutation;
-    mutation.mutate(formValues, {
+    const submitData = {
+      ...formValues,
+      state: formValues.fillWithAI ? 'draft' : formValues.state
+    };
+    mutation.mutate(submitData, {
       onSuccess: () => {
         onSuccess?.();
         onCancel?.();
@@ -114,23 +121,46 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   }
 
   useEffect(() => {
-    console.log("categories:", categories);
-  },[categories])
+    console.log("values:", formValues);
+  },[formValues])
+
+  useEffect(() => {
+    setFormValues(prev => ({
+      ...prev,
+      fillWithAI
+    }));
+  }, [fillWithAI]);
   return (
     <Stack>
+      {!product && (
+        <Group justify="space-between" align="center">
+          <Switch
+            label="Completar con IA"
+            description="La IA analizará las imágenes para generar título y descripción automáticamente"
+            checked={fillWithAI}
+            onChange={(event) => setFillWithAI(event.currentTarget.checked)}
+          />
+        </Group>
+      )}
+
+      {!fillWithAI && (
+        <Group grow>
+          <TextInput label="Título" name="title" placeholder="Ej. Auriculares Kuromi" value={formValues.title} onChange={handleChangeValues} required />
+          <Select
+            label="Estado"
+            name="state" 
+            placeholder="Selecciona el estado"
+            data={PRODUCT_STATE_OPTIONS}
+            value={formValues.state}
+            onChange={(value) => setFormValues(prev => ({ ...prev, state: (value as ProductState) || 'active' }))}
+          />
+        </Group>
+      )}
+
       <Group grow>
-        <TextInput label="Título" name="title" placeholder="Ej. Auriculares Kuromi" value={formValues.title} onChange={handleChangeValues} required />
-        <Select
-          label="Estado"
-          name="state" 
-          placeholder="Selecciona el estado"
-          data={PRODUCT_STATE_OPTIONS}
-          value={formValues.state}
-          onChange={(value) => setFormValues(prev => ({ ...prev, state: (value as ProductState) || 'active' }))}
-        />
-      </Group>
-      <Group grow>
-        <TextInput label="Precio" name="price" placeholder="Ej. 59.99" value={formValues.price} onChange={handleChangeValues} required />
+        {!fillWithAI && (
+          <TextInput label="Precio" name="price" placeholder="Ej. 59.99" value={formValues.price} onChange={handleChangeValues} required />
+        )}
         <Select
           label="Categoría"
           name="category" 
@@ -141,19 +171,25 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           })) : []}
           value={formValues.category}
           onChange={(value) => setFormValues(prev => ({ ...prev, category: value || "" }))}
+          required={fillWithAI}
         />
       </Group>
-      <Textarea name="description" label="Descripción" placeholder="Describe el producto" minRows={3} value={formValues.description} onChange={handleChangeValues} />
-      
-      <Group>
-        <TagsInput
-          name="tags"
-          label="Etiquetas"
-          placeholder="Añade etiquetas"
-          value={formValues.tags}
-          onChange={(value) => setFormValues(prev => ({ ...prev, tags: value || [] }))}
-        />
-      </Group>
+
+      {!fillWithAI && (
+        <>
+          <Textarea name="description" label="Descripción" placeholder="Describe el producto" minRows={3} value={formValues.description} onChange={handleChangeValues} />
+          
+          <Group>
+            <TagsInput
+              name="tags"
+              label="Etiquetas"
+              placeholder="Añade etiquetas"
+              value={formValues.tags}
+              onChange={(value) => setFormValues(prev => ({ ...prev, tags: value || [] }))}
+            />
+          </Group>
+        </>
+      )}
 
       <Stack>
         <Dropzone
@@ -200,8 +236,17 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
          </Stack>
        )}
       <Group justify="flex-end" mt="md">
-        <Button onClick={handleSubmit} loading={product ? updateProductMutation.isPending : saveProductMutation.isPending}>
-          {(product ? updateProductMutation.isPending : saveProductMutation.isPending) ? "Guardando..." : "Guardar"}
+        <Button 
+          onClick={handleSubmit} 
+          loading={product ? updateProductMutation.isPending : saveProductMutation.isPending}
+          disabled={fillWithAI && (!formValues.category || formValues.images.length === 0)}
+        >
+          {(product ? updateProductMutation.isPending : saveProductMutation.isPending) 
+            ? "Guardando..." 
+            : fillWithAI 
+              ? "Generar con IA" 
+              : "Guardar"
+          }
         </Button>
       </Group>
     </Stack>

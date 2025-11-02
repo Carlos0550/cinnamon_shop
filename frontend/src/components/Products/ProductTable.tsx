@@ -174,9 +174,9 @@ function ProductTable({
                   <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
                     <FiEye />
                   </ActionIcon>
-                  <ActionIcon color="red" variant="light" aria-label="Eliminar">
+                  {/* <ActionIcon color="red" variant="light" aria-label="Eliminar">
                     <FiTrash />
-                  </ActionIcon>
+                  </ActionIcon> */}
                   <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
                     onClick={() => { setEditing(p); setViewOpened(true); }}
                   >
@@ -229,9 +229,9 @@ function ProductTable({
                         <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
                           <FiEye />
                         </ActionIcon>
-                        <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => deleteImage(p.id)}>
+                        {/* <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => deleteImage(p.id)}>
                           <FiTrash />
-                        </ActionIcon>
+                        </ActionIcon> */}
                          <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
                           onClick={() => { setEditing(p); setViewOpened(true); }}
                         >

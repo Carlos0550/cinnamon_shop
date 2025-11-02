@@ -56,9 +56,11 @@ type SaveProductPayload = {
   description?: string;
   images: File[];
   // Nuevos campos para edición
+  fillWithAI?: boolean;
   existingImageUrls?: string[];
   deletedImageUrls?: string[];
   productId?: string;
+  state?: ProductState;
 };
 
 export const useSaveProduct = () => {
@@ -73,6 +75,9 @@ export const useSaveProduct = () => {
     mutationKey: ["saveProduct"],
     mutationFn: async (value: SaveProductPayload) => {
       try {
+        console.log("📤 useSaveProduct - value.fillWithAI:", value.fillWithAI);
+        console.log("📤 useSaveProduct - value.state:", value.state);
+        
         const formData = new FormData();
         formData.append("title", value.title);
         formData.append("price", String(value.price));
@@ -99,7 +104,10 @@ export const useSaveProduct = () => {
           formData.append("productImages", image);
         });
 
-        const res = await fetch(baseUrl + "/save-product", {
+        formData.append("fillWithAI", value.fillWithAI ? "true" : "false");
+        formData.append("state", value.state || "active"); 
+
+        const res = await fetch(baseUrl + "/products/save-product", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -306,6 +314,12 @@ export const useUpdateProduct = () => {
         value.images.forEach((image: File) => {
           formData.append("productImages", image);
         });
+        if (value.fillWithAI !== undefined) {
+          formData.append("fillWithAI", value.fillWithAI ? "true" : "false");
+        }
+        if (value.state) {
+          formData.append("state", value.state);
+        }
 
         console.log("Actualizando producto...")
         const res = await fetch(baseUrl + "/products/" + value.productId, {
