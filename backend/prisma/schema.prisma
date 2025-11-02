@@ -29,6 +29,13 @@ enum PromoType {
   fixed //monto fijo
 }
 
+enum CategoryStatus {
+  deleted
+  active
+  inactive
+
+}
+
 model User {
   id             Int      @id @default(autoincrement())
   email          String   @unique
@@ -47,6 +54,7 @@ model Categories {
   image      String?
   is_active  Boolean    @default(true)
   created_at DateTime   @default(now())
+  status      CategoryStatus @default(active)
   products   Products[]
   promos     Promos[]
 }

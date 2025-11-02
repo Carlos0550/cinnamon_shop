@@ -43,7 +43,13 @@ export const UpdateProductRequestSchema = z.object({
   productImages: z.array(BinaryFileSchema).optional(),
 }).openapi({ description: 'Body multipart para actualizar producto' });
 
+export const UpdateCategoryStatusSchema = z.object({
+  status: z.string(),
+  category_id: z.string()
+})
+
 export type SaveProductRequest = z.infer<typeof SaveProductRequestSchema>;
 export type SaveCategoryRequest = z.infer<typeof SaveCategoryRequestSchema>;
 export type GetProductsQuery = z.infer<typeof GetProductsQuerySchema>;
 export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
+export type UpdateCategoryStatusSchema = z.infer<typeof UpdateCategoryStatusSchema>

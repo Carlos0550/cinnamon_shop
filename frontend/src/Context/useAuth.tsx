@@ -42,16 +42,18 @@ export function useAuth() {
     const { data: validationData, isLoading, error, refetch } = useQuery({
         queryKey: ['validateToken', token],
         queryFn: async () => {
+            console.log(token)
             if (!token) {
                 console.log("No token available")
                 throw new Error('No token available')
             }
 
+
             const response = await fetch(baseUrl + '/validate-token', {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                    "Authorization": `Bearer ${token}`,
+                },
             })
             
             if (!response.ok) {
@@ -68,6 +70,24 @@ export function useAuth() {
         refetchInterval: 5 * 60 * 1000, 
         refetchIntervalInBackground: true, 
     })
+
+    const logout = (expired_session: boolean = false) => {
+        updateToken(null)
+        navigate("/auth")
+        if (expired_session) {
+            return showNotification({
+                title: "Sesión expirada",
+                message: 'Por favor, inicie sesión de nuevo',
+                color: 'red',
+            })
+        }else{
+            return showNotification({
+                title: "Sesión cerrada",
+                message: 'Hasta pronto',
+                color: 'green',
+            })
+        }
+    }
 
     useEffect(() => {
         if (validationData) {
@@ -96,7 +116,8 @@ export function useAuth() {
         token,
         setToken: updateToken,
         loading: isLoading,
-        refetchValidation: refetch
+        refetchValidation: refetch,
+        logout
     }
 }
 

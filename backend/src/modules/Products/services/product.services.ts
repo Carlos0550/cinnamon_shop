@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { uploadImage, deleteImage } from "@/config/supabase";
 import fs from "fs";
 import { prisma } from "@/config/prisma";
-import { ProductState } from "@prisma/client";
+import { CategoryStatus, ProductState } from "@prisma/client";
+import { UpdateCategoryStatusSchema } from "./product.zod";
 class ProductServices {
     async saveProduct(req: Request, res: Response) {
         const {
@@ -109,10 +110,37 @@ class ProductServices {
 
     async getAllCategories(req: Request, res: Response) {
         try {
-            const categories = await prisma.categories.findMany()
+            const categories = await prisma.categories.findMany({
+                orderBy: {
+                    created_at: "asc"
+                },
+                include: {
+                    products: true
+                }
+            })
+
+            if(categories.length === 0) {
+                return res.status(404).json({
+                    ok: false,
+                    error: "No se encontraron categorías."
+                })
+            }
+
+            const status_to_number = {
+                [CategoryStatus.active]: 1,
+                [CategoryStatus.inactive]: 2,
+                [CategoryStatus.deleted]: 3
+            };
+
+            const categories_with_status = categories.map((c) => {
+                return {
+                    ...c,
+                    status: status_to_number[c.status]
+                }
+            })
             return res.status(200).json({
                 ok: true,
-                categories
+                categories: categories_with_status
             })
         } catch (error) {
             console.log("Error al obtener categorías", error)
@@ -300,14 +328,14 @@ class ProductServices {
             const normalizedExisting: string[] = Array.isArray(rawExisting)
                 ? rawExisting
                 : typeof rawExisting === 'string' && rawExisting.trim().length
-                ? JSON.parse(rawExisting)
-                : [];
+                    ? JSON.parse(rawExisting)
+                    : [];
 
             const normalizedDeleted: string[] = Array.isArray(rawDeleted)
                 ? rawDeleted
                 : typeof rawDeleted === 'string' && rawDeleted.trim().length
-                ? JSON.parse(rawDeleted)
-                : [];
+                    ? JSON.parse(rawDeleted)
+                    : [];
 
             const {
                 product_id,
@@ -329,7 +357,7 @@ class ProductServices {
             }
 
             if (normalizedDeleted.length > 0) {
-                const imagePaths = normalizedDeleted   
+                const imagePaths = normalizedDeleted
                     .map((img: string) => this.extractPathFromPublicUrl(img))
                     .filter((p: string | null): p is string => p !== null);
                 if (imagePaths.length > 0) {
@@ -359,7 +387,7 @@ class ProductServices {
                     }
                 }
             }
-            
+
             const updatedImages = [...normalizedExisting, ...imageUrls];
             await prisma.products.update({
                 where: { id: product_id },
@@ -384,6 +412,141 @@ class ProductServices {
             return res.status(500).json({
                 ok: false,
                 error: "Error al actualizar el producto"
+            });
+        }
+    }
+
+    async updateCategory(req: Request, res: Response) {
+        try {
+            const { category_id } = req.params;
+            const { title } = req.body;
+            const image = req.file;
+
+            if (!title) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "El título es requerido"
+                });
+            }
+
+            const existingCategory = await prisma.categories.findUnique({
+                where: { id: category_id }
+            });
+
+            if (!existingCategory) {
+                return res.status(404).json({
+                    ok: false,
+                    error: "Categoría no encontrada"
+                });
+            }
+
+            const normalized_title = title.toLowerCase().trim();
+
+            const existingCategoryWithTitle = await prisma.categories.findFirst({
+                where: { 
+                    title: normalized_title,
+                    id: { not: category_id }
+                }
+            });
+
+            if (existingCategoryWithTitle) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "Ya existe una categoría con este título"
+                });
+            }
+
+            let image_url = existingCategory.image;
+
+            if (image) {
+                if (existingCategory.image) {
+                    const imagePath = this.extractPathFromPublicUrl(existingCategory.image);
+                    if (imagePath) {
+                        await deleteImage(imagePath);
+                    }
+                }
+
+                const fileName = `category-${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+                const buffer: Buffer = (image as any).buffer ?? fs.readFileSync((image as any).path);
+                const result = await uploadImage(buffer, fileName, 'categories', image.mimetype);
+                
+                if (result.url) {
+                    image_url = result.url;
+                } else {
+                    console.log("Error subiendo imagen a Supabase", result.error);
+                    return res.status(500).json({
+                        ok: false,
+                        error: "Error al subir la imagen"
+                    });
+                }
+            }
+
+            await prisma.categories.update({
+                where: { id: category_id },
+                data: {
+                    title: normalized_title,
+                    image: image_url
+                }
+            });
+
+            return res.status(200).json({
+                ok: true,
+                message: "Categoría actualizada exitosamente"
+            });
+
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({
+                ok: false,
+                error: "Error al actualizar la categoría"
+            });
+        }
+    }
+
+    async categoryChangeStatus(req: Request, res: Response) {
+        try {
+            const {
+                category_id,
+                status
+            } = req.params as unknown as UpdateCategoryStatusSchema
+
+            const statusNumber = parseInt(status);
+            
+            const status_map: { [key: number]: CategoryStatus } = {
+                1: CategoryStatus.active,
+                2: CategoryStatus.inactive,
+                3: CategoryStatus.deleted
+            }
+
+            if (!status_map[statusNumber] || isNaN(statusNumber)) {
+                return res.status(400).json({
+                    ok: false,
+                    error: "Estado de categoría inválido. Debe ser activo(1), inactivo(2) o eliminado(3)"
+                });
+            }
+
+            await prisma.categories.update({
+                where: { id: category_id },
+                data: {
+                    status: status_map[statusNumber]
+                }
+            })
+
+            const statusMessages = {
+                1: "activada",
+                2: "desactivada", 
+                3: "eliminada"
+            };
+
+            return res.status(200).json({
+                ok: true,
+                message: `Categoría ${statusMessages[statusNumber as keyof typeof statusMessages]} exitosamente`
+            })
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json({
+                ok: false,
+                error: "Error al cambiar el estado de la categoría"
             });
         }
     }

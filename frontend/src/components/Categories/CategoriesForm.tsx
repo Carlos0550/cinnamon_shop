@@ -1,44 +1,99 @@
 import { Badge, Box, Button, Group, Image, Stack, TextInput } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { notifications } from "@mantine/notifications";
-import { useCreateCategory } from "../Api/CategoriesApi";
-import { useState } from "react";
+import { useCreateCategory, useUpdateCategory } from "../Api/CategoriesApi";
+import { useState, useEffect } from "react";
+import type { Category } from "./CategoriesTable";
 
-type CategoryFormValue = {
+type FormValues = {
     title: string,
-    images: File
+    images: File | null
 }
 
-type ProductFormProps = {
-    initialValues?: Partial<CategoryFormValue>;
+type CategoryFormProps = {
     closeForm: () => void;
+    initialValues?: Category       
 };
 
 function CategoriesForm({
-    initialValues,
-    closeForm
-}: ProductFormProps) {
-    const [title, setTitle] = useState<string>(initialValues?.title ?? "")
-    const [image, setImage] = useState<File | null>(initialValues?.images ?? null)
-    const { mutate, isPending } = useCreateCategory()
+    closeForm,
+    initialValues
+}: CategoryFormProps) {
+    const isEditMode = !!initialValues?.id;
+    
+    const { mutate: createCategory, isPending: isCreating } = useCreateCategory()
+    const { mutate: updateCategory, isPending: isUpdating } = useUpdateCategory()
+    
+    const [formValues, setFormValues] = useState<FormValues>({
+        title: "",
+        images: null
+    })
+
+    useEffect(() => {
+        if (initialValues) {
+            setFormValues({
+                title: initialValues.title || "",
+                images: null 
+            })
+        }
+    }, [initialValues])
 
     const handleSubmit = () => {
-        if (!title || !image) {
+        if (!formValues.title.trim()) {
             notifications.show({
-                message: "Por favor, complete todos los campos",
+                message: "Por favor, complete el campo título",
                 color: "red"
             })
             return
         }
-        mutate({ title, images: image, closeForm })
+
+        if (isEditMode && initialValues?.id) {
+            updateCategory({ 
+                categoryId: initialValues.id,
+                title: formValues.title.trim(),
+                images: formValues.images ?? undefined, 
+                closeForm 
+            })
+        } else {
+            createCategory({ 
+                title: formValues.title.trim(),
+                images: formValues.images ?? undefined, 
+                closeForm 
+            })
+        }
     }
+    
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormValues({ ...formValues, [e.currentTarget.name]: e.currentTarget.value })
+    }
+
+    const handleImageDrop = (files: File[]) => {
+        setFormValues({ ...formValues, images: files[0] ?? null })
+    }
+
+    const handleRemoveImage = () => {
+        setFormValues({ ...formValues, images: null })
+    }
+    
+    const isPending = isCreating || isUpdating;
+
+    useEffect(()=>{
+        console.log(formValues)
+    },[formValues])
     
     return (
         <Stack>
             <Group grow>
-                <TextInput label="Título" value={title} onChange={(e) => setTitle(e.currentTarget.value)} required />
+                <TextInput 
+                    label="Título" 
+                    name="title"
+                    value={formValues.title} 
+                    onChange={handleInputChange} 
+                    required 
+                    placeholder="Ingrese el título de la categoría"
+                />
                 <Dropzone
-                    onDrop={(files) => setImage(files[0] ?? null)}
+                    onDrop={handleImageDrop}
                     accept={IMAGE_MIME_TYPE}
                     maxSize={10 * 1024 * 1024}
                 >
@@ -47,22 +102,70 @@ function CategoriesForm({
                         <TextInput disabled placeholder="o haz click para seleccionar" style={{ maxWidth: 240 }} />
                     </Group>
                 </Dropzone>
-
-
             </Group>
-            <Stack>
-                <Group gap="sm">
-                    {image && (
-                        <Box key={`${image.name}`}>
-                            <Image src={URL.createObjectURL(image)} alt={`Imagen`} w={96} h={96} radius="sm" fit="cover" />
-                            <Button mt={6} size="xs" variant="light" color="red" onClick={() => setImage(null)}>Eliminar</Button>
+
+            {isEditMode && initialValues?.image && !formValues.images && (
+                <Stack>
+                    <Badge variant="light" size="sm">Imagen actual:</Badge>
+                    <Group gap="sm">
+                        <Box>
+                            <Image 
+                                src={initialValues.image} 
+                                alt={`Imagen de ${initialValues.title}`} 
+                                w={96} 
+                                h={96} 
+                                radius="sm" 
+                                fit="cover" 
+                            />
                         </Box>
-                    )}
-                </Group>
-            </Stack>
+                    </Group>
+                </Stack>
+            )}
+
+            {formValues.images && (
+                <Stack>
+                    <Badge variant="light" size="sm">
+                        {isEditMode ? "Nueva imagen:" : "Imagen seleccionada:"}
+                    </Badge>
+                    <Group gap="sm">
+                        <Box>
+                            <Image 
+                                src={URL.createObjectURL(formValues.images)} 
+                                alt="Nueva imagen" 
+                                w={96} 
+                                h={96} 
+                                radius="sm" 
+                                fit="cover" 
+                            />
+                            <Button 
+                                mt={6} 
+                                size="xs" 
+                                variant="light" 
+                                color="red" 
+                                onClick={handleRemoveImage}
+                            >
+                                Eliminar
+                            </Button>
+                        </Box>
+                    </Group>
+                </Stack>
+            )}
 
             <Group justify="flex-end" mt="md">
-                <Button onClick={handleSubmit} loading={isPending} disabled={isPending}>Guardar</Button>
+                <Button 
+                    variant="outline" 
+                    onClick={closeForm}
+                    disabled={isPending}
+                >
+                    Cancelar
+                </Button>
+                <Button 
+                    onClick={handleSubmit} 
+                    loading={isPending} 
+                    disabled={isPending}
+                >
+                    {isEditMode ? "Actualizar" : "Crear"}
+                </Button>
             </Group>
         </Stack>
     )

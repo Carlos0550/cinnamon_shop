@@ -33,7 +33,7 @@ class AuthServices {
         }
         const token = signToken(payload);
 
-        await redis.set(`user:${token}`, JSON.stringify(payload), 'EX', 60 * 5);
+        await redis.set(`user:${token}`, JSON.stringify(payload), 'EX', 60 * 60 * 24);
         const user_without_password = {
             ...user,
             password: undefined,

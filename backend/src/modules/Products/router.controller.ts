@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express"
+import { UpdateCategoryStatusSchema } from "./services/product.zod"
 
 export const saveProduct = async (req: Request, res: Response, next: NextFunction) => {
     const {
@@ -57,10 +58,7 @@ export const getAllProducts = async (req:Request, res: Response, next: NextFunct
             limit,
             title,
             categoryId,
-            isActive,
-            state,
-            sortBy,
-            sortOrder,
+            isActive
         } = req.query
 
         if(!page || !limit){
@@ -148,6 +146,38 @@ export const updateProductController = async (req: Request, res: Response, next:
         return res.status(500).json({
             ok: false,
             error: "Error interno del servidor al validar la actualización del producto, por favor intente nuevamente."
+        })
+    }
+}
+
+export const changeCategoryStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const {
+            category_id,
+            status,
+        } = req.params as unknown as UpdateCategoryStatusSchema
+
+        if(!category_id || !status){
+            return res.status(400).json({
+                ok: false,
+                error: "Faltan parametros obligatorios: category_id, status."
+            })
+        }
+
+        const statusNumber = parseInt(status as string);
+        if(![1,2,3].includes(statusNumber) || isNaN(statusNumber)){
+            return res.status(400).json({
+                ok: false,
+                error: "El parametro status debe ser activo(1), inactivo(2) o eliminado(3)."
+            })
+        }
+
+        next()
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            ok: false,
+            error: "Error interno del servidor al validar esta solicitud, por favor intente nuevamente."
         })
     }
 }
