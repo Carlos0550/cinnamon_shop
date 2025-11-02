@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useGetAllCategories } from "../Api/CategoriesApi";
-import { notifications } from "@mantine/notifications";
 
-import {  getAllProducts, saveProduct, updateProduct, type Product, type ProductState } from "../Api/ProductsApi";
+import { useSaveProduct, useUpdateProduct, type Product, type ProductState } from "../Api/ProductsApi";
 
 export type ProductFormValues = {
   title: string;
@@ -41,8 +39,9 @@ const PRODUCT_STATE_OPTIONS: { value: ProductState; label: string }[] = (
 ).map((value) => ({ value, label: PRODUCT_STATE_META[value].label }));
 
 export default function ProductForm({ product, onSuccess, onCancel }: ProductFormProps & { product?: Product | null }) {
-  const queryClient = useQueryClient();
   const {data: categories = []} = useGetAllCategories();
+  const saveProductMutation = useSaveProduct();
+  const updateProductMutation = useUpdateProduct();
   const [formValues, setFormValues] = useState<ProductFormValues>({
     title: "",
     price: "",
@@ -92,33 +91,15 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     }));
   };
 
-  const handleSubmit = useMutation({
-    mutationFn: product ? updateProduct : saveProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      notifications.show({
-        title: "Éxito",
-        message: "Producto guardado correctamente",
-        color: "green",
-        autoClose: 3000,
-      });
-      queryClient.prefetchQuery({
-        queryKey: ["products"],
-        queryFn: ({ pageParam = 1 }) => getAllProducts({ page: pageParam as number, limit: 10, state: 'active' })
-      });
-      onSuccess?.();
-      onCancel?.();
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      notifications.show({
-        title: "Error",
-        message: message || "No se pudo guardar el producto",
-        color: "red",
-        autoClose: 3000,
-      });
-    }
-  })
+  const handleSubmit = () => {
+    const mutation = product ? updateProductMutation : saveProductMutation;
+    mutation.mutate(formValues, {
+      onSuccess: () => {
+        onSuccess?.();
+        onCancel?.();
+      }
+    });
+  };
 
   const capitalizeFirstLetter = (str: string) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -219,8 +200,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
          </Stack>
        )}
       <Group justify="flex-end" mt="md">
-        <Button onClick={() => handleSubmit.mutate(formValues)} loading={handleSubmit.isPending}>
-          {handleSubmit.isPending ? "Guardando..." : "Guardar"}
+        <Button onClick={handleSubmit} loading={product ? updateProductMutation.isPending : saveProductMutation.isPending}>
+          {(product ? updateProductMutation.isPending : saveProductMutation.isPending) ? "Guardando..." : "Guardar"}
         </Button>
       </Group>
     </Stack>

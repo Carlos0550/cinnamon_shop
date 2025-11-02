@@ -1,4 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppContext } from "@/Context/AppContext";
+import { notifications } from "@mantine/notifications";
 import { baseUrl } from "./index";
 
 export type Category_info = {
@@ -59,50 +61,78 @@ type SaveProductPayload = {
   productId?: string;
 };
 
-export const saveProduct = async (value: SaveProductPayload) => {
-  try {
-    const formData = new FormData();
-    formData.append("title", value.title);
-    formData.append("price", String(value.price));
-    formData.append("active", String(value.active));
-    if (value.tags) {
-      formData.append("tags", JSON.stringify(value.tags));
+export const useSaveProduct = () => {
+  const queryClient = useQueryClient();
+  const {
+    auth: {
+      token
     }
-    if (value.category) {
-      formData.append("category_id", value.category);
-    }
-    if (value.description) {
-      formData.append("description", value.description);
-    }
-    if (value.productId) {
-      formData.append("product_id", value.productId);
-    }
-    if (Array.isArray(value.existingImageUrls)) {
-      formData.append("existing_image_urls", JSON.stringify(value.existingImageUrls));
-    }
-    if (Array.isArray(value.deletedImageUrls)) {
-      formData.append("deleted_image_urls", JSON.stringify(value.deletedImageUrls));
-    }
-    value.images.forEach((image: File) => {
-      formData.append("productImages", image);
-    });
+  } = useAppContext();
 
-    const res = await fetch(baseUrl + "/save-product", {
-      method: "POST",
-      body: formData,
-    });
+  return useMutation({
+    mutationKey: ["saveProduct"],
+    mutationFn: async (value: SaveProductPayload) => {
+      try {
+        const formData = new FormData();
+        formData.append("title", value.title);
+        formData.append("price", String(value.price));
+        formData.append("active", String(value.active));
+        if (value.tags) {
+          formData.append("tags", JSON.stringify(value.tags));
+        }
+        if (value.category) {
+          formData.append("category_id", value.category);
+        }
+        if (value.description) {
+          formData.append("description", value.description);
+        }
+        if (value.productId) {
+          formData.append("product_id", value.productId);
+        }
+        if (Array.isArray(value.existingImageUrls)) {
+          formData.append("existing_image_urls", JSON.stringify(value.existingImageUrls));
+        }
+        if (Array.isArray(value.deletedImageUrls)) {
+          formData.append("deleted_image_urls", JSON.stringify(value.deletedImageUrls));
+        }
+        value.images.forEach((image: File) => {
+          formData.append("productImages", image);
+        });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData?.error || "Error creando el producto");
+        const res = await fetch(baseUrl + "/save-product", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData?.error || "Error creando el producto");
+        }
+
+        return res.json();
+      } catch (error: unknown) {
+        console.log(error);
+        if (error instanceof Error) throw error;
+        throw new Error(String(error));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({
+        message: "Producto creado con éxito",
+        color: "green"
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        message: error?.message ?? "Error al crear el producto",
+        color: "red"
+      });
     }
-
-    return res.json();
-  } catch (error: unknown) {
-    console.log(error);
-    if (error instanceof Error) throw error;
-    throw new Error(String(error));
-  }
+  });
 };
 
 export type GetProductsParams = {
@@ -121,9 +151,16 @@ export type GetProductsParams = {
 export const useGetAllProducts = (
   params: GetProductsParams = { page: 1, limit: 10, state: 'active' }
 ) => {
+  const {
+    auth: {
+      token
+    }
+  } = useAppContext();
+
   return useQuery<GetProductsResponse, Error>({
     queryKey: ["products", params],
-    queryFn: () => getAllProducts(params),
+    queryFn: () => getAllProducts(params, token),
+    enabled: !!token,
   });
 };
 
@@ -146,11 +183,16 @@ const buildQueryString = (queryParams: GetProductsParams): string => {
 };
 
 export const getAllProducts = async (
-  queryParams: GetProductsParams
+  queryParams: GetProductsParams,
+  token: string | null
 ): Promise<GetProductsResponse> => {
   try {
     const qs = buildQueryString(queryParams);
-    const res = await fetch(`${baseUrl}/products?${qs}`);
+    const res = await fetch(`${baseUrl}/products?${qs}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+      },
+    });
     const json = await res.json();
     if (!res.ok) {
       throw new Error(json?.error || "Error obteniendo los productos");
@@ -181,67 +223,123 @@ export const getAllProducts = async (
   }
 };
 
-export const deleteProduct = async (id: string) => {
-  try {
-    const res = await fetch(`${baseUrl}/products/${id}`, {
-      method: "DELETE",
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      throw new Error(json?.error || "Error eliminando el producto");
+export const useDeleteProduct = () => {
+  const queryClient = useQueryClient();
+  const {
+    auth: {
+      token
     }
-    return json;
-  } catch (error: unknown) {
-    console.log(error);
-    if (error instanceof Error) throw error;
-    throw new Error(String(error));
-  }
+  } = useAppContext();
+
+  return useMutation({
+    mutationKey: ["deleteProduct"],
+    mutationFn: async (id: string) => {
+      try {
+        const res = await fetch(`${baseUrl}/products/${id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json?.error || "Error eliminando el producto");
+        }
+        return json;
+      } catch (error: unknown) {
+        console.log(error);
+        if (error instanceof Error) throw error;
+        throw new Error(String(error));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({
+        message: "Producto eliminado con éxito",
+        color: "green"
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        message: error?.message ?? "Error al eliminar el producto",
+        color: "red"
+      });
+    }
+  });
 };
 
 
-export const updateProduct = async (value: SaveProductPayload) => {
-  try {
-    const formData = new FormData();
-    formData.append("title", value.title);
-    formData.append("price", String(value.price));
-    formData.append("active", String(value.active));
-    if (value.tags) {
-      formData.append("tags", JSON.stringify(value.tags));
+export const useUpdateProduct = () => {
+  const queryClient = useQueryClient();
+  const {
+    auth: {
+      token
     }
-    if (value.category) {
-      formData.append("category_id", value.category);
-    }
-    if (value.description) {
-      formData.append("description", value.description);
-    }
-    if (value.productId) {
-      formData.append("product_id", value.productId);
-    }
-    if (Array.isArray(value.existingImageUrls)) {
-      formData.append("existing_image_urls", JSON.stringify(value.existingImageUrls));
-    }
-    if (Array.isArray(value.deletedImageUrls)) {
-      formData.append("deleted_image_urls", JSON.stringify(value.deletedImageUrls));
-    }
-    value.images.forEach((image: File) => {
-      formData.append("productImages", image);
-    });
+  } = useAppContext();
 
-    console.log("Actualizando producto...")
-    const res = await fetch(baseUrl + "/products/" + value.productId, {
-      method: "PUT",
-      body: formData,
-    });
+  return useMutation({
+    mutationKey: ["updateProduct"],
+    mutationFn: async (value: SaveProductPayload) => {
+      try {
+        const formData = new FormData();
+        formData.append("title", value.title);
+        formData.append("price", String(value.price));
+        formData.append("active", String(value.active));
+        if (value.tags) {
+          formData.append("tags", JSON.stringify(value.tags));
+        }
+        if (value.category) {
+          formData.append("category_id", value.category);
+        }
+        if (value.description) {
+          formData.append("description", value.description);
+        }
+        if (value.productId) {
+          formData.append("product_id", value.productId);
+        }
+        if (Array.isArray(value.existingImageUrls)) {
+          formData.append("existing_image_urls", JSON.stringify(value.existingImageUrls));
+        }
+        if (Array.isArray(value.deletedImageUrls)) {
+          formData.append("deleted_image_urls", JSON.stringify(value.deletedImageUrls));
+        }
+        value.images.forEach((image: File) => {
+          formData.append("productImages", image);
+        });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData?.error || "Error actualizando el producto");
+        console.log("Actualizando producto...")
+        const res = await fetch(baseUrl + "/products/" + value.productId, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData?.error || "Error actualizando el producto");
+        }
+        console.log("Actualizacion exitosa", res)
+        return res.json();
+      } catch (error: unknown) {
+        console.log(error);
+        if (error instanceof Error) throw error;
+        throw new Error(String(error));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({
+        message: "Producto actualizado con éxito",
+        color: "green"
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        message: error?.message ?? "Error al actualizar el producto",
+        color: "red"
+      });
     }
-    console.log("Actualizacion exitosa", res)
-    return res.json();
-  } catch (error: unknown) {
-    console.log(error);
-    if (error instanceof Error) throw error;
-    throw new Error(String(error));
-  }
+  });
 };

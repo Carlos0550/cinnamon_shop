@@ -3,10 +3,8 @@ import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, G
 import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiEdit, FiTrash, FiEye } from 'react-icons/fi';
-import { deleteProduct, useGetAllProducts, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
+import { useDeleteProduct, useGetAllProducts, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
 import ModalWrapper from '@/components/Common/ModalWrapper';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { showNotification } from '@mantine/notifications';
 import dummyImage from '@/assets/dummy_image.png';
 import ProductForm from './ProductForm';
 
@@ -16,7 +14,7 @@ function ProductTable({
 }: {
   setAddOpened: (opened: boolean) => void;
 }) {
-  const queryClient = useQueryClient();
+  const deleteProductMutation = useDeleteProduct();
 
   const [search, setSearch] = useState<string>("");
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints?.sm || '768px'})`);
@@ -62,25 +60,13 @@ function ProductTable({
   const products: Product[] = data?.products ?? [];
   const pagination = data?.pagination;
 
-  const deleteImage = useMutation({
-    mutationFn: (id: string) => deleteProduct(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      setSearchParams(prev => ({ ...prev }));
-      showNotification({
-        message: 'Producto eliminado con éxito',
-        color: 'green',
-        autoClose: 3000,
-      });
-    },
-    onError: (error: Error) => {
-      showNotification({
-        message: error.message || 'Error al eliminar el producto',
-        color: 'red',
-        autoClose: 3000,
-      });
-    },
-  })
+  const deleteImage = (id: string) => {
+    deleteProductMutation.mutate(id, {
+      onSuccess: () => {
+        setSearchParams(prev => ({ ...prev }));
+      }
+    });
+  };
 
   const renderBadgeByState = (state: ProductState) => {
     switch (state) {
@@ -243,7 +229,7 @@ function ProductTable({
                         <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
                           <FiEye />
                         </ActionIcon>
-                        <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => deleteImage.mutate(p.id)}>
+                        <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => deleteImage(p.id)}>
                           <FiTrash />
                         </ActionIcon>
                          <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
@@ -326,7 +312,6 @@ function ProductTable({
           <ProductForm
             product={editing}
             onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ['products'] });
               setEditing(null);
               setViewOpened(false);
             }}
