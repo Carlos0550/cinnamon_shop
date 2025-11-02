@@ -2,8 +2,8 @@ import { theme } from '@/theme';
 import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table, Select } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
-import { FiPlus, FiSearch, FiEdit, FiTrash, FiEye } from 'react-icons/fi';
-import { useDeleteProduct, useGetAllProducts, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
+import { FiPlus, FiSearch, FiEdit, FiEye } from 'react-icons/fi';
+import { useGetAllProducts, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
 import ModalWrapper from '@/components/Common/ModalWrapper';
 import dummyImage from '@/assets/dummy_image.png';
 import ProductForm from './ProductForm';
@@ -14,7 +14,7 @@ function ProductTable({
 }: {
   setAddOpened: (opened: boolean) => void;
 }) {
-  const deleteProductMutation = useDeleteProduct();
+  //const deleteProductMutation = useDeleteProduct();
 
   const [search, setSearch] = useState<string>("");
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints?.sm || '768px'})`);
@@ -60,13 +60,13 @@ function ProductTable({
   const products: Product[] = data?.products ?? [];
   const pagination = data?.pagination;
 
-  const deleteImage = (id: string) => {
-    deleteProductMutation.mutate(id, {
-      onSuccess: () => {
-        setSearchParams(prev => ({ ...prev }));
-      }
-    });
-  };
+  // const deleteImage = (id: string) => {
+  //   deleteProductMutation.mutate(id, {
+  //     onSuccess: () => {
+  //       setSearchParams(prev => ({ ...prev }));
+  //     }
+  //   });
+  // };
 
   const renderBadgeByState = (state: ProductState) => {
     switch (state) {
