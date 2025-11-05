@@ -4,6 +4,7 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { PromoCreateRequestSchema, DeletePromoRequestSchema } from '@/modules/Promos/services/promo.zod';
 import { SaveProductRequestSchema, SaveCategoryRequestSchema, GetProductsQuerySchema, UpdateProductRequestSchema } from '@/modules/Products/services/product.zod';
 import { LoginRequestSchema, RegisterRequestSchema, NewUserRequestSchema, GetUsersQuerySchema } from '@/modules/User/services/user.zod';
+import { SalesSchema } from '@/modules/Sales/services/schemas/sales.zod';
 extendZodWithOpenApi(z);
 
 const registry = new OpenAPIRegistry();
@@ -24,6 +25,7 @@ registry.register('LoginRequest', LoginRequestSchema);
 registry.register('RegisterRequest', RegisterRequestSchema);
 registry.register('NewUserRequest', NewUserRequestSchema);
 registry.register('GetUsersQuery', GetUsersQuerySchema);
+registry.register('SalesSaveRequest', SalesSchema);
 
 
 registry.registerPath({
@@ -161,6 +163,22 @@ registry.registerPath({
   responses: {
     201: { description: 'Producto creado' },
     400: { description: 'Validación inválida' },
+  },
+});
+
+// Sales
+registry.registerPath({
+  method: 'post',
+  path: '/sales/save',
+  summary: 'Guardar una venta',
+  security: [{ bearerAuth: [] }],
+  request: {
+    body: { content: { 'application/json': { schema: SalesSchema } } },
+  },
+  responses: {
+    200: { description: 'Venta guardada exitosamente' },
+    400: { description: 'Validación inválida o datos incompletos' },
+    500: { description: 'Error interno del servidor' },
   },
 });
 

@@ -6,6 +6,7 @@ import { pingRedis } from '@/config/redis';
 import UserRouter from '@/modules/User/routes';
 import ProductRouter from '@/modules/Products/routes';
 import PromoRouter from '@/modules/Promos/routes';
+import SalesRouter from '@/modules/Sales/routes';
 import { initUploadsCleanupJob } from './jobs/cleanupUploads';
 import swaggerUi from 'swagger-ui-express';
 import spec from './docs/openapi';
@@ -38,6 +39,7 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api', UserRouter);
 app.use("/api/products", ProductRouter)
 app.use("/api/promos", PromoRouter)
+app.use("/api/sales", SalesRouter)
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
 app.get('/docs.json', (_req, res) => res.json(spec));
 

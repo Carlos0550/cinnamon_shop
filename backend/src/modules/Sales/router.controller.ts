@@ -1,0 +1,36 @@
+import { Request, Response } from "express";
+import SalesServices from "./services/sales.services";
+import { SaleRequest } from "./services/schemas/sales.schemas";
+
+export const saveSale = async (req: Request, res: Response) => {
+    try {
+        const request = req.body as SaleRequest;
+
+        if(!request.payment_method || !request.source || !request.product_ids){
+            return res.status(400).json({
+                success: false,
+                message: "Faltan datos obligatorios para guardar la venta."
+            })
+        }
+        const response = await SalesServices.saveSale(request);
+        if(response === true){
+            res.status(200).json({
+                success: true,
+                message: "Venta guardada exitosamente."
+            })
+        } else {
+            res.status(400).json({
+                success: false,
+                err: response.message,
+                message: "Error al guardar la venta, por favor intente nuevamente."
+            })
+        }
+    } catch (error: any) {
+        console.log(error.message);
+        res.status(500).json({
+            success: false,
+            err: error.message,
+            message: "Error interno del servidor al guardar la venta, por favor intente nuevamente."
+        })
+    }
+}

@@ -36,6 +36,18 @@ enum CategoryStatus {
 
 }
 
+enum SaleSource {
+  WEB
+  CAJA
+}
+
+enum PaymentMethod {
+  TARJETA
+  EFECTIVO
+  QR
+  NINGUNO
+}
+
 model User {
   id             Int      @id @default(autoincrement())
   email          String   @unique
@@ -46,6 +58,8 @@ model User {
   updated_at     DateTime @updatedAt
   role           Int      @default(2)
   created_promos Promos[] @relation("PromosCreatedBy")
+
+  sales Sales[]
 }
 
 model Categories {
@@ -73,6 +87,7 @@ model Products {
   stock       Int          @default(1)
   category    Categories?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   promos      Promos[]
+  sales       Sales[]
 }
 
 model Promos {
@@ -100,4 +115,20 @@ model Promos {
   updated_at       DateTime     @updatedAt
   createdById      Int?
   created_by       User?        @relation("PromosCreatedBy", fields: [createdById], references: [id])
+
 }
+
+model Sales {
+  id             String         @id @default(cuid())
+  payment_method PaymentMethod
+  source         SaleSource
+  total          Float          @default(0.00)
+  created_at     DateTime       @default(now())
+  userId         Int?
+  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  products       Products[]
+
+  @@index([created_at])
+  @@index([userId])
+}
+
