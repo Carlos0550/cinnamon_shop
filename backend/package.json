@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/server.ts",
     "build": "tsc && tsc-alias",
+    "postbuild": "node scripts/copy-static.js",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1"
