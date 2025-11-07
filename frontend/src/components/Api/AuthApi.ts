@@ -7,7 +7,7 @@ export const useCreateUser = () => {
     return useMutation({
         mutationKey: ["createUser"],
         mutationFn: async ({ name, email, role_id }: { name: string, email: string, role_id: string }) => {
-            const response = await fetch(`${baseUrl}/users/new`, {
+            const response = await fetch(`${baseUrl}/new`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
