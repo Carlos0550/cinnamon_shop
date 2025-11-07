@@ -10,4 +10,5 @@ export const SalesSchema = z.object({
     user_sale: z.object({
         user_id: z.string().optional(),
     }).optional(),
-})
+    tax: z.number().optional(),
+})  

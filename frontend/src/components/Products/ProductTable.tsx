@@ -56,17 +56,8 @@ function ProductTable({
   }, [search]);
 
   const { data, isLoading, isError } = useGetAllProducts(searchParams);
-  console.log(data)
   const products: Product[] = data?.products ?? [];
   const pagination = data?.pagination;
-
-  // const deleteImage = (id: string) => {
-  //   deleteProductMutation.mutate(id, {
-  //     onSuccess: () => {
-  //       setSearchParams(prev => ({ ...prev }));
-  //     }
-  //   });
-  // };
 
   const renderBadgeByState = (state: ProductState) => {
     switch (state) {

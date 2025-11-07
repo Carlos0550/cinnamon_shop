@@ -42,9 +42,9 @@ export function Sales() {
                     fullScreen={isMobile}
                     opened={opened}
                     onClose={handleToggle}
-                    title="Realizar Venta"
+                    title={<Text fw={600} fz="lg" mb="md">Formulario de Venta</Text>}
                 >
-                    <SalesForm />
+                    <SalesForm onClose={handleToggle} />
                 </ModalWrapper>
             }
         </Box>

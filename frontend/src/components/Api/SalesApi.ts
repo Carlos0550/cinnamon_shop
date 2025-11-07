@@ -1,0 +1,42 @@
+import { useMutation } from "@tanstack/react-query"
+import type { SaleRequest } from "../Sales/SalesForm"
+import { baseUrl } from "."
+import { useAppContext } from "@/Context/AppContext"
+import { showNotification } from "@mantine/notifications"
+
+export const useSaveSale = () => {
+    const {
+        auth: { token }
+    } = useAppContext()
+    return useMutation({
+        mutationKey: ["save-sale"],
+        mutationFn: async (request: SaleRequest) => {
+            const api = new URL(baseUrl + "/sales/save")
+            
+            const result = await fetch(api, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                method: "POST",
+                body: JSON.stringify(request),
+            })
+
+            return await result.json()
+        },
+        onSuccess: (data: any) => {
+            if (data?.success) {
+                showNotification({
+                    message: "Venta guardada con éxito",
+                    color: "green",
+                })
+            }
+        },
+        onError: (error: any) => {
+            showNotification({
+                message: (error as Error)?.message || "Error al guardar la venta",
+                color: "red",
+            })
+        },
+    })
+}

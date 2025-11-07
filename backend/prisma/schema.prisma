@@ -60,6 +60,10 @@ model User {
   created_promos Promos[] @relation("PromosCreatedBy")
 
   sales Sales[]
+
+  @@index([is_active])
+  @@index([role])
+  @@index([created_at])
 }
 
 model Categories {
@@ -71,6 +75,10 @@ model Categories {
   status      CategoryStatus @default(active)
   products   Products[]
   promos     Promos[]
+
+  @@index([status, is_active])
+  @@index([created_at])
+  @@index([title])
 }
 
 model Products {
@@ -88,6 +96,12 @@ model Products {
   category    Categories?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   promos      Promos[]
   sales       Sales[]
+
+  @@index([categoryId])
+  @@index([categoryId, is_active])
+  @@index([is_active, state])
+  @@index([created_at])
+  @@index([price])
 }
 
 model Promos {
@@ -116,6 +130,10 @@ model Promos {
   createdById      Int?
   created_by       User?        @relation("PromosCreatedBy", fields: [createdById], references: [id])
 
+  @@index([is_active])
+  @@index([show_in_home, is_active])
+  @@index([start_date, end_date])
+  @@index([createdById])
 }
 
 model Sales {
@@ -125,10 +143,13 @@ model Sales {
   total          Float          @default(0.00)
   created_at     DateTime       @default(now())
   userId         Int?
+  tax            Float          @default(0.00)
   user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   products       Products[]
 
   @@index([created_at])
   @@index([userId])
+  @@index([source, created_at])
+  @@index([payment_method, created_at])
 }
 

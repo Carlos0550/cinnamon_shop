@@ -13,4 +13,5 @@ export type SaleRequest = {
     source: SaleSource
     product_ids: string[]
     user_sale?: UserSale
+    tax?: number
 }

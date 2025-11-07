@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nueva venta realizada</title>
+</head>
+<body style="margin:0; padding:0; background:#F3E8FF; font-family:Segoe UI, Arial, sans-serif; color:#2B2B2B;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F3E8FF;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px; width:100%;">
+          <tr>
+            <td style="background:#6D28D9; color:#FFFFFF; padding:16px 20px; border-radius:12px 12px 0 0; text-align:center;">
+              <div style="font-size:18px; letter-spacing:0.3px;">Cinnamon</div>
+              <div style="font-size:14px; opacity:0.95;">Nueva venta realizada</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#2B2B2B; color:#FFFFFF; padding:28px 24px;">
+              <h1 style="margin:0 0 12px; font-size:22px; color:#FF6DAA;">Nueva venta realizada</h1>
+              <p style="margin:0 0 8px; font-size:14px; line-height:1.6; color:#F8F8F8;">Resumen de la venta hecha el día {{sale_date}}.</p>
+              <p style="margin:0 0 6px; font-size:14px; color:#DDD;">ID de venta: <strong style="color:#FF6DAA;">{{sale_id}}</strong></p>
+              <p style="margin:0 0 6px; font-size:14px; color:#DDD;">Fecha: <strong style="color:#FF6DAA;">{{sale_date}}</strong></p>
+              <p style="margin:0 0 6px; font-size:14px; color:#DDD;">Cliente: <strong style="color:#FF6DAA;">{{buyer_name}}</strong> <span style="color:#AAA;">({{buyer_email}})</span></p>
+              <p style="margin:0 0 6px; font-size:14px; color:#DDD;">Fuente: <strong style="color:#FF6DAA;">{{source}}</strong></p>
+              <p style="margin:0 0 16px; font-size:14px; color:#DDD;">Método de pago: <strong style="color:#FF6DAA;">{{payment_method}}</strong></p>
+
+              <div style="margin:12px 0 16px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#1F1F1F; border-radius:8px; overflow:hidden;">
+                  <thead>
+                    <tr style="background:#111; color:#BBB; text-align:left;">
+                      <th style="padding:10px 12px; font-size:13px;">Producto</th>
+                      <th style="padding:10px 12px; font-size:13px; text-align:right;">Precio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{products_list}}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="background:#1F1F1F; border-radius:8px; padding:12px 14px; color:#EEE;">
+                <p style="margin:0 0 6px; font-size:14px;">Subtotal: <strong style="color:#FF6DAA;">{{subtotal}}</strong></p>
+                <p style="margin:0 0 6px; font-size:14px;">Impuesto ({{tax_percent}}%): <strong style="color:#FF6DAA;">{{tax}}</strong></p>
+                <p style="margin:0; font-size:16px; font-weight:700;">Total final: <strong style="color:#FF6DAA;">{{final_total}}</strong></p>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#1F1F1F; color:#BBB; padding:14px 20px; border-radius:0 0 12px 12px; text-align:center; font-size:12px;">
+              © {{year}} Cinnamon. Todas los derechos reservados.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  
+</body>
+</html>

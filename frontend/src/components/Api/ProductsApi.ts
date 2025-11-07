@@ -190,7 +190,7 @@ const buildQueryString = (queryParams: GetProductsParams): string => {
   return qs.toString();
 };
 
-export const getAllProducts = async (
+const getAllProducts = async (
   queryParams: GetProductsParams,
   token: string | null
 ): Promise<GetProductsResponse> => {
