@@ -183,6 +183,25 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get',
+  path: '/sales',
+  summary: 'Listar ventas con paginación',
+  security: [{ bearerAuth: [] }],
+  request: {
+    query: z.object({
+      page: z.string().optional(),
+      per_page: z.string().optional(),
+      limit: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: { description: 'Ventas obtenidas' },
+    400: { description: 'Error en parámetros de consulta' },
+    500: { description: 'Error interno del servidor' },
+  },
+});
+
+registry.registerPath({
   method: 'post',
   path: '/products/categories',
   summary: 'Crear categoría',

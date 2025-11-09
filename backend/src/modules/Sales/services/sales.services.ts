@@ -5,7 +5,7 @@ import { sale_email_html } from "@/templates/sale_email";
 
 
 class SalesServices {
-    async saveSale(request: SaleRequest){
+    async saveSale(request: SaleRequest) {
         const { payment_method, source, product_ids, user_sale } = request;
         const { user_id } = user_sale || {};
 
@@ -81,6 +81,46 @@ class SalesServices {
                 console.error('Error sending sale email', err);
             }
             return true
+        } catch (error) {
+            const error_msg = error instanceof Error ? error.message : String(error);
+            console.log(error);
+            return {
+                success: false,
+                message: error_msg
+            }
+        }
+    }
+
+    async getSales({ page = 1, per_page = 5 }: { page?: number, per_page?: number }) {
+        try {
+            const take = Math.max(1, Number(per_page) || 5);
+            const currentPage = Math.max(1, Number(page) || 1);
+            const skip = (currentPage - 1) * take;
+
+            const [total, sales] = await Promise.all([
+                await prisma.sales.count(),
+                await prisma.sales.findMany({
+                    skip,
+                    take,
+                    include: {
+                        products: true,
+                        user: true
+                    },
+                    orderBy: [{ created_at: 'desc' } as any]
+                })
+            ])
+
+            const totalPages = Math.ceil(total / take) || 1;
+            const pagination = {
+                total,
+                page: currentPage,
+                limit: take,
+                totalPages,
+                hasNextPage: currentPage < totalPages,
+                hasPrevPage: currentPage > 1,
+            };
+
+            return { sales, pagination };
         } catch (error) {
             const error_msg = error instanceof Error ? error.message : String(error);
             console.log(error);

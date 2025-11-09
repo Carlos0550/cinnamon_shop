@@ -22,6 +22,9 @@ router.get("/categories", requireAuth, requireRole([1]), (req, res) => product_s
 
 router.get("/", requireAuth, getAllProducts, requireRole([1]),(req, res) => product_service.getAllProducts(req, res))
 
+// Public endpoint for shop to fetch active products without authentication
+router.get("/public", (req, res) => product_service.getPublicProducts(req, res))
+
 router.delete("/:product_id", requireAuth,requireRole([1]), (req, res) => product_service.deleteProduct(req, res))
 
 router.put(

@@ -586,6 +586,66 @@ class ProductServices {
             });
         }
     }
+
+    // Public products endpoint: returns active products, no auth required
+    async getPublicProducts(req: Request, res: Response) {
+        try {
+            const page = Number(req.query.page) || 1;
+            const limit = Number(req.query.limit) || 12;
+            const skip = (page - 1) * limit;
+
+            const title = (req.query.title as string) || undefined;
+            const categoryId = (req.query.categoryId as string) || undefined;
+            const sortBy = (req.query.sortBy as string) || undefined;
+            const sortOrder = (req.query.sortOrder as "asc" | "desc") || "asc";
+
+            const where: any = {
+                is_active: true,
+                state: "active",
+            };
+
+            if (title) {
+                where.title = { contains: title, mode: "insensitive" };
+            }
+            if (categoryId) {
+                where.categoryId = categoryId;
+            }
+
+            const [totalProducts, products] = await Promise.all([
+                prisma.products.count({ where }),
+                prisma.products.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    include: { category: true },
+                    orderBy: sortBy ? [{ [sortBy]: sortOrder }] : [{ created_at: "desc" }],
+                }),
+            ]);
+
+            const totalPages = Math.ceil(totalProducts / limit) || 1;
+
+            return res.status(200).json({
+                ok: true,
+                data: {
+                    products,
+                    pagination: {
+                        total: totalProducts,
+                        page,
+                        limit,
+                        totalPages,
+                        hasNextPage: page < totalPages,
+                        hasPrevPage: page > 1,
+                    },
+                },
+            });
+        } catch (error) {
+            console.error("Error al obtener productos públicos:", error);
+            return res.status(500).json({
+                ok: false,
+                error: "Error al obtener los productos públicos",
+            });
+        }
+    }
 }
 
 export default ProductServices

@@ -1,265 +1,276 @@
-import { Badge, Box, Group, Paper, ScrollArea, Table, Text, Stack, Modal, Divider, List } from "@mantine/core";
-import { useMediaQuery, useDisclosure } from "@mantine/hooks";
-import { useState } from "react";
-
-// Tipos locales para evitar dependencias externas
-export type Product = {
-  id: number;
-  name: string;
-  price: number;
-  available?: boolean;
-  sku?: string;
-};
+import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea } from "@mantine/core"
+import { useMediaQuery } from "@mantine/hooks"
+import { theme } from "@/theme"
+import type { Product } from "../Api/ProductsApi"
+import { useGetSales } from "../Api/SalesApi"
+import type { PaymentMethods, SaleSource } from "./SalesForm"
+import ModalWrapper from "@/components/Common/ModalWrapper"
+import { useMemo, useState } from "react"
 
 export type Sales = {
-  id: number;
-  created_at: string;
-  total: number;
-  payment_method: "Efectivo" | "Tarjeta" | "Transferencia" | "QR";
-  source: "Caja" | "Web"
-  products: Product[];
-  buyer?: {
-    name: string;
-    email?: string;
-    phone?: string;
-  };
-};
+  id: string,
+  created_at: string,
+  payment_method: PaymentMethods
+  source: SaleSource
+  tax: number,
+  total: number,
+  user?: {
+    id?: string,
+    name?: string,
+    email?: string,
+  } | null,
+  products: Product[]
+}
 
-const mockSales: Sales[] = [
-  {
-    id: 1001,
-    created_at: "2025-10-24T10:35:00Z",
-    total: 24.5,
-    payment_method: "Efectivo",
-    products: [
-      { id: 1, name: "Latte", price: 4.5, available: true, sku: "LAT-001" },
-      { id: 2, name: "Croissant", price: 3.0, available: true, sku: "CRO-101" },
-      { id: 3, name: "Scone", price: 4.0, available: false, sku: "SCN-050" },
-      { id: 4, name: "Americano", price: 3.5, available: true, sku: "AME-002" },
-      { id: 5, name: "Té Verde", price: 2.5, available: true, sku: "TEA-200" },
-      { id: 6, name: "Galleta", price: 2.0, available: true, sku: "GAL-010" },
-      { id: 7, name: "Muffin", price: 5.0, available: true, sku: "MUF-015" },
-    ],
-    source: "Caja",
-  },
-  {
-    id: 1002,
-    created_at: "2025-10-24T12:10:00Z",
-    total: 12.0,
-    payment_method: "Tarjeta",
-    products: [
-      { id: 8, name: "Cappuccino", price: 3.5, available: true, sku: "CAP-009" },
-      { id: 9, name: "Tostada", price: 2.5, available: true, sku: "TOS-023" },
-      { id: 10, name: "Jugo Naranja", price: 3.0, available: true, sku: "JUG-300" },
-      { id: 11, name: "Brownie", price: 3.0, available: false, sku: "BRO-501" },
-    ],
-    buyer: { name: "Luis García", email: "luis.garcia@example.com", phone: "+34 600 789 012" },
-    source: "Web",
-  },
-  {
-    id: 1003,
-    created_at: "2025-10-25T09:05:00Z",
-    total: 8.5,
-    payment_method: "Transferencia",
-    products: [
-      { id: 12, name: "Americano", price: 3.0, available: true, sku: "AME-002" },
-      { id: 13, name: "Medialuna", price: 2.5, available: true, sku: "MED-020" },
-      { id: 14, name: "Cookie", price: 3.0, available: true, sku: "COO-070" },
-    ],
-    source: "Caja",
-  },
-  {
-    id: 1004,
-    created_at: "2025-10-25T14:20:00Z",
-    total: 15.75,
-    payment_method: "QR",
-    products: [
-      { id: 15, name: "Flat White", price: 4.0, available: true, sku: "FLW-007" },
-      { id: 16, name: "Sandwich", price: 6.5, available: false, sku: "SAN-120" },
-      { id: 17, name: "Té Chai", price: 5.25, available: true, sku: "CHAI-222" },
-    ],
-    buyer: { name: "Carlos Díaz", email: "carlos.diaz@example.com", phone: "+34 600 456 789" },
-    source: "Web",
-  },
-];
+export default function SalesTable() {
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [perPage, setPerPage] = useState<number>(5)
 
-function formatCurrency(value: number): string {
-  try {
-    return new Intl.NumberFormat("es-ES", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 2,
-    }).format(value);
-  } catch {
-    return `${value.toFixed(2)} €`;
+  const { data, isLoading } = useGetSales(currentPage, perPage)
+
+  const sales: Sales[] = (data?.sales ?? []) as Sales[]
+  const pagination = data?.pagination as undefined | {
+    total: number,
+    page: number,
+    limit: number,
+    totalPages: number,
+    hasNextPage: boolean,
+    hasPrevPage: boolean,
   }
-}
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints?.sm || '768px'})`)
+  const currency = useMemo(() => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }), [])
 
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  return date.toLocaleString("es-ES", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+  const [viewProductsOpen, setViewProductsOpen] = useState<boolean>(false)
+  const [selectedSale, setSelectedSale] = useState<Sales | null>(null)
 
-function SalesTable() {
-  const isSmall = useMediaQuery("(max-width: 48em)"); // ~768px
-  const [opened, { open, close }] = useDisclosure(false);
-  const [selectedSale, setSelectedSale] = useState<Sales | null>(null);
+  const openProducts = (sale: Sales) => {
+    setSelectedSale(sale)
+    setViewProductsOpen(true)
+  }
 
-  const openSale = (sale: Sales) => {
-    setSelectedSale(sale);
-    open();
-  };
+  const closeProducts = () => {
+    setViewProductsOpen(false)
+    setSelectedSale(null)
+  }
+
+  const formatDate = (value?: string) => {
+    if (!value) return "—"
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? String(value) : d.toLocaleString('es-AR')
+  }
+
+  if (isLoading) {
+    return (
+      <Group justify="center" align="center" h={200}>
+        <Loader />
+      </Group>
+    )
+  }
+
+  if (!sales || sales.length === 0) {
+    return (
+      <Text ta="center">No se encontraron ventas</Text>
+    )
+  }
 
   return (
-    <Box mt="lg">
-      {isSmall ? (
-        <StackCards sales={mockSales} onOpenSale={openSale} />
+    <Box>
+      {isMobile ? (
+        <Stack>
+          {sales.map((sale) => {
+            const subtotal = Number(sale.total) || 0
+            const taxPct = Number(sale.tax) || 0
+            const taxAmount = subtotal * (taxPct / 100)
+            const finalTotal = subtotal + taxAmount
+            return (
+              <Paper key={sale.id} withBorder p="md" radius="md">
+                <Stack gap="xs">
+                  <Group justify="space-between">
+                    <Text fw={600}>Venta #{sale.id}</Text>
+                    <Badge variant="light">{sale.source}</Badge>
+                  </Group>
+                  <Text c="dimmed">Fecha: {formatDate(sale.created_at)}</Text>
+                  <Group gap="xs">
+                    <Badge color="blue" variant="light">{sale.payment_method}</Badge>
+                    {taxPct > 0 && <Badge color="grape" variant="light">Impuesto {taxPct}%</Badge>}
+                  </Group>
+                  <Group justify="space-between">
+                    <Text>Subtotal</Text>
+                    <Text fw={600}>{currency.format(subtotal)}</Text>
+                  </Group>
+                  {taxPct > 0 && (
+                    <Group justify="space-between">
+                      <Text>Impuesto</Text>
+                      <Text fw={600}>{currency.format(taxAmount)}</Text>
+                    </Group>
+                  )}
+                  <Group justify="space-between">
+                    <Text>Total</Text>
+                    <Text fw={700}>{currency.format(finalTotal)}</Text>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text>Cliente</Text>
+                    <Text>{sale.user?.name || '—'} {sale.user?.email ? `(${sale.user.email})` : ''}</Text>
+                  </Group>
+                  <Group justify="space-between">
+                    <Text>Productos</Text>
+                    <Badge>{sale.products?.length ?? 0}</Badge>
+                  </Group>
+                  <Group justify="flex-end">
+                    <Button variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
+                  </Group>
+                </Stack>
+              </Paper>
+            )
+          })}
+        </Stack>
       ) : (
-        <Paper withBorder radius="md">
-          <ScrollArea type="auto" offsetScrollbars>
-            <Table striped highlightOnHover withColumnBorders>
+        <Paper withBorder radius="md" p="sm">
+          <ScrollArea>
+            <Table striped highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>ID</Table.Th>
                   <Table.Th>Fecha</Table.Th>
+                  <Table.Th>Cliente</Table.Th>
+                  <Table.Th>Método</Table.Th>
+                  <Table.Th>Fuente</Table.Th>
+                  <Table.Th>Impuesto %</Table.Th>
+                  <Table.Th>Subtotal</Table.Th>
                   <Table.Th>Total</Table.Th>
-                  <Table.Th>Método de pago</Table.Th>
-                  <Table.Th>Origen</Table.Th>
                   <Table.Th>Productos</Table.Th>
+                  <Table.Th>Acciones</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {mockSales.map((sale) => (
-                  <Table.Tr key={sale.id} onClick={() => openSale(sale)} style={{ cursor: "pointer" }}>
-                    <Table.Td>
-                      <Text fw={500}>{sale.id}</Text>
-                    </Table.Td>
-                    <Table.Td>{formatDate(sale.created_at)}</Table.Td>
-                    <Table.Td>
-                      <Text fw={600}>{formatCurrency(sale.total)}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" color="blue">
-                        {sale.payment_method}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" color="green">
-                        {sale.source}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <Badge variant="dot" color="gray">
-                          {sale.products.length} ítems
-                        </Badge>
-                      </Group>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
+                {sales.map((sale) => {
+                  const subtotal = Number(sale.total) || 0
+                  const taxPct = Number(sale.tax) || 0
+                  const finalTotal = subtotal * (1 + taxPct / 100)
+                  return (
+                    <Table.Tr key={sale.id}>
+                      <Table.Td>{formatDate(sale.created_at)}</Table.Td>
+                      <Table.Td>
+                        <Stack gap={2}>
+                          <Text fw={600}>{sale.user?.name || '—'}</Text>
+                          <Text c="dimmed" size="sm">{sale.user?.email || '—'}</Text>
+                        </Stack>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color="blue" variant="light">{sale.payment_method}</Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="light">{sale.source}</Badge>
+                      </Table.Td>
+                      <Table.Td>{taxPct}</Table.Td>
+                      <Table.Td>{currency.format(subtotal)}</Table.Td>
+                      <Table.Td>{currency.format(finalTotal)}</Table.Td>
+                      <Table.Td>
+                        <Badge>{sale.products?.length ?? 0}</Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <Button size="xs" variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  )
+                })}
               </Table.Tbody>
             </Table>
           </ScrollArea>
         </Paper>
       )}
 
-      <SaleDetailsModal sale={selectedSale} opened={opened} onClose={close} />
-    </Box>
-  );
-}
-
-function StackCards({ sales, onOpenSale }: { sales: Sales[]; onOpenSale: (sale: Sales) => void }) {
-  return (
-    <Stack gap="sm">
-      {sales.map((sale) => (
-        <Paper key={sale.id} withBorder radius="md" p="md" onClick={() => onOpenSale(sale)} style={{ cursor: "pointer" }}>
-          <Group justify="space-between" align="flex-start">
-            <Box>
-              <Group gap={6}>
-                <Text size="sm" c="dimmed">
-                  #{sale.id}
-                </Text>
-                <Badge variant="light" color="blue">
-                  {sale.payment_method}
-                </Badge>
-                <Badge variant="light" color="green">
-                  {sale.source}
-                </Badge>
-              </Group>
-              <Text mt={4} fw={600}>
-                {formatCurrency(sale.total)}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {formatDate(sale.created_at)}
-              </Text>
-            </Box>
-            <Box>
-              <Group gap={6} wrap="wrap">
-                {sale.products.slice(0, 3).map((p) => (
-                  <Badge key={p.id} variant="light" color="gray">
-                    {p.name}
-                  </Badge>
-                ))}
-                {sale.products.length > 3 && (
-                  <Badge variant="outline" color="gray">
-                    +{sale.products.length - 3}
-                  </Badge>
-                )}
-              </Group>
-            </Box>
+      {pagination && (
+        <Group justify="center" mt="md" gap="md">
+          <Text>
+            Página {pagination.page} de {pagination.totalPages} ({pagination.total} ventas)
+          </Text>
+          <Group gap="xs">
+            <Button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={!pagination.hasPrevPage}
+              size="sm"
+            >
+              Anterior
+            </Button>
+            <Button
+              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={!pagination.hasNextPage}
+              size="sm"
+            >
+              Siguiente
+            </Button>
           </Group>
-        </Paper>
-      ))}
-    </Stack>
-  );
+          <Group gap="xs" align="center">
+            <Text size="sm">Por página:</Text>
+            <Button size="xs" variant={perPage === 5 ? 'filled' : 'light'} onClick={() => { setPerPage(5); setCurrentPage(1); }}>5</Button>
+            <Button size="xs" variant={perPage === 10 ? 'filled' : 'light'} onClick={() => { setPerPage(10); setCurrentPage(1); }}>10</Button>
+            <Button size="xs" variant={perPage === 20 ? 'filled' : 'light'} onClick={() => { setPerPage(20); setCurrentPage(1); }}>20</Button>
+            <Button size="xs" variant={perPage === 50 ? 'filled' : 'light'} onClick={() => { setPerPage(50); setCurrentPage(1); }}>50</Button>
+          </Group>
+        </Group>
+      )}
+
+      {viewProductsOpen && selectedSale && (
+        <ModalWrapper
+          opened={viewProductsOpen}
+          onClose={closeProducts}
+          title={<Text fw={600}>Productos de la venta #{selectedSale.id}</Text>}
+          size={"lg"}
+          fullScreen={isMobile}
+        >
+          <Stack>
+            {selectedSale.products && selectedSale.products.length > 0 ? (
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Producto</Table.Th>
+                    <Table.Th>Precio</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {selectedSale.products.map((p) => (
+                    <Table.Tr key={p.id}>
+                      <Table.Td>{p.title}</Table.Td>
+                      <Table.Td>{currency.format(typeof p.price === 'number' ? p.price : Number(p.price || 0))}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            ) : (
+              <Text c="dimmed">Sin productos</Text>
+            )}
+
+            {(() => {
+              const subtotal = Number(selectedSale.total) || 0
+              const taxPct = Number(selectedSale.tax) || 0
+              const taxAmount = subtotal * (taxPct / 100)
+              const finalTotal = subtotal + taxAmount
+              return (
+                <Paper withBorder p="sm" radius="md">
+                  <Stack gap={4}>
+                    <Group justify="space-between">
+                      <Text>Subtotal</Text>
+                      <Text fw={600}>{currency.format(subtotal)}</Text>
+                    </Group>
+                    {taxPct > 0 && (
+                      <Group justify="space-between">
+                        <Text>Impuesto ({taxPct}%)</Text>
+                        <Text fw={600}>{currency.format(taxAmount)}</Text>
+                      </Group>
+                    )}
+                    <Group justify="space-between">
+                      <Text>Total</Text>
+                      <Text fw={700}>{currency.format(finalTotal)}</Text>
+                    </Group>
+                  </Stack>
+                </Paper>
+              )
+            })()}
+          </Stack>
+        </ModalWrapper>
+      )}
+    </Box>
+  )
 }
-
-function SaleDetailsModal({ sale, opened, onClose }: { sale: Sales | null; opened: boolean; onClose: () => void }) {
-  if (!sale) return null;
-  return (
-    <Modal opened={opened} onClose={onClose} title={`Venta #${sale.id}`} size="lg">
-      <Box>
-        <Text fw={600}>{formatCurrency(sale.total)}</Text>
-        <Text c="dimmed" size="sm">{formatDate(sale.created_at)}</Text>
-        <Badge mt="xs" variant="light" color="blue">{sale.payment_method}</Badge>
-
-        {sale.buyer && (
-          <Box mt="md">
-            <Divider label="Comprador" labelPosition="center" />
-            <Text mt="xs">{sale.buyer.name}</Text>
-            {sale.buyer.email && <Text c="dimmed" size="sm">{sale.buyer.email}</Text>}
-            {sale.buyer.phone && <Text c="dimmed" size="sm">{sale.buyer.phone}</Text>}
-          </Box>
-        )}
-
-        <Box mt="md">
-          <Divider label="Productos" labelPosition="center" />
-          <List spacing="xs" mt="xs">
-            {sale.products.map((p) => (
-              <List.Item key={p.id}>
-                <Group gap="xs">
-                  <Text fw={500}>{p.name}</Text>
-                  {p.sku && (
-                    <Badge variant="outline" color="gray">{p.sku}</Badge>
-                  )}
-                  <Badge variant="light" color={p.available ? "green" : "red"}>
-                    {p.available ? "Disponible" : "No disponible"}
-                  </Badge>
-                  <Text>{formatCurrency(p.price)}</Text>
-                </Group>
-              </List.Item>
-            ))}
-          </List>
-        </Box>
-      </Box>
-    </Modal>
-  );
-}
-
-export default SalesTable;
