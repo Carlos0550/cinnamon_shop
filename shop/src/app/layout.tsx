@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ColorSchemeScript } from "@mantine/core";
+import Script from "next/script";
 import AppProvider from "../providers/AppProvider";
 
 export const metadata: Metadata = {
@@ -16,6 +17,29 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <Script id="safe-remove-child" strategy="beforeInteractive">
+          {`
+            (function () {
+              var originalRemoveChild = Node.prototype.removeChild;
+              if (!originalRemoveChild) {
+                return;
+              }
+              Node.prototype.removeChild = function removeChildSafe(child) {
+                if (!child || child.parentNode !== this) {
+                  return child;
+                }
+                try {
+                  return originalRemoveChild.call(this, child);
+                } catch (error) {
+                  if (error && error.name === "NotFoundError") {
+                    return child;
+                  }
+                  throw error;
+                }
+              };
+            })();
+          `}
+        </Script>
         <ColorSchemeScript defaultColorScheme="auto" />
       </head>
       <body>
