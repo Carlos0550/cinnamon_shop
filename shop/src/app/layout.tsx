@@ -1,5 +1,6 @@
 import "./globals.css";
 import AppProvider from "../providers/AppProvider";
+import SiteLayout from "../Components/Layout/SiteLayout";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -15,8 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body suppressHydrationWarning>
-        <AppProvider>{children}</AppProvider>
+      <body>
+        <AppProvider>
+          <SiteLayout>{children}</SiteLayout>
+        </AppProvider>
       </body>
     </html>
   );

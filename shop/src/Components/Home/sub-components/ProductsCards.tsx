@@ -1,7 +1,7 @@
-"use client";
 import { Products } from '@/Api/useProducts'
 import { useAppContext } from '@/providers/AppContext'
 import { Badge, Button, Card, Flex, Group, Image, Text } from '@mantine/core'
+import { FaCartPlus, FaInfoCircle } from 'react-icons/fa'
 
 type Props = {
     product: Products
@@ -17,7 +17,7 @@ function ProductsCards({ product }: Props) {
     const smallPhone = windowWidth < 375;
     const mobileCardWidth = smallPhone ? "100%" : "calc(50% - 10px)"; 
     return (
-        <Card shadow="sm" padding="lg" radius="md" withBorder w={isMobile ? mobileCardWidth : 350}>
+        <Card shadow="sm"  radius="md" withBorder w={isMobile ? mobileCardWidth : 350}>
             <Card.Section>
                 <Image
                     src={product.images[0]}
@@ -35,16 +35,27 @@ function ProductsCards({ product }: Props) {
                 </Group>
             </Group>
 
-            <Text size="sm" c="dimmed">
-                {product.description.slice(0, 100) + "..."}
-            </Text>
+            {!isMobile && (
+                <Text size="sm" c="dimmed">
+                    {product.description.slice(0, 100) + "..."}
+                </Text>
+            )}
 
-            <Flex justify="space-evenly" mt={10} gap={10} direction={isMobile ? "column" : "row"}>
-                <Button color="blue" >
-                    Más detalles
-                </Button>
-                <Button>Agregar al carrito</Button>
-            </Flex>
+            {isMobile ? (
+                <Group justify="space-evenly" mt={10} gap={10} wrap='nowrap'>
+                
+            </Group>
+            ) : (
+                <Flex
+                    justify="space-evenly"
+                    mt={10}
+                    gap={10}
+                    wrap='nowrap'
+                >
+                    <Button color="blue" leftSection={<FaInfoCircle />}>Más información</Button>
+                    <Button color="green" leftSection={<FaCartPlus />}>Agregar</Button>
+                </Flex>
+            )}
         </Card>
     )
 }

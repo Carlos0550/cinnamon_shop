@@ -28,7 +28,7 @@ function MainPage() {
   return (
     <Flex
       h={"100vh"}
-      w={"100vw"}
+      
       justify={isLoading ? "center" : "flex-start"}
       align={isLoading ? "center" : "flex-start"}
     >

@@ -1,6 +1,5 @@
 
-"use client";
-import { Box, Flex } from "@mantine/core";
+import { Box, Flex, Title } from "@mantine/core";
 
 import { Products } from "@/Api/useProducts";
 import { useEffect } from "react";
@@ -14,18 +13,27 @@ type Props = {
         total: number,
     }
 }
-export default function Home({products, pagination}: Props) {   
-    useEffect(()=>{
+export default function Home({ products, pagination }: Props) {
+    useEffect(() => {
         console.log("Pagination =>", pagination)
         console.log("Product Data =>", products)
-      },[pagination, products])
-      
+    }, [pagination, products])
+
     return (
         <Box>
-            <Flex p={20} wrap="wrap" justify="space-between" align="flex-start" h="100vh" w="100vw" gap={20}>
-                {products.map((product) => (
-                    <ProductsCards key={product.id} product={product} />
-                ))}
+            <Flex
+               
+                direction="column"
+                justify={"center"}
+            >
+                <Title order={3} mb={20}>
+                    Explorá todo nuestro catálogo de productos
+                </Title>
+                <Flex  wrap="wrap" justify="space-evenly" align="flex-start" h="100vh" w="100%" gap={20}>
+                    {products.map((product) => (
+                        <ProductsCards key={product.id} product={product} />
+                    ))}
+                </Flex>
             </Flex>
         </Box>
     )
