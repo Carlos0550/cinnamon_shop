@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppContextProvider } from "@/providers/AppContext";
-import { ColorSchemeScript, MantineProvider, useMantineColorScheme } from "@mantine/core";
+import { MantineProvider, useMantineColorScheme } from "@mantine/core";
 
 import { theme } from "@/theme"
 import { ModalsProvider } from "@mantine/modals";
@@ -22,7 +22,6 @@ export default function Home() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ColorSchemeScript defaultColorScheme="auto" />
       <MantineProvider theme={theme} defaultColorScheme="auto">
         <PrimaryColorProvider>
           <ModalsProvider>
