@@ -12,8 +12,9 @@ export default function Home() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ModalsProvider>
-        <Notifications position="top-right" />
+      {/* Render Mantine portals inline to avoid mobile browsers detaching portal nodes */}
+      <ModalsProvider modalProps={{ withinPortal: false }}>
+        <Notifications position="top-right" withinPortal={false} />
         <AppContextProvider>
           <MainPage/>
         </AppContextProvider>
