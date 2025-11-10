@@ -4,6 +4,7 @@ import { Flex } from "@mantine/core"
 import Home from "@/Components/Home/Home"
 import useProducts, { Products } from "@/Api/useProducts"
 import { useState } from "react"
+import { Categories, useCategories } from "@/Api/useCategories"
 
 
 function MainPage() {
@@ -21,6 +22,13 @@ function MainPage() {
     title: '',
   })
 
+  const {
+    data: categoriesData,
+    isLoading: categoriesIsLoading,
+  } = useCategories()
+
+  const categories: Categories[] = categoriesData?.data ?? []
+
   const products: Products[] = data?.data?.products ?? []
   const total: number = data?.data?.pagination?.total ?? 0
   const computedPagination = { ...pagination, total }
@@ -35,7 +43,7 @@ function MainPage() {
       {isLoading ? (
         <CinnamonLoader />
       ) : (
-        <Home products={products} pagination={computedPagination} />
+        <Home products={products} pagination={computedPagination} categories={categories} />
       )}
     </Flex>
   )

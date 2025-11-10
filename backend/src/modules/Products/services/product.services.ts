@@ -587,7 +587,25 @@ class ProductServices {
         }
     }
 
-    // Public products endpoint: returns active products, no auth required
+    async getPublicCategories(req: Request, res: Response) {
+        try {
+            const categories = await prisma.categories.findMany({
+                where: {
+                    status: CategoryStatus.active
+                }
+            })
+            return res.status(200).json({
+                ok: true,
+                data: categories
+            })
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json({
+                ok: false,
+                error: "Error al obtener las categorías públicas"
+            });
+        }
+    }
     async getPublicProducts(req: Request, res: Response) {
         try {
             const page = Number(req.query.page) || 1;

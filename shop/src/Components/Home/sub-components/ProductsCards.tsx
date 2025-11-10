@@ -43,7 +43,8 @@ function ProductsCards({ product }: Props) {
 
             {isMobile ? (
                 <Group justify="space-evenly" mt={10} gap={10} wrap='nowrap'>
-                
+                <Button color="blue"><FaInfoCircle /></Button>
+                <Button><FaCartPlus /></Button>
             </Group>
             ) : (
                 <Flex
