@@ -1,7 +1,6 @@
 'use client'
 import { createContext, useContext, useMemo } from 'react';
 import { useUtils } from './useUtils';
-import Loading from '@/Components/Loader/Loading';
 
 type AppContextValue = {
   utils: ReturnType<typeof useUtils>;
@@ -11,11 +10,10 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
   const utils = useUtils()
-
+  
   const value = useMemo(
     () => ({ 
       utils,
-      Loading
     }),
     [
       utils
