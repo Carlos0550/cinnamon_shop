@@ -1,3 +1,4 @@
+'use client'
 import { Box, Image } from "@mantine/core"
 import { useEffect, useRef } from "react"
 import gsap from "gsap"

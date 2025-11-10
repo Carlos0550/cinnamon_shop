@@ -1,3 +1,4 @@
+'use client'
 import { Box, Flex } from "@mantine/core"
 import "./Loading.css"
 
