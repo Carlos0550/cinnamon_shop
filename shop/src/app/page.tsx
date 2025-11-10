@@ -8,7 +8,6 @@ import { ColorSchemeScript, MantineProvider, useMantineColorScheme } from "@mant
 import { theme } from "@/theme"
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
-import CinnamonLoader from "@/Components/CinnamonLoader/CinnamonLoader";
 import MainPage from "./MainPage";
 function PrimaryColorProvider({ children }: { children: React.ReactNode }) {
   const { colorScheme } = useMantineColorScheme();
