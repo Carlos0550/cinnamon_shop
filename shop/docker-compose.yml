@@ -1,0 +1,14 @@
+
+version: "3.9"
+
+services:
+  shop:
+    container_name: cinnamon-shop-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
