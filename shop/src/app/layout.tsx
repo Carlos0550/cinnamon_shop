@@ -1,6 +1,7 @@
 import "./globals.css";
 import AppProvider from "../providers/AppProvider";
 import SiteLayout from "../Components/Layout/SiteLayout";
+import { AppContextProvider } from "@/providers/AppContext";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <AppProvider>
-          <SiteLayout>{children}</SiteLayout>
+          <AppContextProvider>
+            <SiteLayout>{children}</SiteLayout> 
+          </AppContextProvider>
         </AppProvider>
       </body>
     </html>

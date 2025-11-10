@@ -4,6 +4,8 @@ import { MantineProvider, localStorageColorSchemeManager } from "@mantine/core";
 import { theme } from "../theme";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 
 type Props = {
   children: React.ReactNode;
@@ -11,10 +13,13 @@ type Props = {
 
 export default function AppProvider({ children }: Props) {
   const colorSchemeManager = localStorageColorSchemeManager({ key: "mantine-color-scheme" });
+  const [queryClient] = useState(() => new QueryClient());
 
   return (
     <MantineProvider theme={theme} defaultColorScheme="light" colorSchemeManager={colorSchemeManager}>
-      {children}
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
     </MantineProvider>
   );
 }

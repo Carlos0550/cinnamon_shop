@@ -14,8 +14,8 @@ function ProductsCards({ product }: Props) {
             windowWidth
         }
     } = useAppContext()
-    const smallPhone = windowWidth < 375;
-    const mobileCardWidth = smallPhone ? "100%" : "calc(50% - 10px)"; 
+ 
+    const mobileCardWidth = "calc(50% - 10px)"; 
     return (
         <Card shadow="sm"  radius="md" withBorder w={isMobile ? mobileCardWidth : 350}>
             <Card.Section>

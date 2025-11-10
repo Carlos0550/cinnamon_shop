@@ -37,8 +37,8 @@ function MainPage() {
     <Flex
       h={"100vh"}
       
-      justify={isLoading ? "center" : "flex-start"}
-      align={isLoading ? "center" : "flex-start"}
+      justify={isLoading ? "center" : ""}
+      align={isLoading ? "center" : ""}
     >
       {isLoading ? (
         <CinnamonLoader />
