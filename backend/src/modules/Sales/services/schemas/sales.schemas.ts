@@ -14,4 +14,7 @@ export type SaleRequest = {
     product_ids: string[]
     user_sale?: UserSale
     tax?: number
+    loadedManually?: boolean
+    manualProducts?: { quantity: number; title: string; price: number }[]
+    payment_methods?: { method: PaymentMethods; amount: number }[]
 }

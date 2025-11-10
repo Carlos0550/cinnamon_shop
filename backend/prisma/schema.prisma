@@ -146,7 +146,9 @@ model Sales {
   tax            Float          @default(0.00)
   user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   products       Products[]
-
+  manualProducts Json?         @default("[]")
+  loadedManually Boolean        @default(false)
+  paymentMethods Json?         @default("[]")
   @@index([created_at])
   @@index([userId])
   @@index([source, created_at])

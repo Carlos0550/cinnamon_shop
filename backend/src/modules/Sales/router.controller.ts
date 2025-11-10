@@ -5,8 +5,9 @@ import { SaleRequest } from "./services/schemas/sales.schemas";
 export const saveSale = async (req: Request, res: Response) => {
     try {
         const request = req.body as SaleRequest;
-
-        if(!request.payment_method || !request.source || !request.product_ids){
+        const hasProducts = Array.isArray(request.product_ids) && request.product_ids.length > 0;
+        const hasManual = !!request.loadedManually && Array.isArray(request.manualProducts) && request.manualProducts.length > 0;
+        if(!request.payment_method || !request.source || (!hasProducts && !hasManual)){
             return res.status(400).json({
                 success: false,
                 message: "Faltan datos obligatorios para guardar la venta."

@@ -1,4 +1,4 @@
-import { Box, Grid, Text, Select, Card, Group, Stack, Badge, ActionIcon, Divider, Paper, Loader, Button, TextInput } from "@mantine/core";
+import { Box, Grid, Text, Select, Card, Group, Stack, Badge, ActionIcon, Divider, Paper, Loader, Button, TextInput, Switch, Textarea } from "@mantine/core";
 import { useState, useMemo, useEffect } from "react";
 import { FiTrash, FiShoppingCart } from "react-icons/fi";
 import { useGetAllProducts, type GetProductsParams, type Product } from "@/components/Api/ProductsApi";
@@ -13,28 +13,41 @@ export type UserSale = {
     user_id?: string
 }
 
+export type ManualProductItem = {
+    quantity: number;
+    title: string;
+    price: number;
+}
+
 export type SaleRequest = {
     payment_method: PaymentMethods
     source: SaleSource
-    product_ids: string[]
+    product_ids?: string[]
+    manualProducts?: ManualProductItem[]
+    loadedManually: boolean
     user_sale?: UserSale
     total?: number
     tax: number
+    payment_methods?: { method: PaymentMethods; amount: number }[]
 }
 
 type Props = {
     onClose: () => void
 }
-export function SalesForm({ onClose }: Props) { 
+export function SalesForm({ onClose }: Props) {
     const saveSale = useSaveSale();
     const [formValue, setFormValue] = useState<SaleRequest>({
         payment_method: "EFECTIVO",
         source: "CAJA",
         product_ids: [],
         total: 0,
-        tax: 0  
+        tax: 0,
+        loadedManually: false,
+        manualProducts: [],
+        payment_methods: [{ method: "EFECTIVO", amount: 0 }],
     })
 
+    const [manualText, setManualText] = useState<string>("");
     const [searchTitle, setSearchTitle] = useState<string>("");
     const [selectValue, setSelectValue] = useState<string | null>(null);
     const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
@@ -77,9 +90,31 @@ export function SalesForm({ onClose }: Props) {
             return next;
         });
     };
+    const parseManualProducts = (text: string): ManualProductItem[] => {
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+        const items: ManualProductItem[] = [];
+        const re = /^(\d+)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9\s-]+?)\s+(\d+(?:\.\d+)?)$/;
+        for (const line of lines) {
+            const m = line.match(re);
+            if (!m) continue; // Ignora líneas inválidas
+            const quantity = Number(m[1]);
+            const title = m[2].trim();
+            const price = Number(m[3]);
+            if (!Number.isFinite(quantity) || !Number.isFinite(price)) continue;
+            items.push({ quantity, title, price });
+        }
+        return items;
+    };
     const handleChangeValues = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
+        if (name === "manualText") {
+            const text = value.toString();
+            setManualText(text);
+            const parsed = parseManualProducts(text);
+            setFormValue(v => ({ ...v, manualProducts: parsed }));
+            return;
+        }
         setFormValue({
             ...formValue,
             [name]: type === "checkbox" ? checked : value,
@@ -88,88 +123,176 @@ export function SalesForm({ onClose }: Props) {
     const currency = useMemo(() => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }), []);
 
     useEffect(() => {
-        if(formValue.payment_method == "EFECTIVO" || formValue.payment_method == "NINGUNO") {
+        if (formValue.payment_method == "EFECTIVO" || formValue.payment_method == "NINGUNO") {
             setFormValue(v => ({ ...v, tax: 0 }));
         }
-    },[formValue.payment_method])
+    }, [formValue.payment_method])
 
     useEffect(() => {
-        if(saveSale.isSuccess){
-           onClose();
+        if (saveSale.isSuccess) {
+            onClose();
         }
-    },[saveSale.isSuccess])
-    
+    }, [saveSale.isSuccess])
+
+    // Mantener payment_method como el primero seleccionado para compat.
+    useEffect(() => {
+        const primary = formValue.payment_methods?.[0]?.method;
+        if (primary && primary !== formValue.payment_method) {
+            setFormValue(v => ({ ...v, payment_method: primary }));
+        }
+    }, [formValue.payment_methods])
+
+    const productsSubtotal = useMemo(() => selectedProducts.reduce((acc, p) => acc + (typeof p.price === 'number' ? p.price : 0), 0), [selectedProducts]);
+    const manualSubtotal = useMemo(() => (formValue.manualProducts || []).reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0), [formValue.manualProducts]);
+    const subtotal = formValue.loadedManually ? manualSubtotal : productsSubtotal;
+    const finalTotal = subtotal * (1 + Number(formValue.tax) / 100);
+    const paymentSum = (formValue.payment_methods || []).reduce((acc, pm) => acc + Number(pm.amount || 0), 0);
+    // Si hay impuesto, no mostrar advertencia de diferencia.
+    const paymentMismatch = formValue.tax > 0
+        ? false
+        : Math.round((paymentSum - finalTotal) * 100) / 100 !== 0;
+    // Mostrar monto restante: si hay impuesto, calcular contra subtotal (sin impuesto).
+    const remainingBase = formValue.tax > 0 ? subtotal : finalTotal;
+    const remainingAmount = Math.max(remainingBase - paymentSum, 0);
+
     return (
         <Box>
-            
+
             <Paper withBorder p="md" radius="md">
+                <Switch
+                    label="Cargar manualmente"
+                    name="loadedManually"
+                    checked={formValue.loadedManually}
+                    onChange={handleChangeValues}
+                />
                 <Grid gutter={16}>
                     <Grid.Col span={{ base: 12, md: 6 }}>
-                        <Stack gap="sm">
-                            <Select
-                                label="Productos"
-                                name="product_ids"
-                                placeholder={isLoading ? "Cargando productos..." : "Buscar y seleccionar"}
-                                data={productsOptions}
-                                searchable
-                                leftSection={isLoading && <Loader size={"xs"} />}
-                                searchValue={searchTitle}
-                                onSearchChange={setSearchTitle}
-                                value={selectValue}
-                                onChange={(value) => {
-                                    addProductById(value);
-                                    setSelectValue(null);
-                                    setSearchTitle("");
-                                }}
-                                withCheckIcon={false}
-                            />
+                        {!formValue.loadedManually ? (
+                            <Stack gap="sm">
+                                <Select
+                                    label="Productos"
+                                    name="product_ids"
+                                    placeholder={isLoading ? "Cargando productos..." : "Buscar y seleccionar"}
+                                    data={productsOptions}
+                                    searchable
+                                    leftSection={isLoading && <Loader size={"xs"} />}
+                                    searchValue={searchTitle}
+                                    onSearchChange={setSearchTitle}
+                                    value={selectValue}
+                                    onChange={(value) => {
+                                        addProductById(value);
+                                        setSelectValue(null);
+                                        setSearchTitle("");
+                                    }}
+                                    withCheckIcon={false}
+                                />
 
-                            <Card withBorder shadow="sm" radius="md">
-                                <Group justify="space-between" mb="xs">
-                                    <Group>
-                                        <FiShoppingCart />
-                                        <Text fw={500}>Seleccionados</Text>
+                                <Card withBorder shadow="sm" radius="md">
+                                    <Group justify="space-between" mb="xs">
+                                        <Group>
+                                            <FiShoppingCart />
+                                            <Text fw={500}>Seleccionados</Text>
+                                        </Group>
+                                        <Badge color="blue" variant="light">{selectedProducts.length}</Badge>
                                     </Group>
-                                    <Badge color="blue" variant="light">{selectedProducts.length}</Badge>
-                                </Group>
-                                <Divider my="sm" />
-                                <Stack gap="xs">
-                                    {selectedProducts.length === 0 ? (
-                                        <Text c="dimmed">No hay productos seleccionados</Text>
-                                    ) : (
-                                        selectedProducts.map(p => (
-                                            <Group key={p.id} justify="space-between">
-                                                <Group gap="xs">
-                                                    <Badge color="green" variant="light">{currency.format(typeof p.price === 'number' ? p.price : 0)}</Badge>
-                                                    <Text>{p.title}</Text>
+                                    <Divider my="sm" />
+                                    <Stack gap="xs">
+                                        {selectedProducts.length === 0 ? (
+                                            <Text c="dimmed">No hay productos seleccionados</Text>
+                                        ) : (
+                                            selectedProducts.map(p => (
+                                                <Group key={p.id} justify="space-between">
+                                                    <Group gap="xs">
+                                                        <Badge color="green" variant="light">{currency.format(typeof p.price === 'number' ? p.price : 0)}</Badge>
+                                                        <Text>{p.title}</Text>
+                                                    </Group>
+                                                    <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => removeProduct(p.id)}>
+                                                        <FiTrash />
+                                                    </ActionIcon>
                                                 </Group>
-                                                <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => removeProduct(p.id)}>
-                                                    <FiTrash />
-                                                </ActionIcon>
-                                            </Group>
-                                        ))
-                                    )}
-                                </Stack>
-                            </Card>
-                        </Stack>
+                                            ))
+                                        )}
+                                    </Stack>
+                                </Card>
+                            </Stack>
+                        ) : (
+                            <Textarea
+                                label="Productos manuales"
+                                placeholder='Formato: "CANTIDAD PRODUCTO PRECIO" por línea. Ej: "1 gloss 1500"'
+                                name="manualText"
+                                value={manualText}
+                                autosize
+                                minRows={3}
+                                maxRows={40}
+                                onChange={handleChangeValues}
+                            />
+                        )}
+
                     </Grid.Col>
 
                     <Grid.Col span={{ base: 12, md: 6 }}>
                         <Stack gap="sm">
-                            <Select
-                                label="Método de pago"
-                                name="payment_method"
-                                placeholder="Seleccionar método"
-                                data={PaymentMethods.map((pm) => ({ value: pm, label: pm }))}
-                                value={formValue.payment_method}
-                                onChange={(value) => {
-                                    if (!value) return;
-                                    setFormValue((prev) => ({
-                                        ...prev,
-                                        payment_method: value as PaymentMethods,
-                                    }));
-                                }}
-                            />
+                            <Card withBorder shadow="sm" radius="md">
+                                <Stack gap="xs">
+                                    <Group justify="space-between">
+                                        <Text fw={500}>Métodos de pago (máx. 2)</Text>
+                                        <Button size="xs" variant="light" disabled={(formValue.payment_methods?.length || 0) >= 2}
+                                            onClick={() => setFormValue(v => ({
+                                                ...v,
+                                                payment_methods: [
+                                                    ...(v.payment_methods || []),
+                                                    { method: "EFECTIVO", amount: 0 }
+                                                ]
+                                            }))}
+                                        >Agregar método</Button>
+                                    </Group>
+                                    <Divider my="xs" />
+                                    {(formValue.payment_methods || []).map((pm, idx) => (
+                                        <Group key={idx} align="end" justify="space-between">
+                                            <Select
+                                                label={`Método ${idx + 1}`}
+                                                data={PaymentMethods.map(m => ({ value: m, label: m }))}
+                                                value={pm.method}
+                                                onChange={(value) => {
+                                                    if (!value) return;
+                                                    setFormValue(v => ({
+                                                        ...v,
+                                                        payment_methods: (v.payment_methods || []).map((x, i) => i === idx ? { ...x, method: value as PaymentMethods } : x)
+                                                    }))
+                                                }}
+                                            />
+                                            <TextInput
+                                                label="Monto"
+                                                placeholder="0"
+                                                value={String(pm.amount ?? 0)}
+                                                onChange={(e) => {
+                                                    const amount = Number(e.target.value || 0);
+                                                    setFormValue(v => ({
+                                                        ...v,
+                                                        payment_methods: (v.payment_methods || []).map((x, i) => i === idx ? { ...x, amount: Number.isFinite(amount) ? amount : 0 } : x)
+                                                    }))
+                                                }}
+                                            />
+                                            {(formValue.payment_methods || []).length > 1 && (
+                                                <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => {
+                                                    setFormValue(v => ({
+                                                        ...v,
+                                                        payment_methods: (v.payment_methods || []).filter((_, i) => i !== idx)
+                                                    }))
+                                                }}>
+                                                    <FiTrash />
+                                                </ActionIcon>
+                                            )}
+                                        </Group>
+                                    ))}
+                                    {paymentMismatch && (
+                                        <Text c="red">Advertencia: la suma de los métodos de pago ({currency.format(paymentSum)}) no coincide con el total ({currency.format(finalTotal)}).</Text>
+                                    )}
+                                    {remainingAmount > 0 && (
+                                        <Text c="orange">Faltan {currency.format(remainingAmount)} {formValue.tax > 0 ? "(calculado sobre subtotal sin impuesto)" : ""}</Text>
+                                    )}
+                                </Stack>
+                            </Card>
                             {["TARJETA", "QR"].includes(formValue.payment_method) && (
                                 <TextInput
                                     label="Agregar impuesto"
@@ -183,17 +306,17 @@ export function SalesForm({ onClose }: Props) {
                                 {formValue.tax > 0 && (
                                     <Group justify="space-between">
                                         <Text>Impuesto ({formValue.tax}%)</Text>
-                                        <Text>{currency.format(Number(formValue.total) * Number(formValue.tax) / 100)}</Text>
+                                        <Text>{currency.format(Number(subtotal) * Number(formValue.tax) / 100)}</Text>
                                     </Group>
                                 )}
                                 <Group justify="space-between">
                                     <Text fw={500}>Total</Text>
-                                    <Text fw={700}>{currency.format(Number(formValue.total) * (1 + Number(formValue.tax) / 100))}</Text>
+                                    <Text fw={700}>{currency.format(finalTotal)}</Text>
                                 </Group>
                             </Card>
                         </Stack>
                     </Grid.Col>
-                    <Button disabled={saveSale.isPending} loading={saveSale.isPending} onClick={() => saveSale.mutate(formValue)}>Guardar venta</Button>
+                    <Button disabled={saveSale.isPending} loading={saveSale.isPending} onClick={() => saveSale.mutate({ ...formValue, total: finalTotal })}>Guardar venta</Button>
                 </Grid>
             </Paper>
         </Box>

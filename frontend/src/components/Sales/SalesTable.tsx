@@ -3,7 +3,7 @@ import { useMediaQuery } from "@mantine/hooks"
 import { theme } from "@/theme"
 import type { Product } from "../Api/ProductsApi"
 import { useGetSales } from "../Api/SalesApi"
-import type { PaymentMethods, SaleSource } from "./SalesForm"
+import type { PaymentMethods, SaleSource, ManualProductItem } from "./SalesForm"
 import ModalWrapper from "@/components/Common/ModalWrapper"
 import { useMemo, useState } from "react"
 
@@ -19,7 +19,9 @@ export type Sales = {
     name?: string,
     email?: string,
   } | null,
-  products: Product[]
+  products: Product[],
+  manualProducts?: ManualProductItem[],
+  loadedManually?: boolean,
 }
 
 export default function SalesTable() {
@@ -72,16 +74,17 @@ export default function SalesTable() {
       <Text ta="center">No se encontraron ventas</Text>
     )
   }
-
+  console.log(sales)
   return (
     <Box>
       {isMobile ? (
         <Stack>
           {sales.map((sale) => {
-            const subtotal = Number(sale.total) || 0
+            const finalTotal = Number(sale.total) || 0
             const taxPct = Number(sale.tax) || 0
-            const taxAmount = subtotal * (taxPct / 100)
-            const finalTotal = subtotal + taxAmount
+            const subtotal = taxPct > 0 ? finalTotal / (1 + taxPct / 100) : finalTotal
+            const taxAmount = finalTotal - subtotal
+            const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
             return (
               <Paper key={sale.id} withBorder p="md" radius="md">
                 <Stack gap="xs">
@@ -114,7 +117,7 @@ export default function SalesTable() {
                   </Group>
                   <Group justify="space-between">
                     <Text>Productos</Text>
-                    <Badge>{sale.products?.length ?? 0}</Badge>
+                    <Badge>{itemsCount}</Badge>
                   </Group>
                   <Group justify="flex-end">
                     <Button variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
@@ -143,9 +146,10 @@ export default function SalesTable() {
               </Table.Thead>
               <Table.Tbody>
                 {sales.map((sale) => {
-                  const subtotal = Number(sale.total) || 0
+                  const finalTotal = Number(sale.total) || 0
                   const taxPct = Number(sale.tax) || 0
-                  const finalTotal = subtotal * (1 + taxPct / 100)
+                  const subtotal = taxPct > 0 ? finalTotal / (1 + taxPct / 100) : finalTotal
+                  const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
                   return (
                     <Table.Tr key={sale.id}>
                       <Table.Td>{formatDate(sale.created_at)}</Table.Td>
@@ -165,7 +169,7 @@ export default function SalesTable() {
                       <Table.Td>{currency.format(subtotal)}</Table.Td>
                       <Table.Td>{currency.format(finalTotal)}</Table.Td>
                       <Table.Td>
-                        <Badge>{sale.products?.length ?? 0}</Badge>
+                        <Badge>{itemsCount}</Badge>
                       </Table.Td>
                       <Table.Td>
                         <Group gap="xs">
@@ -221,7 +225,7 @@ export default function SalesTable() {
           fullScreen={isMobile}
         >
           <Stack>
-            {selectedSale.products && selectedSale.products.length > 0 ? (
+            {(selectedSale.loadedManually ? (selectedSale.manualProducts?.length ?? 0) > 0 : (selectedSale.products?.length ?? 0) > 0) ? (
               <Table>
                 <Table.Thead>
                   <Table.Tr>
@@ -230,12 +234,25 @@ export default function SalesTable() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {selectedSale.products.map((p) => (
-                    <Table.Tr key={p.id}>
-                      <Table.Td>{p.title}</Table.Td>
-                      <Table.Td>{currency.format(typeof p.price === 'number' ? p.price : Number(p.price || 0))}</Table.Td>
-                    </Table.Tr>
-                  ))}
+                  {(() => {
+                    const rows = selectedSale.loadedManually
+                      ? (selectedSale.manualProducts || []).map((mp, idx) => ({
+                          key: String(idx),
+                          title: mp.title + (mp.quantity && mp.quantity > 1 ? ` x${mp.quantity}` : ''),
+                          price: Number(mp.quantity) * Number(mp.price),
+                        }))
+                      : (selectedSale.products || []).map((p) => ({
+                          key: String(p.id),
+                          title: p.title,
+                          price: typeof p.price === 'number' ? p.price : Number(p.price || 0),
+                        }));
+                    return rows.map((r) => (
+                      <Table.Tr key={r.key}>
+                        <Table.Td>{r.title}</Table.Td>
+                        <Table.Td>{currency.format(r.price)}</Table.Td>
+                      </Table.Tr>
+                    ))
+                  })()}
                 </Table.Tbody>
               </Table>
             ) : (
@@ -243,10 +260,10 @@ export default function SalesTable() {
             )}
 
             {(() => {
-              const subtotal = Number(selectedSale.total) || 0
+              const finalTotal = Number(selectedSale.total) || 0
               const taxPct = Number(selectedSale.tax) || 0
-              const taxAmount = subtotal * (taxPct / 100)
-              const finalTotal = subtotal + taxAmount
+              const subtotal = taxPct > 0 ? finalTotal / (1 + taxPct / 100) : finalTotal
+              const taxAmount = finalTotal - subtotal
               return (
                 <Paper withBorder p="sm" radius="md">
                   <Stack gap={4}>

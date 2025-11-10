@@ -10,47 +10,63 @@ class SalesServices {
         const { user_id } = user_sale || {};
 
         try {
-            const int_product_ids = Array.from(product_ids).map(String);
-            const product_data = await prisma.products.findMany({
-                where: {
-                    id: {
-                        in: int_product_ids
+            const isManual = !!request.loadedManually;
+            const manualItems = Array.isArray(request.manualProducts) ? request.manualProducts : [];
+            let product_data: { id: string; title: string; price: number }[] = [];
+            let subtotal = 0;
+
+            if (!isManual) {
+                const int_product_ids = Array.from(product_ids || []).map(String);
+                product_data = await prisma.products.findMany({
+                    where: {
+                        id: {
+                            in: int_product_ids
+                        }
                     }
+                }) as any;
+
+                if (product_data.length !== int_product_ids.length) {
+                    throw new Error("Some products not found");
                 }
-            })
 
-            if (product_data.length !== int_product_ids.length) {
-                throw new Error("Some products not found");
+                subtotal = product_data.reduce((acc, product) => acc + Number(product.price), 0);
+            } else {
+                // Manual items: subtotal from quantity * price
+                subtotal = manualItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
+                product_data = manualItems.map(mi => ({ id: '', title: mi.title, price: Number(mi.quantity) * Number(mi.price) }));
             }
-
-            const total_products = product_data.reduce((acc, product) => acc + Number(product.price), 0);
 
             const parsedUserId = user_id !== undefined ? Number(user_id) : undefined;
 
+            const primaryPaymentMethod = (request.payment_methods && request.payment_methods[0]?.method) || payment_method;
+            const paymentBreakdown = Array.isArray(request.payment_methods) ? request.payment_methods : [];
+            const taxPercent = Number(request.tax) || 0;
+            const taxAmount = subtotal * (taxPercent / 100);
+            const finalTotal = subtotal + taxAmount;
+
             const sale = await prisma.sales.create({
                 data: {
-                    payment_method,
+                    payment_method: primaryPaymentMethod,
                     source,
-                    total: Number(total_products),
+                    total: Number(finalTotal),
                     ...(parsedUserId && Number.isInteger(parsedUserId)
                         ? { user: { connect: { id: parsedUserId } } }
                         : {}),
-                    tax: Number(request.tax) || 0,
-                    products: {
+                    tax: taxPercent,
+                    products: !isManual ? {
                         connect: product_data.map(product => ({ id: product.id }))
-                    }
+                    } : undefined,
+                    manualProducts: isManual ? manualItems as any : undefined,
+                    loadedManually: isManual,
+                    paymentMethods: paymentBreakdown as any,
                 }
             })
             // Send email notification
             try {
                 const user = parsedUserId ? await prisma.user.findUnique({ where: { id: parsedUserId } }) : null;
-                const subtotal = Number(total_products);
-                const taxPercent = Number(request.tax) || 0;
-                const taxAmount = subtotal * (taxPercent / 100);
-                const finalTotal = subtotal + taxAmount;
                 const html = sale_email_html({
                     source,
-                    payment_method,
+                    payment_method: primaryPaymentMethod,
                     products: product_data.map(p => ({ title: p.title, price: Number(p.price) })),
                     subtotal,
                     taxPercent,
