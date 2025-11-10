@@ -1,7 +1,8 @@
 
-import { Box, Container, Flex } from "@mantine/core";
+"use client";
+import { Box, Flex } from "@mantine/core";
 
-import useProducts, { Products } from "@/Api/useProducts";
+import { Products } from "@/Api/useProducts";
 import { useEffect } from "react";
 import ProductsCards from "./sub-components/ProductsCards";
 
@@ -18,9 +19,10 @@ export default function Home({products, pagination}: Props) {
         console.log("Pagination =>", pagination)
         console.log("Product Data =>", products)
       },[pagination, products])
+      
     return (
         <Box>
-            <Flex p={20} wrap="wrap" justify="space-between" align="flex-start" h="100vh" w="100vw" style={{border: "1px solid #000"}} gap={20}>
+            <Flex p={20} wrap="wrap" justify="space-between" align="flex-start" h="100vh" w="100vw" gap={20}>
                 {products.map((product) => (
                     <ProductsCards key={product.id} product={product} />
                 ))}

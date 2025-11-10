@@ -1,3 +1,4 @@
+"use client";
 import { Products } from '@/Api/useProducts'
 import { useAppContext } from '@/providers/AppContext'
 import { Badge, Button, Card, Flex, Group, Image, Text } from '@mantine/core'

@@ -16,7 +16,7 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 
 # Copiar artefactos de build de Next.js y dependencias
 COPY --from=build /app/package.json ./package.json

@@ -1,3 +1,4 @@
+
 import { useAppContext } from "@/providers/AppContext";
 import { useQuery } from "@tanstack/react-query";
 
@@ -24,15 +25,27 @@ export interface Products {
 
 }
 
+export type ProductsResponse = {
+    data: {
+        products: Products[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+        };
+    };
+};
+
 export default function useProducts(params: FetchProductsParams){
+
     const {
         utils: {
             baseUrl
         }
     } = useAppContext()
-    return useQuery({
+    return useQuery<ProductsResponse>({
         queryKey: ['products', params],
-        queryFn: async () => {
+        queryFn: async (): Promise<ProductsResponse> => {
             const qp = new URLSearchParams({
                 page: params.page.toString(),
                 limit: params.limit.toString(),
@@ -41,7 +54,8 @@ export default function useProducts(params: FetchProductsParams){
             const res = await fetch(`${baseUrl}/products/public?${qp}`)
             //espera artificial de 2 segundos
             await new Promise(resolve => setTimeout(resolve, 2000));
-            return res.json()
+            const data = await res.json();
+            return data as ProductsResponse;
         }
     })
 }
