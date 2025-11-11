@@ -40,7 +40,9 @@ export const getSales = async (req: Request, res: Response) => {
     try {
         const page = Number(req.query.page) || 1;
         const per_page = Number((req.query.per_page || req.query.limit)) || 10;
-        const response = await SalesServices.getSales({ page, per_page });
+        const start_date = (req.query.start_date as string | undefined) || undefined;
+        const end_date = (req.query.end_date as string | undefined) || undefined;
+        const response = await SalesServices.getSales({ page, per_page, start_date, end_date });
 
         if (Array.isArray(response?.sales)) {
             res.status(200).json({
@@ -61,6 +63,34 @@ export const getSales = async (req: Request, res: Response) => {
             success: false,
             err: error.message,
             message: "Error interno del servidor al obtener las ventas, por favor intente nuevamente."
+        })
+    }
+}
+
+export const getSalesAnalytics = async (req: Request, res: Response) => {
+    try {
+        const start_date = (req.query.start_date as string | undefined) || undefined;
+        const end_date = (req.query.end_date as string | undefined) || undefined;
+        const response = await SalesServices.getSalesAnalytics({ start_date, end_date });
+
+        if ((response as any)?.success === false) {
+            return res.status(400).json({
+                success: false,
+                err: (response as any).message || 'analytics_error',
+                message: "Error al obtener las analíticas de ventas, por favor intente nuevamente."
+            })
+        }
+
+        res.status(200).json({
+            success: true,
+            analytics: response
+        })
+    } catch (error: any) {
+        console.log(error.message);
+        res.status(500).json({
+            success: false,
+            err: error.message,
+            message: "Error interno del servidor al obtener las analíticas de ventas, por favor intente nuevamente."
         })
     }
 }

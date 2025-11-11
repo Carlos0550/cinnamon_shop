@@ -2,6 +2,7 @@ import { prisma } from "@/config/prisma";
 import { SaleRequest } from "./schemas/sales.schemas";
 import { sendEmail } from "@/config/resend";
 import { sale_email_html } from "@/templates/sale_email";
+import dayjs from "@/config/dayjs";
 
 
 class SalesServices {
@@ -107,17 +108,41 @@ class SalesServices {
         }
     }
 
-    async getSales({ page = 1, per_page = 5 }: { page?: number, per_page?: number }) {
+    async getSales({ page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
         try {
             const take = Math.max(1, Number(per_page) || 5);
             const currentPage = Math.max(1, Number(page) || 1);
             const skip = (currentPage - 1) * take;
 
+            const today = new Date();
+            const defaultStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+            const defaultEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+            const parseDateOnly = (value?: string, endOfDay: boolean = false) => {
+                if (!value) return undefined;
+                const [y, m, d] = value.split('-').map(Number);
+                if (!y || !m || !d) return undefined;
+                return endOfDay
+                    ? new Date(y, m - 1, d, 23, 59, 59, 999)
+                    : new Date(y, m - 1, d, 0, 0, 0, 0);
+            };
+
+            const start = parseDateOnly(start_date) || defaultStart;
+            const end = parseDateOnly(end_date, true) || defaultEnd;
+
+            const where: any = {
+                created_at: {
+                    gte: start,
+                    lte: end,
+                }
+            };
+
             const [total, sales] = await Promise.all([
-                await prisma.sales.count(),
+                await prisma.sales.count({ where }),
                 await prisma.sales.findMany({
                     skip,
                     take,
+                    where,
                     include: {
                         products: true,
                         user: true
@@ -144,6 +169,129 @@ class SalesServices {
                 success: false,
                 message: error_msg
             }
+        }
+    }
+
+    async getSalesAnalytics({ start_date, end_date }: { start_date?: string, end_date?: string }) {
+        try {
+            const defaultEnd = dayjs();
+            const defaultStart = defaultEnd.subtract(30, 'day');
+
+            const parseDate = (value?: string, endOfDay: boolean = false) => {
+                if (!value) return undefined;
+                const parsed = dayjs(value, 'YYYY-MM-DD');
+                if (!parsed.isValid()) return undefined;
+                return endOfDay ? parsed.endOf('day') : parsed.startOf('day');
+            };
+
+            const start = parseDate(start_date) || defaultStart.startOf('day');
+            const end = parseDate(end_date, true) || defaultEnd.endOf('day');
+
+            const rangeDays = end.diff(start, 'day') + 1;
+            const prevEnd = start.subtract(1, 'day').endOf('day');
+            const prevStart = prevEnd.subtract(rangeDays - 1, 'day').startOf('day');
+
+            const [currentSales, previousSales] = await Promise.all([
+                prisma.sales.findMany({
+                    where: {
+                        created_at: {
+                            gte: start.toDate(),
+                            lte: end.toDate(),
+                        }
+                    },
+                    select: {
+                        id: true,
+                        total: true,
+                        payment_method: true,
+                        source: true,
+                        created_at: true,
+                    },
+                    orderBy: [{ created_at: 'asc' } as any]
+                }),
+                prisma.sales.findMany({
+                    where: {
+                        created_at: {
+                            gte: prevStart.toDate(),
+                            lte: prevEnd.toDate(),
+                        }
+                    },
+                    select: { id: true, total: true },
+                }),
+            ]);
+
+            const salesCount = currentSales.length;
+            const revenueTotal = currentSales.reduce((acc, s) => acc + Number(s.total || 0), 0);
+            const avgOrderValue = salesCount > 0 ? revenueTotal / salesCount : 0;
+
+            const prevCount = previousSales.length;
+            const prevRevenue = previousSales.reduce((acc, s) => acc + Number(s.total || 0), 0);
+
+            const growthPercentRevenue = prevRevenue > 0 ? ((revenueTotal - prevRevenue) / prevRevenue) * 100 : (revenueTotal > 0 ? 100 : 0);
+            const growthPercentCount = prevCount > 0 ? ((salesCount - prevCount) / prevCount) * 100 : (salesCount > 0 ? 100 : 0);
+
+            const byDayMap: Record<string, { date: string; count: number; revenue: number }> = {};
+            for (let i = 0; i < rangeDays; i++) {
+                const d = start.add(i, 'day');
+                const key = d.format('YYYY-MM-DD');
+                byDayMap[key] = { date: key, count: 0, revenue: 0 };
+            }
+            currentSales.forEach((s) => {
+                const key = dayjs(s.created_at).format('YYYY-MM-DD');
+                if (!byDayMap[key]) {
+                    byDayMap[key] = { date: key, count: 0, revenue: 0 };
+                }
+                byDayMap[key].count += 1;
+                byDayMap[key].revenue += Number(s.total || 0);
+            });
+            const timeseriesByDay = Object.values(byDayMap);
+
+            const methodMap: Record<string, { method: string; count: number; revenue: number }> = {};
+            const sourceMap: Record<string, { source: string; count: number; revenue: number }> = {};
+            currentSales.forEach((s) => {
+                const mKey = String(s.payment_method);
+                const sKey = String(s.source);
+                if (!methodMap[mKey]) methodMap[mKey] = { method: mKey, count: 0, revenue: 0 };
+                if (!sourceMap[sKey]) sourceMap[sKey] = { source: sKey, count: 0, revenue: 0 };
+                methodMap[mKey].count += 1;
+                methodMap[mKey].revenue += Number(s.total || 0);
+                sourceMap[sKey].count += 1;
+                sourceMap[sKey].revenue += Number(s.total || 0);
+            });
+
+            return {
+                range: {
+                    start_date: start.format('YYYY-MM-DD'),
+                    end_date: end.format('YYYY-MM-DD'),
+                    days: rangeDays,
+                },
+                totals: {
+                    sales_count: salesCount,
+                    revenue_total: revenueTotal,
+                    avg_order_value: avgOrderValue,
+                },
+                previous: {
+                    sales_count: prevCount,
+                    revenue_total: prevRevenue,
+                },
+                growth: {
+                    revenue_percent: growthPercentRevenue,
+                    count_percent: growthPercentCount,
+                },
+                timeseries: {
+                    by_day: timeseriesByDay,
+                },
+                breakdowns: {
+                    payment_methods: Object.values(methodMap),
+                    sources: Object.values(sourceMap),
+                },
+            };
+        } catch (error) {
+            const error_msg = error instanceof Error ? error.message : String(error);
+            console.log(error);
+            return {
+                success: false,
+                message: error_msg
+            };
         }
     }
 }

@@ -8,7 +8,11 @@
     "postbuild": "node scripts/copy-static.js",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed:sales": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-sales.ts",
+    "seed:users": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-users.ts",
+    "seed:products": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-products.ts",
+    "seed:promos": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-promos.ts"
   },
   "keywords": [],
   "author": "",

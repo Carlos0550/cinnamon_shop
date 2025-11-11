@@ -1,11 +1,12 @@
-import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea } from "@mantine/core"
+import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea, SegmentedControl } from "@mantine/core"
+import { DatePickerInput } from "@mantine/dates"
 import { useMediaQuery } from "@mantine/hooks"
 import { theme } from "@/theme"
 import type { Product } from "../Api/ProductsApi"
 import { useGetSales } from "../Api/SalesApi"
 import type { PaymentMethods, SaleSource, ManualProductItem } from "./SalesForm"
 import ModalWrapper from "@/components/Common/ModalWrapper"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 
 export type Sales = {
   id: string,
@@ -27,8 +28,54 @@ export type Sales = {
 export default function SalesTable() {
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [perPage, setPerPage] = useState<number>(5)
+  const [preset, setPreset] = useState<string>("HOY")
+  const [range, setRange] = useState<[Date | null, Date | null]>([null, null])
 
-  const { data, isLoading } = useGetSales(currentPage, perPage)
+  const startEndFromPreset = useMemo(() => {
+    const today = new Date();
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
+    const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
+    const addDays = (d: Date, days: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, 0, 0, 0, 0)
+    switch (preset) {
+      case "AYER": {
+        const y = addDays(today, -1); return { start: startOfDay(y), end: endOfDay(y) }
+      }
+      case "ULTIMOS_3": {
+        const s = addDays(today, -2); return { start: startOfDay(s), end: endOfDay(today) }
+      }
+      case "ULTIMOS_7": {
+        const s = addDays(today, -6); return { start: startOfDay(s), end: endOfDay(today) }
+      }
+      case "MES": {
+        const s = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0); const e = endOfDay(today); return { start: s, end: e }
+      }
+      case "PERSONALIZADO": {
+        const [s, e] = range;
+        const start = s instanceof Date ? s : (s ? new Date(s as unknown as string) : startOfDay(today));
+        const end = e instanceof Date ? e : (e ? new Date(e as unknown as string) : endOfDay(today));
+        return { start, end }
+      }
+      case "HOY":
+      default: {
+        return { start: startOfDay(today), end: endOfDay(today) }
+      }
+    }
+  }, [preset, range])
+
+  const toDateOnly = (d: unknown) => {
+    if (!d) return undefined;
+    const date = d instanceof Date ? d : new Date(d as unknown as string);
+    if (isNaN(date.getTime())) return undefined;
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  const start_date = toDateOnly(startEndFromPreset.start)
+  const end_date = toDateOnly(startEndFromPreset.end)
+
+  const { data, isLoading } = useGetSales(currentPage, perPage, start_date, end_date)
 
   const sales: Sales[] = (data?.sales ?? []) as Sales[]
   const pagination = data?.pagination as undefined | {
@@ -44,6 +91,8 @@ export default function SalesTable() {
 
   const [viewProductsOpen, setViewProductsOpen] = useState<boolean>(false)
   const [selectedSale, setSelectedSale] = useState<Sales | null>(null)
+
+  useEffect(() => { setCurrentPage(1) }, [preset, range])
 
   const openProducts = (sale: Sales) => {
     setSelectedSale(sale)
@@ -61,23 +110,38 @@ export default function SalesTable() {
     return isNaN(d.getTime()) ? String(value) : d.toLocaleString('es-AR')
   }
 
-  if (isLoading) {
-    return (
-      <Group justify="center" align="center" h={200}>
-        <Loader />
-      </Group>
-    )
-  }
-
-  if (!sales || sales.length === 0) {
-    return (
-      <Text ta="center">No se encontraron ventas</Text>
-    )
-  }
-  console.log(sales)
   return (
     <Box>
-      {isMobile ? (
+      <Group mb="md" gap="md" align="center" wrap="wrap">
+        <SegmentedControl
+          value={preset}
+          onChange={setPreset}
+          data={[
+            { label: "Hoy", value: "HOY" },
+            { label: "Ayer", value: "AYER" },
+            { label: "Últimos 3", value: "ULTIMOS_3" },
+            { label: "Últimos 7", value: "ULTIMOS_7" },
+            { label: "Mes", value: "MES" },
+            { label: "Personalizado", value: "PERSONALIZADO" },
+          ]}
+        />
+        {preset === "PERSONALIZADO" && (
+          <DatePickerInput
+            type="range"
+            value={range}
+            onChange={(value) => setRange(value as [Date | null, Date | null])}
+            placeholder="Selecciona rango"
+            locale="es"
+          />
+        )}
+      </Group>
+      {isLoading ? (
+        <Group justify="center" align="center" h={200}>
+          <Loader />
+        </Group>
+      ) : (!sales || sales.length === 0) ? (
+        <Text ta="center">No se encontraron ventas</Text>
+      ) : isMobile ? (
         <Stack>
           {sales.map((sale) => {
             const finalTotal = Number(sale.total) || 0

@@ -147,13 +147,14 @@ export function SalesForm({ onClose }: Props) {
     const subtotal = formValue.loadedManually ? manualSubtotal : productsSubtotal;
     const finalTotal = subtotal * (1 + Number(formValue.tax) / 100);
     const paymentSum = (formValue.payment_methods || []).reduce((acc, pm) => acc + Number(pm.amount || 0), 0);
-    // Si hay impuesto, no mostrar advertencia de diferencia.
-    const paymentMismatch = formValue.tax > 0
-        ? false
-        : Math.round((paymentSum - finalTotal) * 100) / 100 !== 0;
-    // Mostrar monto restante: si hay impuesto, calcular contra subtotal (sin impuesto).
+    // const paymentMismatch = formValue.tax > 0
+    //     ? false
+    //     : Math.round((paymentSum - finalTotal) * 100) / 100 !== 0;
     const remainingBase = formValue.tax > 0 ? subtotal : finalTotal;
     const remainingAmount = Math.max(remainingBase - paymentSum, 0);
+
+    // Ocultar mensajes de falta cuando solo hay un método de pago se maneja en el render
+    // eliminando la necesidad de mutar valores derivados en efectos.
 
     return (
         <Box>
@@ -285,10 +286,10 @@ export function SalesForm({ onClose }: Props) {
                                             )}
                                         </Group>
                                     ))}
-                                    {paymentMismatch && (
+                                    {/* {paymentMismatch && (
                                         <Text c="red">Advertencia: la suma de los métodos de pago ({currency.format(paymentSum)}) no coincide con el total ({currency.format(finalTotal)}).</Text>
-                                    )}
-                                    {remainingAmount > 0 && (
+                                    )} */}
+                                    {remainingAmount > 0 && ((formValue.payment_methods?.length || 0) > 1) && (
                                         <Text c="orange">Faltan {currency.format(remainingAmount)} {formValue.tax > 0 ? "(calculado sobre subtotal sin impuesto)" : ""}</Text>
                                     )}
                                 </Stack>

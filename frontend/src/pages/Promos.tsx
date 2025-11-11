@@ -1,11 +1,15 @@
 import ModalWrapper from "@/components/Common/ModalWrapper";
 import { PromoForm } from "@/components/Promos/PromoForm";
+import PromosTable from "@/components/Promos/PromosTable";
 import { Box, Button, Group, TextInput, Title } from "@mantine/core";
 import { useState } from "react";
+import type { Promo } from "@/components/Api/PromoApi";
 import { FiPlus, FiSearch } from "react-icons/fi";
 
 export function Promos() {
     const [opened, setOpened] = useState<boolean>(false)
+    const [search, setSearch] = useState<string>("")
+    const [editingPromo, setEditingPromo] = useState<Promo | null>(null)
 
     const handleToggle = () => {
         setOpened(!opened)
@@ -15,23 +19,29 @@ export function Promos() {
             <Title mb={"md"}>Promociones</Title>
             <Group mb={"md"} gap={"md"} align="center" wrap="wrap">
                 <TextInput
-                    placeholder="Buscar por nombre o email"
+                    placeholder="Buscar por código o título"
                     leftSection={<FiSearch />}
                     style={{ flex: "1 1 280px", minWidth: 260, maxWidth: 520 }}
-                    
+                    value={search}
+                    onChange={(e) => setSearch(e.currentTarget.value)}
                 />
-                <Button leftSection={<FiPlus />}
-                    onClick={handleToggle}
-                >Nueva promoción</Button>
+                <Button leftSection={<FiPlus />} onClick={() => { setEditingPromo(null); handleToggle(); }}>
+                    Nueva promoción
+                </Button>
             </Group>
+
+            <PromosTable
+                search={search}
+                onEdit={(promo) => { setEditingPromo(promo); setOpened(true); }}
+            />
 
             <ModalWrapper
                 opened={opened}
                 onClose={handleToggle}
-                title="Nueva promoción"
+                title={editingPromo ? "Editar promoción" : "Nueva promoción"}
                 size={"xl"}
             >
-                <PromoForm onClose={handleToggle}/>
+                <PromoForm onClose={handleToggle} promo={editingPromo}/>
             </ModalWrapper>
         </Box>
     )

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react"
-import type { PromoRequest } from "../Api/PromoApi"
-import { PromoTypes, useSubmitPromo } from "../Api/PromoApi"
+import type { PromoRequest, Promo } from "../Api/PromoApi"
+import { PromoTypes, useSubmitPromo, useUpdatePromo } from "../Api/PromoApi"
 import {
     Box,
     Button,
@@ -34,9 +34,10 @@ import { showNotification } from "@mantine/notifications"
 
 export interface PromoFormProps {
     onClose: () => void
+    promo?: Promo | null
 }
 
-export function PromoForm({ onClose }: PromoFormProps) {
+export function PromoForm({ onClose, promo }: PromoFormProps) {
     const [formValues, setFormValues] = useState<PromoRequest>({
         code: "",
         title: "",
@@ -65,6 +66,7 @@ export function PromoForm({ onClose }: PromoFormProps) {
     const productCombobox = useCombobox()
     
     const submitPromo = useSubmitPromo()
+    const updatePromo = useUpdatePromo()
 
     const handleChange = (field: keyof PromoRequest, value: any) => {
         setFormValues({
@@ -143,10 +145,31 @@ export function PromoForm({ onClose }: PromoFormProps) {
     }, [productsLoading, products?.products, productSearch])
 
     useEffect(() => {
-        console.log("Form VALUES", formValues)
-        console.log("Image:", image)
-        console.log("Date Ranges:", dateRange)
-    }, [formValues, image, dateRange])
+        if (promo) {
+            setFormValues({
+                code: promo.code || "",
+                title: promo.title || "",
+                description: promo.description || "",
+                type: promo.type === 'fixed' ? PromoTypes.FIXED : PromoTypes.PERCENTAGE,
+                value: Number(promo.value || 0),
+                max_discount: promo.max_discount ?? 0,
+                min_order_amount: promo.min_order_amount ?? 0,
+                start_date: promo.start_date ? String(promo.start_date).split('T')[0] : "",
+                end_date: promo.end_date ? String(promo.end_date).split('T')[0] : "",
+                is_active: !!promo.is_active,
+                usage_limit: promo.usage_limit ?? 0,
+                usage_count: promo.usage_count ?? 0,
+                show_in_home: !!promo.show_in_home,
+                per_user_limit: promo.per_user_limit ?? 0,
+                categories: (promo.categories || []).map((c: any) => c.id),
+                products: (promo.products || []).map((p: any) => p.id),
+            })
+            setDateRange([
+                promo.start_date ? new Date(promo.start_date as any) : null,
+                promo.end_date ? new Date(promo.end_date as any) : null,
+            ])
+        }
+    }, [promo])
 
     const handleSubmit = async () => {
         
@@ -177,20 +200,26 @@ export function PromoForm({ onClose }: PromoFormProps) {
             })
         }
         
-        await submitPromo.mutateAsync({
-            values: formValues,
-            image : image || undefined,
-        })
-
-        if (submitPromo.isSuccess) {
-            return onClose()
+        if (promo?.id) {
+            await updatePromo.mutateAsync({
+                id: promo.id,
+                values: formValues,
+                image: image || undefined,
+            })
+            if (updatePromo.isSuccess) return onClose()
+        } else {
+            await submitPromo.mutateAsync({
+                values: formValues,
+                image : image || undefined,
+            })
+            if (submitPromo.isSuccess) return onClose()
         }
     }
 
     return (
         <Container size="xl" p={0}>
             <Paper shadow="sm" p="xl" radius="md">
-                <Text size="xl" fw={600} mb="lg">Crear Nueva Promoción</Text>
+                <Text size="xl" fw={600} mb="lg">{promo ? "Editar Promoción" : "Crear Nueva Promoción"}</Text>
 
                 <Stack gap="lg">
                     <Box>
@@ -389,12 +418,12 @@ export function PromoForm({ onClose }: PromoFormProps) {
                                 />
                             </Grid.Col>
                             <Grid.Col span={{ base: 12, sm: 6 }}>
-                                {image && (
+                                {(image || promo?.image) && (
                                     <Box>
                                         <Text size="sm" mb="xs">Vista Previa:</Text>
                                         <Group gap="sm">
                                             <Image
-                                                src={URL.createObjectURL(image)}
+                                                src={image ? URL.createObjectURL(image) : (promo?.image || "")}
                                                 alt="Vista previa"
                                                 w={120}
                                                 h={120}
@@ -425,10 +454,10 @@ export function PromoForm({ onClose }: PromoFormProps) {
                         </Button>
                         <Button 
                             onClick={handleSubmit}
-                            loading={submitPromo.isPending}
-                            disabled={submitPromo.isPending}
+                            loading={promo ? updatePromo.isPending : submitPromo.isPending}
+                            disabled={promo ? updatePromo.isPending : submitPromo.isPending}
                         >
-                            Crear Promoción
+                            {promo ? "Guardar cambios" : "Crear Promoción"}
                         </Button>
                     </Group>
                 </Stack>

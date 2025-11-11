@@ -126,10 +126,8 @@ class PromoServices {
         }
       })
 
-      if (result.length > 0) {
-        return res.status(200).json({ ok: true, promos: result });
-      }
-      return res.status(404).json({ ok: false, error: "No se encontraron promociones" });
+      // Siempre devolver 200 con la lista (posiblemente vacía)
+      return res.status(200).json({ ok: true, promos: result });
     } catch (error) {
       console.log(error)
       return res.status(500).json({ ok: false, error: "Error al obtener las promociones" });
@@ -151,6 +149,140 @@ class PromoServices {
       return typeof url === "string" && url.length > 0 ? url : null;
     }
   };
+  async updatePromo(req: Request, res: Response) {
+    let newImageStoragePath: string | null = null;
+    try {
+      const { id } = req.params as { id: string };
+      const existing = await prisma.promos.findUnique({ where: { id } });
+      if (!existing) {
+        return res.status(404).json({ ok: false, error: "Promoción no encontrada" });
+      }
+
+      const {
+        code,
+        title,
+        description,
+        type,
+        value,
+        max_discount,
+        min_order_amount,
+        start_date,
+        end_date,
+        is_active,
+        usage_limit,
+        per_user_limit,
+        categories,
+        products,
+        show_in_home,
+      } = req.body as PromoRequest;
+
+      const image = req.file as Express.Multer.File | undefined;
+
+      let imageUrl: string | undefined = undefined;
+      if (image) {
+        const buffer: Buffer = image.buffer ?? image;
+        const fileName = `promo-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        newImageStoragePath = `promos/${fileName}`;
+        const rs = await uploadImage(buffer, fileName, "promos", image.mimetype);
+        if (rs.url) imageUrl = rs.url;
+      }
+
+      const toBoolean = (v: any) => {
+        if (typeof v === 'boolean') return v;
+        if (typeof v === 'string') {
+          const s = v.trim().toLowerCase();
+          if (['true', '1', 'yes', 'on'].includes(s)) return true;
+          if (['false', '0', 'no', 'off', ''].includes(s)) return false;
+        }
+        return Boolean(v);
+      };
+
+      const normalizedType = typeof type === "string" ? (type as string).toLowerCase() : undefined;
+      const promoType = normalizedType
+        ? normalizedType === "percentage" || normalizedType === "porcentaje" || normalizedType === "percent"
+          ? PromoType.percentage
+          : PromoType.fixed
+        : undefined;
+
+      const fromDate = start_date && dayjs(start_date).isValid() ? new Date(start_date as string) : undefined;
+      const toDate = end_date && dayjs(end_date).isValid() ? new Date(end_date as string) : undefined;
+
+      const allProducts = Array.isArray(products) && products.length === 0;
+      const allCategories = Array.isArray(categories) && categories.length === 0;
+
+      const updated = await prisma.promos.update({
+        where: { id },
+        data: {
+          code: code ?? existing.code,
+          title: title ? title.trim().toLowerCase() : existing.title,
+          description: description ?? existing.description ?? undefined,
+          image: imageUrl ?? existing.image ?? undefined,
+          type: promoType ?? existing.type,
+          value: value != null ? (typeof value === 'string' ? parseFloat(value as any) : Number(value)) : existing.value,
+          max_discount: typeof max_discount === 'number' ? max_discount : existing.max_discount ?? undefined,
+          min_order_amount: typeof min_order_amount === 'number' ? min_order_amount : existing.min_order_amount ?? undefined,
+          start_date: fromDate ?? existing.start_date,
+          end_date: toDate ?? existing.end_date,
+          is_active: is_active != null ? toBoolean(is_active) : existing.is_active,
+          usage_limit: typeof usage_limit === 'number' ? usage_limit : existing.usage_limit ?? undefined,
+          per_user_limit: typeof per_user_limit === 'number' ? per_user_limit : existing.per_user_limit ?? undefined,
+          show_in_home: show_in_home != null ? toBoolean(show_in_home) : existing.show_in_home,
+          all_products: Array.isArray(products) ? allProducts : existing.all_products,
+          all_categories: Array.isArray(categories) ? allCategories : existing.all_categories,
+          categories: Array.isArray(categories)
+            ? { set: categories.map((id) => ({ id })) }
+            : undefined,
+          products: Array.isArray(products)
+            ? { set: products.map((id) => ({ id })) }
+            : undefined,
+        },
+        include: { categories: true, products: true },
+      });
+
+      if (imageUrl && existing.image) {
+        const imagePath = this.extractPathFromPublicUrl(existing.image);
+        if (imagePath) {
+          try {
+            await deleteImage(imagePath);
+          } catch (cleanupErr) {
+            console.warn("Error al eliminar imagen previa:", cleanupErr);
+          }
+        }
+      }
+
+      return res.status(200).json({ ok: true, promo: updated });
+    } catch (error: any) {
+      console.error("Error al actualizar promo:", error);
+      try {
+        if (newImageStoragePath) {
+          await deleteImage(newImageStoragePath);
+        }
+      } catch (cleanupErr) {
+        console.warn("Error al limpiar imagen subida:", cleanupErr);
+      }
+      return res.status(500).json({ ok: false, error: "Error al actualizar la promoción" });
+    }
+  }
+
+  async togglePromoActive(req: Request, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      const { is_active } = req.body as { is_active?: boolean | string };
+      const existing = await prisma.promos.findUnique({ where: { id } });
+      if (!existing) return res.status(404).json({ ok: false, error: "Promoción no encontrada" });
+
+      const nextActive = is_active != null ? (typeof is_active === 'string' ? ['true','1','yes','on'].includes(is_active.toLowerCase()) : !!is_active) : !existing.is_active;
+      const updated = await prisma.promos.update({
+        where: { id },
+        data: { is_active: nextActive },
+      });
+      return res.status(200).json({ ok: true, promo: updated });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ ok: false, error: "Error al cambiar estado de la promoción" });
+    }
+  }
+
   async deletePromo(req: Request, res: Response) {
     try {
       const { id } = req.params;

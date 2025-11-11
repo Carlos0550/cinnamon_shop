@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select, Switch, Text } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { useGetAllCategories } from "../Api/CategoriesApi";
 
@@ -95,17 +96,29 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   };
 
   const handleSubmit = () => {
+    const isAI = !!formValues.fillWithAI;
     const mutation = product ? updateProductMutation : saveProductMutation;
     const submitData = {
       ...formValues,
-      state: formValues.fillWithAI ? 'draft' : formValues.state
+      state: isAI ? 'draft' : formValues.state
     };
-    mutation.mutate(submitData, {
-      onSuccess: () => {
-        onSuccess?.();
-        onCancel?.();
-      }
-    });
+
+    if (isAI) {
+      mutation.mutate(submitData);
+      notifications.show({
+        title: "Generación en segundo plano",
+        message: "Estamos creando el producto con IA. Te avisaremos al finalizar.",
+        color: "blue",
+      });
+      onCancel?.();
+    } else {
+      mutation.mutate(submitData, {
+        onSuccess: () => {
+          onSuccess?.();
+          onCancel?.();
+        }
+      });
+    }
   };
 
   const capitalizeFirstLetter = (str: string) => {
@@ -292,7 +305,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       <Group justify="flex-end" mt="md">
         <Button 
           onClick={handleSubmit} 
-          loading={product ? updateProductMutation.isPending : saveProductMutation.isPending}
+          loading={!fillWithAI && (product ? updateProductMutation.isPending : saveProductMutation.isPending)}
           disabled={fillWithAI && (!formValues.category || formValues.images.length === 0)}
         >
           {(product ? updateProductMutation.isPending : saveProductMutation.isPending) 

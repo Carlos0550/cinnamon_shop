@@ -202,6 +202,24 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get',
+  path: '/sales/analytics',
+  summary: 'Analíticas de ventas para un rango de fechas',
+  security: [{ bearerAuth: [] }],
+  request: {
+    query: z.object({
+      start_date: z.string().optional().openapi({ description: 'YYYY-MM-DD' }),
+      end_date: z.string().optional().openapi({ description: 'YYYY-MM-DD' }),
+    }),
+  },
+  responses: {
+    200: { description: 'Analíticas calculadas' },
+    400: { description: 'Error en parámetros' },
+    500: { description: 'Error interno del servidor' },
+  },
+});
+
+registry.registerPath({
   method: 'post',
   path: '/products/categories',
   summary: 'Crear categoría',
