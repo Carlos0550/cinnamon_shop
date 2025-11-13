@@ -50,10 +50,13 @@ enum PaymentMethod {
 
 model User {
   id             Int      @id @default(autoincrement())
-  email          String   @unique
+  email          String
   password       String
   name           String
   is_active      Boolean  @default(true)
+  is_clerk       Boolean  @default(false)
+  clerk_user_id  String?  @unique
+  profile_image  String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
   role           Int      @default(2)
@@ -64,6 +67,7 @@ model User {
   @@index([is_active])
   @@index([role])
   @@index([created_at])
+  @@unique([email, role])
 }
 
 model Categories {
@@ -154,4 +158,3 @@ model Sales {
   @@index([source, created_at])
   @@index([payment_method, created_at])
 }
-

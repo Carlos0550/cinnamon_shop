@@ -7,7 +7,14 @@ import { FiMoon, FiSun } from 'react-icons/fi';
 
 export default function Layout() {
   const [opened, { toggle, close }] = useDisclosure(false);
-
+  const goToShop = () => {
+    const environment = import.meta.env.VITE_ENV;
+    if (environment === 'development') {
+      window.open('http://localhost:3001', '_blank');
+    } else {
+      window.open('https://cinnamon-shop.up.railway.app/', '_blank');
+    }
+  }
   return (
     <AppShell
       header={{ height: 60 }}
@@ -32,6 +39,7 @@ export default function Layout() {
       <AppShell.Navbar p="md" style={{ background: 'var(--mantine-color-body)' }}>
         <Stack gap="sm" onClick={close}>
           {/* <ColorSchemeToggle /> */}
+          <Anchor component={Link} to="/" onClick={goToShop}>Ir a mi tienda</Anchor>
           <Anchor component={Link} to="/">Inicio</Anchor>
           <Anchor component={Link} to="/products">Productos</Anchor>
           <Anchor component={Link} to="/categories">Categorias</Anchor>

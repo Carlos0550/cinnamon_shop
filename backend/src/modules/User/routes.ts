@@ -8,16 +8,20 @@ const router = Router();
 router.post('/login', login, authServices.login);
 router.post('/register', createUser, authServices.createUser);
 router.post("/new", CreateUserController, authServices.newUser)
+// Intercambio de sesión Clerk -> token propio
+router.post('/clerk-login', (req, _res, next) => next(), (req, res) => authServices.clerkLogin(req, res));
 router.get("/", requireAuth, requireRole([1]), (req, res) => authServices.getUsers(req, res))
 router.get('/validate-token', requireAuth, (req, res) => {
     const user = (req as any).user;
     res.json({ 
         ok: true, 
-        id: user.id,
+        id: user.sub || user.id,
         email: user.email,
         name: user.name,
         is_active: true,
-        role: user.role || 2
+        role: user.role || 2,
+        profileImage: user.profileImage || null,
+        is_clerk: !!user.is_clerk,
     });
 });
 

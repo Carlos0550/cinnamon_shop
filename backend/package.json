@@ -20,6 +20,7 @@
   "description": "",
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.1.0",
+    "@clerk/backend": "^2.22.0",
     "@prisma/client": "^6.17.1",
     "@supabase/supabase-js": "^2.75.0",
     "@types/morgan": "^1.9.10",

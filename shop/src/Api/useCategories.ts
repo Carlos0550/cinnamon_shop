@@ -24,8 +24,6 @@ export const useCategories = () => {
         queryKey: ['categories'],
         queryFn: async (): Promise<CategoriesResponse> => {
             const res = await fetch(`${baseUrl}/products/public/categories`)
-            //espera artificial de 2 segundos
-            await new Promise(resolve => setTimeout(resolve, 2000));
             const data = await res.json();
             return data as CategoriesResponse;
         }

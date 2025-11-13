@@ -31,3 +31,4 @@ shop/node_modules
 backend/scripts/run-seed.js
 backend/docs/Guia-Endpoints-OpenAPI-Zod-Prisma.md
 backend/README.md
+.trae/documents/Arreglar autenticación Clerk y sincronización con backend.md

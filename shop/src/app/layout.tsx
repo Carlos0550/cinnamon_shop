@@ -3,6 +3,7 @@ import AppProvider from "../providers/AppProvider";
 import SiteLayout from "../Components/Layout/SiteLayout";
 import { AppContextProvider } from "@/providers/AppContext";
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
   title: "Cinnamon Shop",
@@ -18,11 +19,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <AppProvider>
-          <AppContextProvider>
-            <SiteLayout>{children}</SiteLayout> 
-          </AppContextProvider>
-        </AppProvider>
+        <ClerkProvider>
+          <AppProvider>
+              <SiteLayout>{children}</SiteLayout>
+          </AppProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

@@ -6,13 +6,15 @@ import { redis } from "@/config/redis";
 import { sendEmail } from "@/config/resend";
 import { welcomeKuromiHTML } from "@/templates/welcome_kuromi";
 import { new_user_html } from "@/templates/new_user";
+import { verifyToken as verifyClerkToken } from "@clerk/backend";
 
 class AuthServices {
     async login(req: Request, res: Response) {
         const { email, password } = req.body;
-        const user = await prisma.user.findUnique({
+        const user = await prisma.user.findFirst({
             where: {
-                email: email
+                email: email,
+                role: 1,
             }
         })
 
@@ -20,6 +22,9 @@ class AuthServices {
             return res.status(400).json({ ok: false, error: 'invalid_email' });
         }
 
+        if (user.is_clerk) {
+            return res.status(400).json({ ok: false, error: 'use_clerk_login' });
+        }
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ ok: false, error: 'invalid_password' });
@@ -30,6 +35,7 @@ class AuthServices {
             email: user.email,
             name: user.name,
             role: user.role,
+            is_clerk: user.is_clerk ?? false,
         }
         const token = signToken(payload);
 
@@ -42,12 +48,112 @@ class AuthServices {
         return res.status(200).json({ ok: true, token, user: user_without_password });
     }
 
+    async clerkLogin(req: Request, res: Response) {
+        try {
+            const authHeader = (req.headers['authorization'] || req.headers['Authorization']) as string | undefined;
+            if (!authHeader) {
+                console.warn('clerk_login_missing_token');
+                return res.status(401).json({ ok: false, error: 'missing_clerk_token' });
+            }
+            const parts = authHeader.split(' ');
+            if (parts.length !== 2 || !/^Bearer$/i.test(parts[0])) {
+                console.warn('clerk_login_invalid_auth_header');
+                return res.status(401).json({ ok: false, error: 'invalid_auth_header' });
+            }
+            const clerkToken = parts[1];
+            console.log("clerkToken", clerkToken)
+            if (!process.env.CLERK_SECRET_KEY) {
+                console.error('clerk_login_missing_secret_key');
+                return res.status(500).json({ ok: false, error: 'missing_clerk_secret_key' });
+            }
+            const verified = await verifyClerkToken(clerkToken, {
+                secretKey: process.env.CLERK_SECRET_KEY,
+            });
+            const { email, name, profileImage } = req.body as {
+                email?: string;
+                name?: string;
+                profileImage?: string;
+            };
+
+            const payloadClaims = (verified as any) || {};
+            console.log("payloadClaims", payloadClaims)
+            const claimedEmail = payloadClaims?.email || email;
+            if (!claimedEmail) {
+                console.warn('clerk_login_missing_email');
+                return res.status(400).json({ ok: false, error: 'missing_email' });
+            }
+            if (payloadClaims?.email_verified === false) {
+                console.warn('clerk_login_email_not_verified');
+                return res.status(400).json({ ok: false, error: 'email_not_verified' });
+            }
+
+            const normalized_name = ((name || (claimedEmail.split('@')[0]))).trim().toLowerCase();
+
+            const clerkUserId = payloadClaims?.sub as string | undefined;
+            const picture = profileImage || payloadClaims?.picture || undefined;
+
+            const existingByClerkId = clerkUserId ? await prisma.user.findUnique({ where: { clerk_user_id: clerkUserId } }) : null;
+            
+            let user = existingByClerkId ;
+
+            if (!user) {
+                const secure_password = Math.random().toString(36).slice(-12);
+                const hashed = await hashPassword(secure_password);
+                user = await prisma.user.create({
+                    data: {
+                        email: claimedEmail,
+                        password: hashed,
+                        name: normalized_name,
+                        is_clerk: true,
+                        clerk_user_id: clerkUserId,
+                        profile_image: picture,
+                        role: 2,
+                    }
+                });
+            } else {
+                try {
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: { 
+                            name: normalized_name,
+                            is_clerk: true,
+                            clerk_user_id: clerkUserId,
+                            profile_image: picture,
+                        }
+                    });
+                    user = { ...user, name: normalized_name, is_clerk: true, clerk_user_id: clerkUserId, profile_image: picture } as any;
+                } catch {}
+            }
+
+            if (!user) {
+                return res.status(500).json({ ok: false, error: 'user_persist_failed' });
+            }
+            const payload = {
+                sub: user.id.toString(),
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                profileImage: picture,
+                is_clerk: true,
+            };
+            const token = signToken(payload);
+
+            await redis.set(`user:${token}`, JSON.stringify(payload), 'EX', 60 * 60 * 24);
+            const user_without_password = { ...user, password: undefined } as any;
+            return res.status(200).json({ ok: true, token, user: user_without_password });
+        } catch (err) {
+            console.warn('clerk_login_invalid_token', err);
+            return res.status(401).json({ ok: false, error: 'invalid_clerk_token' });
+        }
+    }
+
 
     async createUser(req: Request, res: Response) {
         const { email, password, name } = req.body;
-        const user_exists = await prisma.user.findUnique({
+        const user_exists = await prisma.user.findFirst({
             where: {
-                email: email
+                email: email,
+                role: 1,
             }
         })
 
@@ -60,6 +166,7 @@ class AuthServices {
                 email: email,
                 password: await hashPassword(password),
                 name: normalized_name,
+                role: 1
             }
         })
 
@@ -81,14 +188,15 @@ class AuthServices {
 
     async newUser(req: Request, res: Response) {
         const { email, role_id, name } = req.body;
-        const user_exists = await prisma.user.findUnique({
+        const user_exists = await prisma.user.findFirst({
             where: {
-                email: email
+                email: email,
+                role: Number(role_id),
             }
         })
 
         var secure_password = Math.random().toString(36).slice(-8);
-        var password = await hashPassword(secure_password);
+        var hashedPassword = await hashPassword(secure_password);
         if (user_exists) {
             return res.status(400).json({ ok: false, error: 'email_already_registered' });
         }
@@ -96,7 +204,7 @@ class AuthServices {
         const user = await prisma.user.create({
             data: {
                 email: email,
-                password: await hashPassword(password),
+                password: hashedPassword,
                 name: normalized_name,
                 role: Number(role_id),
             }

@@ -52,8 +52,6 @@ export default function useProducts(params: FetchProductsParams){
                 title: params.title,
             })
             const res = await fetch(`${baseUrl}/products/public?${qp}`)
-            //espera artificial de 2 segundos
-            await new Promise(resolve => setTimeout(resolve, 2000));
             const data = await res.json();
             return data as ProductsResponse;
         }

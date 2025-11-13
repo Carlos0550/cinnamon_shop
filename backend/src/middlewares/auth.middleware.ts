@@ -6,6 +6,7 @@ export type AuthUser = JwtPayload & {
   email?: string;
   name?: string;
   role?: number;
+  profileImage?: string;
 };
 
 function getBearerToken(req: Request): string | null {
