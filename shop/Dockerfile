@@ -27,6 +27,9 @@ ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
+ARG publishableKey
+ENV publishableKey=$publishableKey
+
 # Copiar artefactos de build de Next.js y dependencias
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
