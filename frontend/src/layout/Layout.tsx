@@ -12,7 +12,7 @@ export default function Layout() {
     if (environment === 'development') {
       window.open('http://localhost:3001', '_blank');
     } else {
-      window.open('https://cinnamon-shop.up.railway.app/', '_blank');
+      window.open('https://st.cinnamon-makeup.com/', '_blank');
     }
   }
   return (
