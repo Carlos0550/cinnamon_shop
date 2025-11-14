@@ -1,28 +1,41 @@
 
 import { Box, Flex, Title, Text, Container, Input, MultiSelect } from "@mantine/core";
 
-import { Products } from "@/Api/useProducts";
+import useProducts, { Products } from "@/Api/useProducts";
 import ProductsCards from "./sub-components/ProductsCards";
-import { Categories } from "@/Api/useCategories";
+import { Categories, useCategories } from "@/Api/useCategories";
 import CategoriesCards from "./sub-components/CategoriesCards";
 import { useAppContext } from "@/providers/AppContext";
+import { useState } from "react";
+import CinnamonLoader from "@/Components/CinnamonLoader/CinnamonLoader";
 
-type Props = {
-    products: Products[]
-    pagination: {
-        page: number,
-        limit: number,
-        total: number,
-    }
-    categories: Categories[]
-}
-export default function Home({ products, pagination, categories }: Props) {
+export default function Home() {
+    const [pagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+    })
+    const { data, isLoading } = useProducts({
+        page: pagination.page,
+        limit: pagination.limit,
+        title: '',
+    })
+    const { data: categoriesData } = useCategories()
+    const categories: Categories[] = categoriesData?.data ?? []
+    const products: Products[] = data?.data?.products ?? []
     const {
         utils: {
             capitalizeTexts,
             isMobile
         }
     } = useAppContext()
+    if (isLoading) {
+        return (
+            <Flex h={"100vh"} justify="center" align="center">
+                <CinnamonLoader />
+            </Flex>
+        )
+    }
     return (
         <Box>
             <Flex direction="column" justify={"center"}>

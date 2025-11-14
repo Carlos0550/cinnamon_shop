@@ -15,7 +15,8 @@ export default function LoginForm(){
   const [error, setError] = useState<string>("");
   const {
     utils:{
-      capitalizeTexts
+      capitalizeTexts,
+      isMobile
     },
     auth:{
       setSession,
@@ -64,7 +65,7 @@ export default function LoginForm(){
   };
 
   return (
-    <Paper withBorder p="md" radius="md" component="form" onSubmit={handleSubmit} w={420}>
+    <Paper withBorder p="md" radius="md" component="form" onSubmit={handleSubmit} w={isMobile ? "100%" : 420}>
       <Stack>
         <Title order={4}>Iniciar sesión</Title>
         <TextInput

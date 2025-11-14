@@ -1,21 +1,22 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useAppContext } from "@/providers/AppContext";
-import { Button, Stack, TextInput, Title, Text, Group } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { SignIn, useAuth as useClerkAuth, useUser } from "@clerk/nextjs";
+import { Button, Stack, TextInput, Title, Text, Group, Flex, PasswordInput } from "@mantine/core";
+import { Form, useForm } from "@mantine/form";
+import { SignIn, useAuth as useClerkAuth } from "@clerk/nextjs";
+import { FcGoogle } from "react-icons/fc";
+import { showNotification } from "@mantine/notifications";
 
-export default function LoginForm() {
-  const { auth } = useAppContext();
+
+type Props = {
+  onClose: () => void;
+}
+export default function LoginForm({ onClose }: Props) {
+  const { auth, utils } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showClerkSignIn, setShowClerkSignIn] = useState(false);
   const { isSignedIn } = useClerkAuth();
-  const { user } = useUser();
-
-  // useEffect(()=> {
-  //   console.log(user)
-  // },[user])
 
   const form = useForm({
     initialValues: { email: "", password: "" },
@@ -29,7 +30,16 @@ export default function LoginForm() {
     setError(null);
     setLoading(true);
     try {
-      await auth.signIn(values.email, values.password);
+      const result = await auth.signIn(values.email, values.password);
+      if (result?.user) {
+        showNotification({
+          title: `Bienvenido nuevamente ${utils.capitalizeTexts(result?.user?.name)}`,
+          message: "",
+          color: "green",
+          autoClose: 3000,
+        })
+        onClose();
+      }
     } catch (err) {
       const e = err as Error;
       setError(e?.message || "Error al iniciar sesión");
@@ -59,39 +69,43 @@ export default function LoginForm() {
   }, [isSignedIn, showClerkSignIn]);
 
   return (
-    <Stack p="md" gap="xs" maw={520}>
-      <Title order={3}>Iniciar sesión</Title>
-      <form onSubmit={form.onSubmit(onSubmit)}>
-        <Stack gap="sm">
-          <TextInput
-            label="Correo"
-            placeholder="tu@correo.com"
-            {...form.getInputProps("email")}
-          />
-          <TextInput
-            label="Contraseña"
-            placeholder="••••••••"
-            type="password"
-            {...form.getInputProps("password")}
-          />
-          {error && <Text c="red">{error}</Text>}
-          <Button type="submit" loading={loading}>
-            Entrar
-          </Button>
+    <Flex direction="column" gap="xs" maw={520} align="center" justify={"space-between"}>
+        <Title order={3}>Iniciar sesión</Title>
+        <Stack w={"100%"} p={"md"}>
+          <Form form={form} onSubmit={onSubmit}>
+          <Stack gap="sm">
+            <TextInput
+              label="Correo"
+              placeholder="tu@correo.com"
+              {...form.getInputProps("email")}
+            />
+            <PasswordInput
+              label="Contraseña"
+              placeholder="••••••••"
+              
+              {...form.getInputProps("password")}
+            />
+            {error && <Text c="red">{error}</Text>}
+            <Button type="submit" loading={loading}>
+              Entrar
+            </Button>
+          </Stack>
+        </Form>
         </Stack>
-      </form>
-
-      <Group mt="md">
-        <Button variant="outline" color="blue" onClick={() => setShowClerkSignIn(true)}>
-          Google
+      {!showClerkSignIn && (
+        <Flex direction={"column"} mt="md" gap="sm" align="center" justify={"space-between"}>
+          <Text c="dimmed" >ó tambien</Text>
+        <Button leftSection={<FcGoogle />} variant="outline" color="blue" onClick={() => setShowClerkSignIn(true)}>
+          Ingresar con Google
         </Button>
-      </Group>
+      </Flex>
+      )}
 
       {showClerkSignIn && (
-        <Stack mt="md">
+        <Flex mt="md">
           <SignIn routing="hash" afterSignInUrl="/" afterSignUpUrl="/" />
-        </Stack>
+        </Flex>
       )}
-    </Stack>
+    </Flex>
   );
 }

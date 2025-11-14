@@ -7,7 +7,6 @@ import Link from "next/link";
 import { FaShoppingCart } from "react-icons/fa";
 import LoginForm from "../Auth/LoginForm";
 import AuthModal from "../Modals/AuthModal/AuthModal";
-import { useEffect, useState } from "react";
 import { useAuth as useClerkAuth, useUser } from "@clerk/nextjs";
 type Props = {
   children: React.ReactNode;
@@ -128,7 +127,7 @@ export default function SiteLayout({ children }: Props) {
         {children}
       </AppShell.Main>
       <AuthModal opened={authOpened} onClose={closeAuth}>
-        <LoginForm />
+        <LoginForm onClose={closeAuth} />
       </AuthModal>
     </AppShell>
   );
