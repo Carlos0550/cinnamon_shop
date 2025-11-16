@@ -47,8 +47,8 @@ class PromoServices {
 
       const generatedCode = code && code.length > 0 ? code : `${(title || "PROMO").slice(0, 3).toUpperCase()}-${Date.now()}`;
 
-      const fromDate = dayjs(start_date).isValid() ? new Date(start_date as string) : new Date(dayjs().toISOString());
-      const toDate = dayjs(end_date).isValid() ? new Date(end_date as string) : new Date(dayjs().add(1, "day").toISOString());
+      const fromDate = dayjs(start_date).isValid() ? new Date(start_date as string) : new Date(dayjs.tz().toISOString());
+      const toDate = dayjs(end_date).isValid() ? new Date(end_date as string) : new Date(dayjs.tz().add(1, "day").toISOString());
 
       const normalizedType = typeof type === "string" ? (type as string).toLowerCase() : "";
       const promoType: PromoType = normalizedType === "percentage" || normalizedType === "porcentaje" || normalizedType === "percent" || normalizedType === "percentage"

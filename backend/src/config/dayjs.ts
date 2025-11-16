@@ -9,8 +9,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 
-// Define huso horario por defecto (Argentina) y locale
-const DEFAULT_TZ = 'America/Argentina/Buenos_Aires';
+// Define huso horario por defecto y locale
+const DEFAULT_TZ = process.env.APP_TZ || 'America/Argentina/Buenos_Aires';
 dayjs.tz.setDefault(DEFAULT_TZ);
 dayjs.locale('es');
 

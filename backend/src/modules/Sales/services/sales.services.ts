@@ -113,7 +113,7 @@ class SalesServices {
             const take = Math.max(1, Number(per_page) || 5);
             const currentPage = Math.max(1, Number(page) || 1);
             const skip = (currentPage - 1) * take;
-            const defaultEnd = dayjs();
+            const defaultEnd = dayjs.tz();
             const defaultStart = defaultEnd.startOf('day');
 
             const parseDateTz = (value?: string, endOfDay: boolean = false) => {
@@ -170,7 +170,7 @@ class SalesServices {
 
     async getSalesAnalytics({ start_date, end_date }: { start_date?: string, end_date?: string }) {
         try {
-            const defaultEnd = dayjs();
+            const defaultEnd = dayjs.tz();
             const defaultStart = defaultEnd.subtract(30, 'day');
 
             const parseDate = (value?: string, endOfDay: boolean = false) => {
@@ -232,7 +232,7 @@ class SalesServices {
                 byDayMap[key] = { date: key, count: 0, revenue: 0 };
             }
             currentSales.forEach((s) => {
-                const key = dayjs(s.created_at).format('YYYY-MM-DD');
+                const key = dayjs.tz(s.created_at).format('YYYY-MM-DD');
                 if (!byDayMap[key]) {
                     byDayMap[key] = { date: key, count: 0, revenue: 0 };
                 }
