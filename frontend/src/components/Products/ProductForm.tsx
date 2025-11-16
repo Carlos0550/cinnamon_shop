@@ -31,8 +31,6 @@ const PRODUCT_STATE_META: Record<ProductState, { label: string; color: string }>
   inactive: { label: "Inactivo", color: "gray" },
   draft: { label: "Borrador", color: "orange" },
   out_stock: { label: "Agotado", color: "red" },
-  discontinued: { label: "Obsoleto", color: "yellow" },
-  archived: { label: "Archivado", color: "blue" },
   deleted: { label: "Eliminado", color: "red" },
 };
 

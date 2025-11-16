@@ -6,7 +6,7 @@ import { useSaveSale } from "../Api/SalesApi";
 export const SaleSource = ["WEB", "CAJA"] as const;
 export type SaleSource = typeof SaleSource[number];
 
-export const PaymentMethods = ["TARJETA", "EFECTIVO", "QR", "NINGUNO"] as const;
+export const PaymentMethods = ["TARJETA", "EFECTIVO", "QR", "NINGUNO", "TRANSFERENCIA"] as const;
 export type PaymentMethods = typeof PaymentMethods[number];
 
 export type UserSale = {
@@ -134,7 +134,6 @@ export function SalesForm({ onClose }: Props) {
         }
     }, [saveSale.isSuccess])
 
-    // Mantener payment_method como el primero seleccionado para compat.
     useEffect(() => {
         const primary = formValue.payment_methods?.[0]?.method;
         if (primary && primary !== formValue.payment_method) {
@@ -147,15 +146,13 @@ export function SalesForm({ onClose }: Props) {
     const subtotal = formValue.loadedManually ? manualSubtotal : productsSubtotal;
     const finalTotal = subtotal * (1 + Number(formValue.tax) / 100);
     const paymentSum = (formValue.payment_methods || []).reduce((acc, pm) => acc + Number(pm.amount || 0), 0);
-    // const paymentMismatch = formValue.tax > 0
-    //     ? false
-    //     : Math.round((paymentSum - finalTotal) * 100) / 100 !== 0;
+
     const remainingBase = formValue.tax > 0 ? subtotal : finalTotal;
     const remainingAmount = Math.max(remainingBase - paymentSum, 0);
 
-    // Ocultar mensajes de falta cuando solo hay un método de pago se maneja en el render
-    // eliminando la necesidad de mutar valores derivados en efectos.
-
+    useEffect(()=>{
+        console.log("Sales Form Values", formValue)
+    },[formValue])
     return (
         <Box>
 
@@ -294,7 +291,7 @@ export function SalesForm({ onClose }: Props) {
                                     )}
                                 </Stack>
                             </Card>
-                            {["TARJETA", "QR"].includes(formValue.payment_method) && (
+                            {["TARJETA", "QR", "TRANSFERENCIA"].includes(formValue.payment_method) && (
                                 <TextInput
                                     label="Agregar impuesto"
                                     placeholder="Ingresar impuesto"

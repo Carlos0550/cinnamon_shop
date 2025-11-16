@@ -15,7 +15,7 @@ export const SaveProductRequestSchema = z.object({
   category_id: z.string().min(1),
   productImages: z.array(BinaryFileSchema).optional(),
   fillWithAI: z.boolean().optional(),
-  state: z.enum(['active','inactive','draft','out_stock','discontinued','archived','deleted']).optional(),
+  state: z.enum(['active','inactive','draft','out_stock','deleted']).optional(),
 }).openapi({ description: 'Body multipart para crear producto' });
 
 export const SaveCategoryRequestSchema = z.object({
@@ -29,7 +29,7 @@ export const GetProductsQuerySchema = z.object({
   title: z.string().optional(),
   categoryId: z.string().optional(),
   isActive: z.enum(['true', 'false']).optional(),
-  state: z.enum(['active','inactive','draft','out_stock','discontinued','archived','deleted']).optional(),
+  state: z.enum(['active','inactive','draft','out_stock','deleted']).optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(['asc','desc']).optional(),
 }).openapi({ description: 'Query params para listar productos' });
@@ -44,7 +44,7 @@ export const UpdateProductRequestSchema = z.object({
   deletedImageUrls: z.array(z.string()).optional(),
   productImages: z.array(BinaryFileSchema).optional(),
   fillWithAI: z.boolean().optional(),
-  state: z.enum(['active','inactive','draft','out_stock','discontinued','archived','deleted']).optional(),
+  state: z.enum(['active','inactive','draft','out_stock','deleted']).optional(),
 }).openapi({ description: 'Body multipart para actualizar producto' });
 
 export const UpdateCategoryStatusSchema = z.object({
@@ -52,8 +52,14 @@ export const UpdateCategoryStatusSchema = z.object({
   category_id: z.string()
 })
 
+export const UpdateProductStatusSchema = z.object({
+  state: z.enum(['active','inactive','draft','out_stock','deleted']),
+  product_id: z.string()
+})
+
 export type SaveProductRequest = z.infer<typeof SaveProductRequestSchema>;
 export type SaveCategoryRequest = z.infer<typeof SaveCategoryRequestSchema>;
 export type GetProductsQuery = z.infer<typeof GetProductsQuerySchema>;
 export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
 export type UpdateCategoryStatusSchema = z.infer<typeof UpdateCategoryStatusSchema>
+export type UpdateProductStatusSchema = z.infer<typeof UpdateProductStatusSchema>

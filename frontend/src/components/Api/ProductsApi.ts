@@ -16,8 +16,6 @@ export type ProductState =
   | 'inactive'
   | 'draft'
   | 'out_stock'
-  | 'discontinued'
-  | 'archived'
   | 'deleted';
 
 export type Product = {
@@ -355,5 +353,42 @@ export const useUpdateProduct = () => {
         color: "red"
       });
     }
+  });
+};
+
+export const useUpdateProductState = () => {
+  const queryClient = useQueryClient();
+  const {
+    auth: { token },
+  } = useAppContext();
+
+  return useMutation({
+    mutationKey: ["updateProductState"],
+    mutationFn: async (payload: { productId: string; state: ProductState }) => {
+      const res = await fetch(`${baseUrl}/products/status/${payload.productId}/${payload.state}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || "Error actualizando el estado del producto");
+      }
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({
+        message: "Estado actualizado con éxito",
+        color: "green",
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        message: error?.message ?? "Error al actualizar el estado",
+        color: "red",
+      });
+    },
   });
 };

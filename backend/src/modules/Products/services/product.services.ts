@@ -3,7 +3,7 @@ import { uploadImage, deleteImage } from "@/config/supabase";
 import fs from "fs";
 import { prisma } from "@/config/prisma";
 import { CategoryStatus, ProductState } from "@prisma/client";
-import { UpdateCategoryStatusSchema, UpdateProductRequest } from "./product.zod";
+import { UpdateCategoryStatusSchema, UpdateProductRequest, UpdateProductStatusSchema } from "./product.zod";
 import { analyzeProductImages } from "@/config/openai";
 class ProductServices {
     async saveProduct(req: Request, res: Response) {
@@ -298,41 +298,21 @@ class ProductServices {
             if (product_info.state === ProductState.deleted) {
                 return res.status(400).json({
                     ok: false,
-                    error: "Producto ya eliminado"
+                    error: "Producto ya eliminado",
+                    message: "El producto ha sido eliminado previamente."
                 });
-            }
-
-            const images: string[] = Array.isArray(product_info.images)
-                ? product_info.images.filter((img): img is string => typeof img === 'string')
-                : [];
-
-
-
-            const imagePaths = images
-                .map((img) => this.extractPathFromPublicUrl(img))
-                .filter((p): p is string => typeof p === "string" && p.length > 0);
-
-            if (imagePaths.length > 0) {
-                const results = await Promise.all(imagePaths.map((p) => deleteImage(p)));
-                const failed = results.filter(r => !r.success).length;
-                if (failed > 0) {
-                    console.warn(`No se pudieron eliminar ${failed} imágenes de Supabase.`);
-                }
             }
 
             await prisma.products.update({
                 where: { id: product_id },
                 data: {
-                    is_active: false,
                     state: ProductState.deleted,
-                    images: []
                 }
             });
 
             return res.status(200).json({
                 ok: true,
                 message: "Producto eliminado exitosamente",
-                deletedImages: imagePaths.length
             });
         } catch (error) {
             console.error("Error al eliminar producto:", error);
@@ -448,6 +428,36 @@ class ProductServices {
             return res.status(500).json({
                 ok: false,
                 error: "Error al actualizar el producto"
+            });
+        }
+    }
+
+    async productChangeStatus(req: Request, res: Response) {
+        try {
+            const { product_id, state } = req.params as unknown as UpdateProductStatusSchema;
+
+            const product = await prisma.products.findUnique({ where: { id: product_id } });
+            if (!product) {
+                return res.status(404).json({
+                    ok: false,
+                    error: "Producto no encontrado"
+                });
+            }
+
+            await prisma.products.update({
+                where: { id: product_id },
+                data: { state: state as ProductState }
+            });
+
+            return res.status(200).json({
+                ok: true,
+                message: "Estado del producto actualizado exitosamente"
+            });
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({
+                ok: false,
+                error: "Error al actualizar el estado del producto"
             });
         }
     }

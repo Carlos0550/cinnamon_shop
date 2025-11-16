@@ -2,8 +2,8 @@ import { theme } from '@/theme';
 import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table, Select } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
-import { FiPlus, FiSearch, FiEdit, FiEye } from 'react-icons/fi';
-import { useGetAllProducts, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
+import { FiPlus, FiSearch, FiEdit, FiEye, FiTrash} from 'react-icons/fi';
+import { useDeleteProduct, useGetAllProducts, useUpdateProductState, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
 import ModalWrapper from '@/components/Common/ModalWrapper';
 import dummyImage from '@/assets/dummy_image.png';
 import ProductForm from './ProductForm';
@@ -14,7 +14,10 @@ function ProductTable({
 }: {
   setAddOpened: (opened: boolean) => void;
 }) {
-  //const deleteProductMutation = useDeleteProduct();
+  const deleteProductMutation = useDeleteProduct();
+  const updateProductMutation = useUpdateProductState();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const [search, setSearch] = useState<string>("");
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints?.sm || '768px'})`);
@@ -69,15 +72,20 @@ function ProductTable({
         return <Badge variant="light" color="orange">Borrador</Badge>;
       case 'out_stock':
         return <Badge variant="light" color="red">Agotado</Badge>;
-      case 'discontinued':
-        return <Badge variant="light" color="yellow">Obsoleto</Badge>;
-      case 'archived':
-        return <Badge variant="light" color="blue">Archivado</Badge>;
       case 'deleted':
         return <Badge variant="light" color="red">Eliminado</Badge>;
       default:
         return null;
     }
+  }
+
+
+  const changeProductsStatus = (pr_id: string, status: ProductState) => {
+    setUpdatingId(pr_id);
+    updateProductMutation.mutate(
+      { productId: pr_id, state: status },
+      { onSettled: () => setUpdatingId(null) }
+    );
   }
   return (
     <Box>
@@ -96,7 +104,7 @@ function ProductTable({
         <Select
           value={String(searchParams.limit)}
           onChange={(value) => setSearchParams(prev => ({ ...prev, limit: Number(value) }))}
-          
+
           data={[
             { value: '5', label: '5 por página' },
             { value: '10', label: '10 por página' },
@@ -113,8 +121,6 @@ function ProductTable({
             { value: 'inactive', label: 'Inactivo' },
             { value: 'draft', label: 'Borrador' },
             { value: 'out_stock', label: 'Agotado' },
-            { value: 'discontinued', label: 'Obsoleto' },
-            { value: 'archived', label: 'Archivado' },
             { value: 'deleted', label: 'Eliminado' },
           ]}
         />
@@ -151,6 +157,9 @@ function ProductTable({
         <Stack>
           {products.map((p) => (
             <Paper key={p.id} withBorder p="sm" radius="md">
+              {searchParams.state === "draft" && (
+                <Text mb={"md"} c={"dimmed"}>Recuerde editar precio y activar el producto para que esté a la venta, haga esto usando el botón " <FiEdit /> editar " en la fila del producto.</Text>
+              )}
               <Group justify="space-between" align="flex-start">
                 <Group gap="sm" wrap="nowrap">
                   <Image src={p.images?.[0] || dummyImage} alt={p.title} w={64} h={64} radius="sm" fit="cover" />
@@ -161,25 +170,41 @@ function ProductTable({
                     <Text c="dimmed">{typeof p.price === 'number' ? `Precio: $${p.price}` : "Precio: —"}</Text>
                   </Box>
                 </Group>
-                <Group gap="xs">
-                  <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
-                    <FiEye />
-                  </ActionIcon>
-                  {/* <ActionIcon color="red" variant="light" aria-label="Eliminar">
-                    <FiTrash />
-                  </ActionIcon> */}
-                  <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
-                    onClick={() => { setEditing(p); setViewOpened(true); }}
+                <Stack gap="xs">
+                  <Group gap={"xs"}>
+                    <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }} loading={isLoading}>
+                      <FiEye />
+                    </ActionIcon>
+                    <ActionIcon color="red" variant="light" aria-label="Eliminar"
+                      onClick={() => { setDeletingId(p.id); deleteProductMutation.mutate(p.id, { onSettled: () => setDeletingId(null) }); }}
+                      loading={deleteProductMutation.isPending && deletingId === p.id}
+                      disabled={deleteProductMutation.isPending && deletingId === p.id}
+                    >
+                      <FiTrash />
+                    </ActionIcon>
+                    <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
+                      onClick={() => { setEditing(p); setViewOpened(true); }}
+                      loading={isLoading}
+                    >
+                      Editar
+                    </Button>
+                  </Group>
+                  <Button onClick={() => changeProductsStatus(p.id, p.state === 'out_stock' ? 'active' : 'out_stock')}
+                    loading={updateProductMutation.isPending && updatingId === p.id}
+                    disabled={updateProductMutation.isPending && updatingId === p.id}
                   >
-                    Editar
+                    {p.state === 'out_stock' ? "Con stock" : "Sin stock"}
                   </Button>
-                </Group>
+                </Stack>
               </Group>
             </Paper>
           ))}
         </Stack>
       ) : (
         <Paper withBorder p="md" radius="md">
+          {searchParams.state === "draft" && (
+            <Text mb={"md"} c={"dimmed"}>Recuerde editar precio y activar el producto para que esté a la venta, haga esto usando el botón " <FiEdit /> editar " en la fila del producto.</Text>
+          )}
           <ScrollArea>
             <Table highlightOnHover withTableBorder withColumnBorders>
               <Table.Thead>
@@ -205,7 +230,7 @@ function ProductTable({
                       {typeof p.price === 'number' ? `$${p.price}` : '—'}
                     </Table.Td>
                     <Table.Td>
-                      
+
                       {renderBadgeByState(p.state)}
                     </Table.Td>
                     <Table.Td>
@@ -216,19 +241,32 @@ function ProductTable({
                       )}
                     </Table.Td>
                     <Table.Td>
-                      <Group gap="xs" justify="flex-end">
-                        <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }}>
-                          <FiEye />
-                        </ActionIcon>
-                        {/* <ActionIcon color="red" variant="light" aria-label="Eliminar" onClick={() => deleteImage(p.id)}>
-                          <FiTrash />
-                        </ActionIcon> */}
-                         <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
-                          onClick={() => { setEditing(p); setViewOpened(true); }}
+                      <Stack gap="xs">
+                        <Group gap={"xs"}>
+                          <ActionIcon variant="light" aria-label="Ver" onClick={() => { setSelected(p); setViewOpened(true); }} loading={isLoading}>
+                            <FiEye />
+                          </ActionIcon>
+                          <ActionIcon color="red" variant="light" aria-label="Eliminar"
+                            onClick={() => { setDeletingId(p.id); deleteProductMutation.mutate(p.id, { onSettled: () => setDeletingId(null) }); }}
+                            loading={deleteProductMutation.isPending && deletingId === p.id}
+                            disabled={deleteProductMutation.isPending && deletingId === p.id}
+                          >
+                            <FiTrash />
+                          </ActionIcon>
+                          <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
+                            onClick={() => { setEditing(p); setViewOpened(true); }}
+                            loading={isLoading}
+                          >
+                            Editar
+                          </Button>
+                        </Group>
+                        <Button onClick={() => changeProductsStatus(p.id, p.state === 'out_stock' ? 'active' : 'out_stock')}
+                          loading={updateProductMutation.isPending && updatingId === p.id}
+                          disabled={updateProductMutation.isPending && updatingId === p.id}
                         >
-                          Editar
+                          {p.state === 'out_stock' ? "Con stock" : "Sin stock"}
                         </Button>
-                      </Group>
+                      </Stack>
                     </Table.Td>
                   </Table.Tr>
                 ))}
@@ -251,6 +289,7 @@ function ProductTable({
                 }
               }}
               disabled={!pagination.hasPrevPage}
+              loading={isLoading}
             >
               Anterior
             </Button>
@@ -261,6 +300,7 @@ function ProductTable({
                 }
               }}
               disabled={!pagination.hasNextPage}
+              loading={isLoading}
             >
               Siguiente
             </Button>

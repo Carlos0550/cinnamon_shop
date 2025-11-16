@@ -202,3 +202,32 @@ export const changeCategoryStatus = async (req: Request, res: Response, next: Ne
         })
     }
 }
+
+export const changeProductStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { product_id, state } = req.params as { product_id?: string; state?: string };
+
+        if (!product_id || !state) {
+            return res.status(400).json({
+                ok: false,
+                error: "Faltan parametros obligatorios: product_id, state."
+            })
+        }
+
+        const allowed = ["active","inactive","draft","out_stock","deleted"];
+        if (!allowed.includes(state)) {
+            return res.status(400).json({
+                ok: false,
+                error: "El estado es inválido. Debe ser active, inactive, draft, out_stock o deleted."
+            })
+        }
+
+        next()
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            ok: false,
+            error: "Error interno del servidor al validar esta solicitud, por favor intente nuevamente."
+        })
+    }
+}

@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Group, Text, Title } from "@mantine/core";
 import SalesTable from "../components/Sales/SalesTable";
-import React, { useState } from "react";
+import { useState } from "react";
 import ModalWrapper from "@/components/Common/ModalWrapper";
 import { SalesForm } from "@/components/Sales/SalesForm";
 import { useMediaQuery } from "@mantine/hooks";

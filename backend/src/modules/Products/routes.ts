@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { saveProduct, saveCategory, getAllProducts, updateProductController, changeCategoryStatus } from "./router.controller";
+import { saveProduct, saveCategory, getAllProducts, updateProductController, changeCategoryStatus, changeProductStatus } from "./router.controller";
 import { uploadMultipleImages, handleImageUploadError, uploadSingleImage } from "../../middlewares/image.middleware";
 import { requireAuth, requireRole } from "@/middlewares/auth.middleware";
 import ProductServices from "./services/product.services";
@@ -41,6 +41,14 @@ router.patch(
     requireRole([1]),
     changeCategoryStatus,
     (req, res) => product_service.categoryChangeStatus(req, res)
+)
+
+router.patch(
+    "/status/:product_id/:state",
+    requireAuth,
+    requireRole([1]),
+    changeProductStatus,
+    (req, res) => product_service.productChangeStatus(req, res)
 )
 
 //Public endpoints

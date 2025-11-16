@@ -279,6 +279,22 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: 'patch',
+  path: '/products/status/{product_id}/{state}',
+  summary: 'Actualizar estado del producto',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    { name: 'product_id', in: 'path', required: true, schema: { type: 'string' } },
+    { name: 'state', in: 'path', required: true, schema: { type: 'string', enum: ['active','inactive','draft','out_stock','deleted'] } },
+  ],
+  responses: {
+    200: { description: 'Estado actualizado' },
+    400: { description: 'Estado inválido o parámetros faltantes' },
+    404: { description: 'Producto no encontrado' },
+  },
+});
+
 
 
 const generator = new OpenApiGeneratorV3(registry.definitions);

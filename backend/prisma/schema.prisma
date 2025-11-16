@@ -19,8 +19,6 @@ enum ProductState {
   inactive
   draft
   out_stock
-  discontinued
-  archived
   deleted
 }
 
@@ -33,7 +31,6 @@ enum CategoryStatus {
   deleted
   active
   inactive
-
 }
 
 enum SaleSource {
@@ -44,6 +41,7 @@ enum SaleSource {
 enum PaymentMethod {
   TARJETA
   EFECTIVO
+  TRANSFERENCIA
   QR
   NINGUNO
 }
@@ -57,26 +55,26 @@ model User {
   is_clerk       Boolean  @default(false)
   clerk_user_id  String?  @unique
   profile_image  String?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  created_at     DateTime @default(now()) @db.Timestamptz(3)
+  updated_at     DateTime @updatedAt @db.Timestamptz(3)
   role           Int      @default(2)
   created_promos Promos[] @relation("PromosCreatedBy")
 
   sales Sales[]
 
+  @@unique([email, role])
   @@index([is_active])
   @@index([role])
   @@index([created_at])
-  @@unique([email, role])
 }
 
 model Categories {
-  id         String     @id @default(cuid())
+  id         String         @id @default(cuid())
   title      String
   image      String?
-  is_active  Boolean    @default(true)
-  created_at DateTime   @default(now())
-  status      CategoryStatus @default(active)
+  is_active  Boolean        @default(true)
+  created_at DateTime       @default(now()) @db.Timestamptz(3)
+  status     CategoryStatus @default(active)
   products   Products[]
   promos     Promos[]
 
@@ -92,7 +90,7 @@ model Products {
   description String
   is_active   Boolean      @default(true)
   state       ProductState @default(active)
-  created_at  DateTime     @default(now())
+  created_at  DateTime     @default(now()) @db.Timestamptz(3)
   images      Json         @default("[]")
   categoryId  String?
   tags        Json?        @default("[]")
@@ -118,8 +116,8 @@ model Promos {
   value            Float
   max_discount     Float?
   min_order_amount Float?
-  start_date       DateTime?
-  end_date         DateTime?
+  start_date       DateTime?    @db.Timestamptz(3)
+  end_date         DateTime?    @db.Timestamptz(3)
   is_active        Boolean      @default(true)
   usage_limit      Int?
   usage_count      Int          @default(0)
@@ -129,8 +127,8 @@ model Promos {
   all_products     Boolean      @default(false)
   all_categories   Boolean      @default(false)
   show_in_home     Boolean      @default(false)
-  created_at       DateTime     @default(now())
-  updated_at       DateTime     @updatedAt
+  created_at       DateTime     @default(now()) @db.Timestamptz(3)
+  updated_at       DateTime     @updatedAt @db.Timestamptz(3)
   createdById      Int?
   created_by       User?        @relation("PromosCreatedBy", fields: [createdById], references: [id])
 
@@ -141,18 +139,19 @@ model Promos {
 }
 
 model Sales {
-  id             String         @id @default(cuid())
+  id             String        @id @default(cuid())
   payment_method PaymentMethod
   source         SaleSource
-  total          Float          @default(0.00)
-  created_at     DateTime       @default(now())
+  total          Float         @default(0.00)
+  created_at     DateTime      @default(now()) @db.Timestamptz(3)
   userId         Int?
-  tax            Float          @default(0.00)
-  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tax            Float         @default(0.00)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   products       Products[]
   manualProducts Json?         @default("[]")
-  loadedManually Boolean        @default(false)
+  loadedManually Boolean       @default(false)
   paymentMethods Json?         @default("[]")
+
   @@index([created_at])
   @@index([userId])
   @@index([source, created_at])
