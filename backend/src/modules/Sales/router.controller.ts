@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import SalesServices from "./services/sales.services";
-import { SaleRequest } from "./services/schemas/sales.schemas";
+import { SaleRequest, SalesSummaryRequest } from "./services/schemas/sales.schemas";
 
 export const saveSale = async (req: Request, res: Response) => {
     try {
@@ -45,6 +45,7 @@ export const getSales = async (req: Request, res: Response) => {
         const response = await SalesServices.getSales({ page, per_page, start_date, end_date });
 
         if (Array.isArray(response?.sales)) {
+            res.set('Cache-Control', 'no-store');
             res.status(200).json({
                 success: true,
                 sales: response.sales,
@@ -94,3 +95,5 @@ export const getSalesAnalytics = async (req: Request, res: Response) => {
         })
     }
 }
+
+

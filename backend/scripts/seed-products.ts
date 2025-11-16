@@ -82,7 +82,7 @@ function getRandomElements<T>(array: T[], count: number): T[] {
 
 // Función para generar precio aleatorio
 function generateRandomPrice(): number {
-  const prices = [9.99, 14.99, 19.99, 24.99, 29.99, 34.99, 39.99, 44.99, 49.99, 59.99, 69.99, 79.99, 89.99, 99.99];
+  const prices = [990, 1490, 1990, 2490, 2990, 3490, 3990, 4490, 4990, 5990, 6990, 7990, 8990, 9990];
   return getRandomElement(prices);
 }
 
@@ -129,7 +129,7 @@ async function seedProducts() {
 
     const products = [];
     
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 10000; i++) {
       const randomCategory = getRandomElement(categories);
       const randomTitle = getRandomElement(productTitles);
       const randomDescription = getRandomElement(descriptions);
@@ -156,7 +156,7 @@ async function seedProducts() {
     // Insertar productos en lotes para mejor rendimiento
     console.log('💾 Insertando productos en la base de datos...');
     
-    const batchSize = 10;
+    const batchSize = 1000;
     let insertedCount = 0;
 
     for (let i = 0; i < products.length; i += batchSize) {

@@ -1,3 +1,4 @@
+import { showNotification } from "@mantine/notifications";
 import { baseUrl } from ".";
 
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -61,13 +62,17 @@ export const useLogin = () => {
           password,
         }),
       });
-      if (!response.ok && response.status !== 401) {
-        throw new Error('Error al iniciar sesión')
-      }
-      if (response.status === 401) {
-        throw new Error('Credenciales inválidas')
-      }
       const data = await response.json();
+      console.log(data)
+      if (!response.ok){
+        showNotification({
+          title: "Error al iniciar sesión",
+          message: data?.message || data?.err || "Error desconocido",
+          autoClose: 3000,
+          color: "red",
+        })
+        return
+      }
       return data;
     },
   })

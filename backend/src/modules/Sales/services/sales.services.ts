@@ -1,5 +1,5 @@
 import { prisma } from "@/config/prisma";
-import { SaleRequest } from "./schemas/sales.schemas";
+import { SaleRequest, SalesSummaryRequest } from "./schemas/sales.schemas";
 import { sendEmail } from "@/config/resend";
 import { sale_email_html } from "@/templates/sale_email";
 import dayjs from "@/config/dayjs";
@@ -113,27 +113,23 @@ class SalesServices {
             const take = Math.max(1, Number(per_page) || 5);
             const currentPage = Math.max(1, Number(page) || 1);
             const skip = (currentPage - 1) * take;
+            const defaultEnd = dayjs();
+            const defaultStart = defaultEnd.startOf('day');
 
-            const today = new Date();
-            const defaultStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-            const defaultEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-
-            const parseDateOnly = (value?: string, endOfDay: boolean = false) => {
+            const parseDateTz = (value?: string, endOfDay: boolean = false) => {
                 if (!value) return undefined;
-                const [y, m, d] = value.split('-').map(Number);
-                if (!y || !m || !d) return undefined;
-                return endOfDay
-                    ? new Date(y, m - 1, d, 23, 59, 59, 999)
-                    : new Date(y, m - 1, d, 0, 0, 0, 0);
+                const parsed = dayjs(value, 'YYYY-MM-DD').tz();
+                if (!parsed.isValid()) return undefined;
+                return endOfDay ? parsed.endOf('day') : parsed.startOf('day');
             };
 
-            const start = parseDateOnly(start_date) || defaultStart;
-            const end = parseDateOnly(end_date, true) || defaultEnd;
+            const start = parseDateTz(start_date) || defaultStart;
+            const end = parseDateTz(end_date, true) || defaultEnd.endOf('day');
 
             const where: any = {
                 created_at: {
-                    gte: start,
-                    lte: end,
+                    gte: start.toDate(),
+                    lte: end.toDate(),
                 }
             };
 
@@ -179,7 +175,7 @@ class SalesServices {
 
             const parseDate = (value?: string, endOfDay: boolean = false) => {
                 if (!value) return undefined;
-                const parsed = dayjs(value, 'YYYY-MM-DD');
+                const parsed = dayjs(value, 'YYYY-MM-DD').tz();
                 if (!parsed.isValid()) return undefined;
                 return endOfDay ? parsed.endOf('day') : parsed.startOf('day');
             };
@@ -294,6 +290,8 @@ class SalesServices {
             };
         }
     }
+
+    
 }
 
 export default new SalesServices();

@@ -6,7 +6,7 @@ import type { Product } from "../Api/ProductsApi"
 import { useGetSales } from "../Api/SalesApi"
 import type { PaymentMethods, SaleSource, ManualProductItem } from "./SalesForm"
 import ModalWrapper from "@/components/Common/ModalWrapper"
-import { useMemo, useState, useEffect } from "react"
+import React, { useMemo, useState, useEffect } from "react"
 
 export type Sales = {
   id: string,
@@ -30,6 +30,7 @@ export default function SalesTable() {
   const [perPage, setPerPage] = useState<number>(5)
   const [preset, setPreset] = useState<string>("HOY")
   const [range, setRange] = useState<[Date | null, Date | null]>([null, null])
+  const [totalToday, setTotalToday] = useState<number>(0)
 
   const startEndFromPreset = useMemo(() => {
     const today = new Date();
@@ -110,12 +111,19 @@ export default function SalesTable() {
     return isNaN(d.getTime()) ? String(value) : d.toLocaleString('es-AR')
   }
 
+  useEffect(() => {
+    if (sales && Array.isArray(sales) && sales.length > 0) {
+      const total = sales.reduce((acc, sale) => acc + Number(sale.total || 0), 0)
+      setTotalToday(total)
+    }
+  }, [sales])
   return (
     <Box>
       <Group mb="md" gap="md" align="center" wrap="wrap">
         <SegmentedControl
           value={preset}
           onChange={setPreset}
+          style={{ flexWrap: "wrap" }}
           data={[
             { label: "Hoy", value: "HOY" },
             { label: "Ayer", value: "AYER" },
@@ -143,6 +151,9 @@ export default function SalesTable() {
         <Text ta="center">No se encontraron ventas</Text>
       ) : isMobile ? (
         <Stack>
+          <Text c={"dimmed"} size="xl">
+            Total vendido hoy: {currency.format(totalToday)}
+          </Text>
           {sales.map((sale) => {
             const finalTotal = Number(sale.total) || 0
             const taxPct = Number(sale.tax) || 0
@@ -151,6 +162,7 @@ export default function SalesTable() {
             const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
             return (
               <Paper key={sale.id} withBorder p="md" radius="md">
+
                 <Stack gap="xs">
                   <Group justify="space-between">
                     <Text fw={600}>Venta #{sale.id}</Text>
@@ -192,61 +204,69 @@ export default function SalesTable() {
           })}
         </Stack>
       ) : (
-        <Paper withBorder radius="md" p="sm">
-          <ScrollArea>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Fecha</Table.Th>
-                  <Table.Th>Cliente</Table.Th>
-                  <Table.Th>Método</Table.Th>
-                  <Table.Th>Fuente</Table.Th>
-                  <Table.Th>Impuesto %</Table.Th>
-                  <Table.Th>Subtotal</Table.Th>
-                  <Table.Th>Total</Table.Th>
-                  <Table.Th>Productos</Table.Th>
-                  <Table.Th>Acciones</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {sales.map((sale) => {
-                  const finalTotal = Number(sale.total) || 0
-                  const taxPct = Number(sale.tax) || 0
-                  const subtotal = taxPct > 0 ? finalTotal / (1 + taxPct / 100) : finalTotal
-                  const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
-                  return (
-                    <Table.Tr key={sale.id}>
-                      <Table.Td>{formatDate(sale.created_at)}</Table.Td>
-                      <Table.Td>
-                        <Stack gap={2}>
-                          <Text fw={600}>{sale.user?.name || '—'}</Text>
-                          <Text c="dimmed" size="sm">{sale.user?.email || '—'}</Text>
-                        </Stack>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge color="blue" variant="light">{sale.payment_method}</Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge variant="light">{sale.source}</Badge>
-                      </Table.Td>
-                      <Table.Td>{taxPct}</Table.Td>
-                      <Table.Td>{currency.format(subtotal)}</Table.Td>
-                      <Table.Td>{currency.format(finalTotal)}</Table.Td>
-                      <Table.Td>
-                        <Badge>{itemsCount}</Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap="xs">
-                          <Button size="xs" variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  )
-                })}
-              </Table.Tbody>
-            </Table>
-          </ScrollArea>
-        </Paper>
+        <React.Fragment>
+          <Stack mb={"md"}>
+            <Text c={"dimmed"} size="xl">
+              Total vendido hoy: {currency.format(totalToday)}
+            </Text>
+          </Stack>
+          <Paper withBorder radius="md" p="sm">
+
+            <ScrollArea>
+              <Table striped highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Fecha</Table.Th>
+                    <Table.Th>Cliente</Table.Th>
+                    <Table.Th>Método</Table.Th>
+                    <Table.Th>Fuente</Table.Th>
+                    <Table.Th>Impuesto %</Table.Th>
+                    <Table.Th>Subtotal</Table.Th>
+                    <Table.Th>Total</Table.Th>
+                    <Table.Th>Productos</Table.Th>
+                    <Table.Th>Acciones</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {sales.map((sale) => {
+                    const finalTotal = Number(sale.total) || 0
+                    const taxPct = Number(sale.tax) || 0
+                    const subtotal = taxPct > 0 ? finalTotal / (1 + taxPct / 100) : finalTotal
+                    const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
+                    return (
+                      <Table.Tr key={sale.id}>
+                        <Table.Td>{formatDate(sale.created_at)}</Table.Td>
+                        <Table.Td>
+                          <Stack gap={2}>
+                            <Text fw={600}>{sale.user?.name || '—'}</Text>
+                            <Text c="dimmed" size="sm">{sale.user?.email || '—'}</Text>
+                          </Stack>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color="blue" variant="light">{sale.payment_method}</Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge variant="light">{sale.source}</Badge>
+                        </Table.Td>
+                        <Table.Td>{taxPct}</Table.Td>
+                        <Table.Td>{currency.format(subtotal)}</Table.Td>
+                        <Table.Td>{currency.format(finalTotal)}</Table.Td>
+                        <Table.Td>
+                          <Badge>{itemsCount}</Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap="xs">
+                            <Button size="xs" variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    )
+                  })}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
+          </Paper>
+        </React.Fragment>
       )}
 
       {pagination && (
@@ -301,15 +321,15 @@ export default function SalesTable() {
                   {(() => {
                     const rows = selectedSale.loadedManually
                       ? (selectedSale.manualProducts || []).map((mp, idx) => ({
-                          key: String(idx),
-                          title: mp.title + (mp.quantity && mp.quantity > 1 ? ` x${mp.quantity}` : ''),
-                          price: Number(mp.quantity) * Number(mp.price),
-                        }))
+                        key: String(idx),
+                        title: mp.title + (mp.quantity && mp.quantity > 1 ? ` x${mp.quantity}` : ''),
+                        price: Number(mp.quantity) * Number(mp.price),
+                      }))
                       : (selectedSale.products || []).map((p) => ({
-                          key: String(p.id),
-                          title: p.title,
-                          price: typeof p.price === 'number' ? p.price : Number(p.price || 0),
-                        }));
+                        key: String(p.id),
+                        title: p.title,
+                        price: typeof p.price === 'number' ? p.price : Number(p.price || 0),
+                      }));
                     return rows.map((r) => (
                       <Table.Tr key={r.key}>
                         <Table.Td>{r.title}</Table.Td>

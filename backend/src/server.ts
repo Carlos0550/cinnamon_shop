@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import '@/config/dayjs';
 import express from 'express';
 import cors from 'cors';
 import { prisma } from '@/config/prisma';

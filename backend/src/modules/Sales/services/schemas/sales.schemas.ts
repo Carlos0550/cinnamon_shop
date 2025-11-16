@@ -18,3 +18,10 @@ export type SaleRequest = {
     manualProducts?: { quantity: number; title: string; price: number }[]
     payment_methods?: { method: PaymentMethods; amount: number }[]
 }
+
+export type SalesSummaryRequest = {
+    page: number,
+    limit: number,
+    start: string,
+    end: string
+}

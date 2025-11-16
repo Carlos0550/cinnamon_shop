@@ -1,11 +1,13 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import 'dayjs/locale/es';
 
 // Extiende plugins necesarios
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 // Define huso horario por defecto (Argentina) y locale
 const DEFAULT_TZ = 'America/Argentina/Buenos_Aires';

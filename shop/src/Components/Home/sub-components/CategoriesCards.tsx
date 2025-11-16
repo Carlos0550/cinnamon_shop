@@ -26,7 +26,7 @@ export default function CategoriesCards({ categories }: { categories: Categories
         >
           {category.image && category.image.trim() !== "" ? (
             <CardSection>
-              <Image src={category.image} alt={category.title} height={140} fit="cover" />
+              <Image src={category.image} alt={category.title} height={280} fit="cover" />
             </CardSection>
           ) : (
             <CardSection>

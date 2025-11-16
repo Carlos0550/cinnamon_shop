@@ -13,6 +13,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppContextProvider } from '@/Context/AppContext'
 import { theme } from '@/theme'
 import { BrowserRouter } from 'react-router-dom'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
+import 'dayjs/locale/es'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
+dayjs.extend(customParseFormat)
+dayjs.tz.setDefault('America/Argentina/Buenos_Aires')
+dayjs.locale('es')
 
 function PrimaryColorProvider({ children }: { children: React.ReactNode }) {
   const { colorScheme } = useMantineColorScheme();

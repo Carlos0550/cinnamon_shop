@@ -19,7 +19,7 @@ class AuthServices {
         })
 
         if (!user) {
-            return res.status(400).json({ ok: false, error: 'invalid_email' });
+            return res.status(400).json({ ok: false, error: 'invalid_email', message:"El correo electrónico no está registrado" });
         }
 
         if (user.is_clerk) {
@@ -27,7 +27,7 @@ class AuthServices {
         }
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ ok: false, error: 'invalid_password' });
+            return res.status(401).json({ ok: false, error: 'invalid_password', message:"La contraseña es incorrecta" });
         }
 
         const payload = {
