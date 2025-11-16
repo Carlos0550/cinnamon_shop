@@ -2,7 +2,7 @@ import { prisma } from "@/config/prisma";
 import { SaleRequest, SalesSummaryRequest } from "./schemas/sales.schemas";
 import { sendEmail } from "@/config/resend";
 import { sale_email_html } from "@/templates/sale_email";
-import dayjs from "@/config/dayjs";
+import dayjs, { DEFAULT_TZ, nowTz } from "@/config/dayjs";
 
 
 class SalesServices {
@@ -113,12 +113,12 @@ class SalesServices {
             const take = Math.max(1, Number(per_page) || 5);
             const currentPage = Math.max(1, Number(page) || 1);
             const skip = (currentPage - 1) * take;
-            const defaultEnd = dayjs.tz();
+            const defaultEnd = nowTz();
             const defaultStart = defaultEnd.startOf('day');
 
             const parseDateTz = (value?: string, endOfDay: boolean = false) => {
                 if (!value) return undefined;
-                const parsed = dayjs(value, 'YYYY-MM-DD').tz();
+                const parsed = dayjs.tz(value, 'YYYY-MM-DD', DEFAULT_TZ);
                 if (!parsed.isValid()) return undefined;
                 return endOfDay ? parsed.endOf('day') : parsed.startOf('day');
             };
@@ -170,12 +170,12 @@ class SalesServices {
 
     async getSalesAnalytics({ start_date, end_date }: { start_date?: string, end_date?: string }) {
         try {
-            const defaultEnd = dayjs.tz();
+            const defaultEnd = nowTz();
             const defaultStart = defaultEnd.subtract(30, 'day');
 
             const parseDate = (value?: string, endOfDay: boolean = false) => {
                 if (!value) return undefined;
-                const parsed = dayjs(value, 'YYYY-MM-DD').tz();
+                const parsed = dayjs.tz(value, 'YYYY-MM-DD', DEFAULT_TZ);
                 if (!parsed.isValid()) return undefined;
                 return endOfDay ? parsed.endOf('day') : parsed.startOf('day');
             };

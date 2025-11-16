@@ -10,8 +10,14 @@ dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 
 // Define huso horario por defecto y locale
-const DEFAULT_TZ = process.env.APP_TZ || 'America/Argentina/Buenos_Aires';
-dayjs.tz.setDefault(DEFAULT_TZ);
+export const DEFAULT_TZ = process.env.APP_TZ || 'America/Argentina/Buenos_Aires';
+const zone = (dayjs.tz as any).zone?.(DEFAULT_TZ);
+if (!zone) {
+  console.warn(`[time] Zona inválida "${DEFAULT_TZ}", fallback America/Argentina/Buenos_Aires`);
+  dayjs.tz.setDefault('America/Argentina/Buenos_Aires');
+} else {
+  dayjs.tz.setDefault(DEFAULT_TZ);
+}
 dayjs.locale('es');
 
 // Helpers opcionales
