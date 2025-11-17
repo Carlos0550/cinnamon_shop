@@ -14,6 +14,8 @@ class ProductServices {
             tags,
             category_id,
             fillWithAI,
+            publishAutomatically,
+            stock,
         } = req.body
 
         const productImages = req.files
@@ -44,8 +46,9 @@ class ProductServices {
         let finalPrice = price ? parseFloat(price) : 0;
         let finalTags = Array.isArray(tags) ? tags : [];
         let productState: ProductState = ProductState.active;
+        const parsedStock = typeof stock === 'string' ? parseInt(stock, 10) : (typeof stock === 'number' ? stock : 1);
+        const finalStock = Number.isFinite(parsedStock) && parsedStock >= 0 ? parsedStock : 1;
 
-        // If AI completion is requested
         if (fillWithAI === true || fillWithAI === 'true') {
             if (imageUrls.length === 0) {
                 return res.status(400).json({
@@ -58,9 +61,8 @@ class ProductServices {
                 const aiResult = await analyzeProductImages(imageUrls);
                 finalTitle = aiResult.title;
                 finalDescription = aiResult.description;
-                finalPrice = 0; // Default price for AI-generated products
-                finalTags = []; // Default empty tags for AI-generated products
-                productState = ProductState.draft; // Set as draft for AI-generated products
+                finalTags = []; 
+                productState = publishAutomatically === "true" || publishAutomatically === true ? ProductState.active : ProductState.draft; 
             } catch (error) {
                 console.error('Error al procesar con IA:', error);
                 return res.status(500).json({
@@ -76,9 +78,10 @@ class ProductServices {
                 description: finalDescription,
                 price: finalPrice,
                 tags: finalTags,
-                categoryId: category_id,
+                category: { connect: { id: category_id } },
                 images: imageUrls,
                 state: productState,
+                stock: finalStock,
             }
         });
 
@@ -233,9 +236,7 @@ class ProductServices {
                     include: {
                         category: true
                     },
-                    orderBy: [{
-                        ...(sortBy && { [sortBy]: sortOrder || 'asc' as "asc" | "desc" }),
-                    }]
+                    orderBy: sortBy ? [{ [sortBy]: (sortOrder || 'asc') as "asc" | "desc" }] : [{ created_at: 'desc' }]
                 })
             ])
 
@@ -333,7 +334,8 @@ class ProductServices {
                 category_id,
                 existingImageUrls,
                 deletedImageUrls,
-                state
+                state,
+                stock
             } = req.body as UpdateProductRequest;
             console.log("Estatus actual:", state);
 
@@ -404,6 +406,9 @@ class ProductServices {
             }
 
             const updatedImages = [...normalizedExisting, ...imageUrls];
+            const parsedStock = typeof stock === 'string' ? parseInt(stock, 10) : (typeof stock === 'number' ? stock : undefined);
+            const finalStock = parsedStock !== undefined && Number.isFinite(parsedStock) && parsedStock >= 0 ? parsedStock : undefined;
+
             await prisma.products.update({
                 where: { id: product_id },
                 data: {
@@ -411,9 +416,10 @@ class ProductServices {
                     description,
                     price: typeof price === 'string' ? parseFloat(price) : price,
                     tags: Array.isArray(tags) ? tags : (typeof tags === 'string' ? JSON.parse(tags) : []),
-                    categoryId: category_id,
+                    category: { connect: { id: category_id } },
                     images: updatedImages,
-                    state: state || ProductState.active
+                    state: state || ProductState.active,
+                    ...(finalStock !== undefined ? { stock: finalStock } : {}),
                 }
             });
 
@@ -459,6 +465,26 @@ class ProductServices {
                 ok: false,
                 error: "Error al actualizar el estado del producto"
             });
+        }
+    }
+
+    async updateStock(req: Request, res: Response) {
+        try {
+            const { product_id, quantity } = req.params as unknown as { product_id: string; quantity: string };
+            const q = parseInt(quantity, 10);
+            if (!Number.isFinite(q) || q < 0) {
+                return res.status(400).json({ ok: false, error: 'Cantidad de stock inválida' });
+            }
+            const product = await prisma.products.findUnique({ where: { id: product_id } });
+            if (!product) {
+                return res.status(404).json({ ok: false, error: 'Producto no encontrado' });
+            }
+            const nextState: ProductState = q > 0 ? ProductState.active : ProductState.out_stock;
+            await prisma.products.update({ where: { id: product_id }, data: { stock: q, state: nextState } });
+            return res.status(200).json({ ok: true, message: 'Stock actualizado', stock: q, state: nextState });
+        } catch (error) {
+            console.error('Error al actualizar stock:', error);
+            return res.status(500).json({ ok: false, error: 'Error al actualizar el stock' });
         }
     }
 

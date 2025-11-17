@@ -1,9 +1,9 @@
 import { theme } from '@/theme';
-import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table, Select } from '@mantine/core';
+import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table, Select, Pagination, Modal } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiEdit, FiEye, FiTrash} from 'react-icons/fi';
-import { useDeleteProduct, useGetAllProducts, useUpdateProductState, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
+import { useDeleteProduct, useGetAllProducts, useUpdateProductState, useUpdateProductStock, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
 import ModalWrapper from '@/components/Common/ModalWrapper';
 import dummyImage from '@/assets/dummy_image.png';
 import ProductForm from './ProductForm';
@@ -16,8 +16,9 @@ function ProductTable({
 }) {
   const deleteProductMutation = useDeleteProduct();
   const updateProductMutation = useUpdateProductState();
+  const updateStockMutation = useUpdateProductStock();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updatingId] = useState<string | null>(null);
 
   const [search, setSearch] = useState<string>("");
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints?.sm || '768px'})`);
@@ -29,13 +30,16 @@ function ProductTable({
     page: 1,
     limit: 10,
     state: 'active',
-    sortBy: 'title',
-    sortOrder: 'asc',
+    sortBy: undefined,
+    sortOrder: undefined,
     isActive: undefined,
     categoryId: undefined,
   });
 
   const [editing, setEditing] = useState<Product | null>(null);
+  const [stockModalOpen, setStockModalOpen] = useState<boolean>(false);
+  const [stockProductId, setStockProductId] = useState<string | null>(null);
+  const [stockValue, setStockValue] = useState<string>("1");
 
   const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -62,6 +66,12 @@ function ProductTable({
   const products: Product[] = data?.products ?? [];
   const pagination = data?.pagination;
 
+  useEffect(() => {
+    if (pagination?.totalPages && currentPage > pagination.totalPages) {
+      setCurrentPage(pagination.totalPages);
+    }
+  }, [pagination, currentPage]);
+
   const renderBadgeByState = (state: ProductState) => {
     switch (state) {
       case 'active':
@@ -80,12 +90,18 @@ function ProductTable({
   }
 
 
-  const changeProductsStatus = (pr_id: string, status: ProductState) => {
-    setUpdatingId(pr_id);
-    updateProductMutation.mutate(
-      { productId: pr_id, state: status },
-      { onSettled: () => setUpdatingId(null) }
-    );
+  // const changeProductsStatus = (pr_id: string, status: ProductState) => {
+  //   setUpdatingId(pr_id);
+  //   updateProductMutation.mutate(
+  //     { productId: pr_id, state: status },
+  //     { onSettled: () => setUpdatingId(null) }
+  //   );
+  // }
+
+  const openStockModal = (product: Product) => {
+    setStockProductId(product.id);
+    setStockValue(String(typeof product.stock === 'number' ? product.stock : 1));
+    setStockModalOpen(true);
   }
   return (
     <Box>
@@ -103,8 +119,8 @@ function ProductTable({
 
         <Select
           value={String(searchParams.limit)}
-          onChange={(value) => setSearchParams(prev => ({ ...prev, limit: Number(value) }))}
-
+          onChange={(value) => { setSearchParams(prev => ({ ...prev, limit: Number(value) })); setCurrentPage(1); }}
+          label="Mostrar por página"
           data={[
             { value: '5', label: '5 por página' },
             { value: '10', label: '10 por página' },
@@ -115,6 +131,7 @@ function ProductTable({
 
         <Select
           value={String(searchParams.state)}
+          label="Filtrar por estado"
           onChange={(value) => setSearchParams(prev => ({ ...prev, state: value as ProductState }))}
           data={[
             { value: 'active', label: 'Activo' },
@@ -126,9 +143,11 @@ function ProductTable({
         />
 
         <Select
-          value={searchParams.sortBy || 'title'}
+          value={searchParams.sortBy ?? ''}
+          label="Tipo de orden"
           onChange={(value) => setSearchParams(prev => ({ ...prev, sortBy: value || undefined }))}
           data={[
+            { value: '', label: 'Ninguno' },
             { value: 'title', label: 'Nombre' },
             { value: 'price', label: 'Precio' },
             { value: 'created_at', label: 'Fecha de creación' },
@@ -136,7 +155,8 @@ function ProductTable({
         />
 
         <Select
-          value={searchParams.sortOrder || 'asc'}
+          value={searchParams.sortOrder || 'desc'}
+          label="Orden"
           onChange={(value) => setSearchParams(prev => ({ ...prev, sortOrder: value as "asc" | "desc" }))}
           data={[
             { value: 'asc', label: 'Ascendente' },
@@ -168,6 +188,7 @@ function ProductTable({
                       {renderBadgeByState(p.state)}
                     </Group>
                     <Text c="dimmed">{typeof p.price === 'number' ? `Precio: $${p.price}` : "Precio: —"}</Text>
+                    <Text c="dimmed">{p.stock !== undefined ? `Stock: ${p.stock}` : "Stock: —"}</Text>
                   </Box>
                 </Group>
                 <Stack gap="xs">
@@ -189,12 +210,22 @@ function ProductTable({
                       Editar
                     </Button>
                   </Group>
-                  <Button onClick={() => changeProductsStatus(p.id, p.state === 'out_stock' ? 'active' : 'out_stock')}
-                    loading={updateProductMutation.isPending && updatingId === p.id}
-                    disabled={updateProductMutation.isPending && updatingId === p.id}
-                  >
-                    {p.state === 'out_stock' ? "Con stock" : "Sin stock"}
-                  </Button>
+                  <Group gap="xs">
+                    <Button onClick={() => openStockModal(p)}
+                      loading={updateProductMutation.isPending && updatingId === p.id}
+                      disabled={updateProductMutation.isPending && updatingId === p.id}
+                    >
+                      Actualizar stock
+                    </Button>
+                    {/* {p.state !== 'out_stock' && (
+                      <Button onClick={() => changeProductsStatus(p.id, 'out_stock')}
+                        loading={updateProductMutation.isPending && updatingId === p.id}
+                        disabled={updateProductMutation.isPending && updatingId === p.id}
+                      >
+                        Sin stock
+                      </Button>
+                    )} */}
+                  </Group>
                 </Stack>
               </Group>
             </Paper>
@@ -209,12 +240,13 @@ function ProductTable({
             <Table highlightOnHover withTableBorder withColumnBorders>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th style={{ width: 64 }}>Imagen</Table.Th>
+                  <Table.Th style={{ width: 120 }}>Imagen</Table.Th>
                   <Table.Th>Título</Table.Th>
-                  <Table.Th style={{ width: 120 }}>Precio</Table.Th>
+                  <Table.Th>Precio</Table.Th>
                   <Table.Th>Estado</Table.Th>
-                  <Table.Th style={{ width: 160 }}>Creado</Table.Th>
-                  <Table.Th style={{ width: 240 }}>Acciones</Table.Th>
+                  <Table.Th>Stock</Table.Th>
+                  <Table.Th>Creado</Table.Th>
+                  <Table.Th style={{ width: 440 }}>Acciones</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -232,6 +264,9 @@ function ProductTable({
                     <Table.Td>
 
                       {renderBadgeByState(p.state)}
+                    </Table.Td>
+                    <Table.Td>
+                      {p.stock !== undefined ? p.stock : '—'}
                     </Table.Td>
                     <Table.Td>
                       {p.created_at ? (
@@ -259,13 +294,24 @@ function ProductTable({
                           >
                             Editar
                           </Button>
+                          <Button onClick={() => openStockModal(p)}
+                            loading={updateProductMutation.isPending && updatingId === p.id}
+                            disabled={updateProductMutation.isPending && updatingId === p.id}
+                          >
+                            Actualizar stock
+                          </Button>
+                          {/* {p.state !== 'out_stock' && (
+                            <Button onClick={() => changeProductsStatus(p.id, 'out_stock')}
+                              loading={updateProductMutation.isPending && updatingId === p.id}
+                              disabled={updateProductMutation.isPending && updatingId === p.id}
+                            >
+                              Sin stock
+                            </Button>
+                          )} */}
                         </Group>
-                        <Button onClick={() => changeProductsStatus(p.id, p.state === 'out_stock' ? 'active' : 'out_stock')}
-                          loading={updateProductMutation.isPending && updatingId === p.id}
-                          disabled={updateProductMutation.isPending && updatingId === p.id}
-                        >
-                          {p.state === 'out_stock' ? "Con stock" : "Sin stock"}
-                        </Button>
+                        {/* <Group gap="xs">
+                          
+                        </Group> */}
                       </Stack>
                     </Table.Td>
                   </Table.Tr>
@@ -277,36 +323,31 @@ function ProductTable({
       )}
 
       {pagination && (
-        <Flex justify="center" mt="md" gap="md">
+        <Flex justify="center" mt="md" gap="md" align="center">
           <Text>
             Página {pagination.page} de {pagination.totalPages} ({pagination.total} productos)
           </Text>
-          <Group gap="xs">
-            <Button
-              onClick={() => {
-                if (pagination.hasPrevPage) {
-                  setCurrentPage(pagination.page - 1);
-                }
-              }}
-              disabled={!pagination.hasPrevPage}
-              loading={isLoading}
-            >
-              Anterior
-            </Button>
-            <Button
-              onClick={() => {
-                if (pagination.hasNextPage) {
-                  setCurrentPage(pagination.page + 1);
-                }
-              }}
-              disabled={!pagination.hasNextPage}
-              loading={isLoading}
-            >
-              Siguiente
-            </Button>
-          </Group>
+          <Pagination total={pagination.totalPages || 1} value={pagination.page || 1} onChange={setCurrentPage} disabled={isLoading} withEdges />
         </Flex>
       )}
+
+      <Modal opened={stockModalOpen} onClose={() => setStockModalOpen(false)} title="Reponer stock" centered>
+        <Stack>
+          <TextInput label="Cantidad" value={stockValue} onChange={(e) => setStockValue(e.currentTarget.value)} type="number" min={0} />
+          <Group justify="flex-end">
+            <Button variant="light" onClick={() => setStockModalOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!stockProductId) return;
+              const qty = parseInt(stockValue, 10);
+              if (!Number.isFinite(qty) || qty < 0) return;
+              setStockModalOpen(false);
+              updateStockMutation.mutate({ productId: stockProductId, quantity: qty });
+            }}>
+              Guardar
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
       <ModalWrapper opened={viewOpened} onClose={() => { setViewOpened(false); setEditing(null); }} title={selected ? selected.title : 'Ver producto'} size="md">
         {selected && (
           <Stack>

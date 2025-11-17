@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth as useClerkAuth, useUser, useClerk } from "@clerk/nextjs";
 
 type AuthProps = {

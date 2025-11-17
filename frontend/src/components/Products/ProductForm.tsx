@@ -19,6 +19,8 @@ export type ProductFormValues = {
   productId?: string;
   state: ProductState;
   fillWithAI?: boolean;
+  publishAutomatically?: boolean;
+  stock?: string;
 };
 
 type ProductFormProps = {
@@ -43,6 +45,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const saveProductMutation = useSaveProduct();
   const updateProductMutation = useUpdateProduct();
   const [fillWithAI, setFillWithAI] = useState(false);
+  const [publishAutomatically, setPublishAutomatically] = useState(false);
   const [formValues, setFormValues] = useState<ProductFormValues>({
     title: "",
     price: "",
@@ -56,6 +59,8 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     productId: undefined,
     state: 'active',
     fillWithAI: false,
+    publishAutomatically: false,
+    stock: "1",
   });
 
   useEffect(() => {
@@ -96,9 +101,11 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const handleSubmit = () => {
     const isAI = !!formValues.fillWithAI;
     const mutation = product ? updateProductMutation : saveProductMutation;
+    const { stock, ...rest } = formValues;
     const submitData = {
-      ...formValues,
-      state: isAI ? 'draft' : formValues.state
+      ...rest,
+      state: isAI ? 'draft' : formValues.state,
+      ...(product ? {} : { stock: stock ? Number(stock) : undefined }),
     };
 
     if (isAI) {
@@ -141,6 +148,13 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       fillWithAI
     }));
   }, [fillWithAI]);
+
+  useEffect(() => {
+    setFormValues(prev => ({
+      ...prev,
+      publishAutomatically
+    }));
+  }, [publishAutomatically]);
   return (
     <Stack>
       {!product && (
@@ -168,23 +182,24 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         </Group>
       )}
 
-      <Group grow>
-        {!fillWithAI && (
-          <TextInput label="Precio" name="price" placeholder="Ej. 59.99" value={formValues.price} onChange={handleChangeValues} required />
-        )}
-        <Select
-          label="Categoría"
-          name="category" 
-          placeholder="Selecciona una categoría"
-          data={Array.isArray(categories?.categories) ? categories.categories.map((cat: { id: string; title: string }) => ({ 
-            value: cat.id, 
-            label: capitalizeFirstLetter(cat.title)
-          })) : []}
-          value={formValues.category}
-          onChange={(value) => setFormValues(prev => ({ ...prev, category: value || "" }))}
-          required={fillWithAI}
-        />
-      </Group>
+  <Group grow>
+    <TextInput label="Precio" name="price" placeholder="Ej. 59.99" value={formValues.price} onChange={handleChangeValues} required />
+    {!product && (
+      <TextInput label="Stock" name="stock" placeholder="Ej. 10" value={formValues.stock} onChange={handleChangeValues} />
+    )}
+    <Select
+      label="Categoría"
+      name="category" 
+      placeholder="Selecciona una categoría"
+      data={Array.isArray(categories?.categories) ? categories.categories.map((cat: { id: string; title: string }) => ({ 
+        value: cat.id, 
+        label: capitalizeFirstLetter(cat.title)
+      })) : []}
+      value={formValues.category}
+      onChange={(value) => setFormValues(prev => ({ ...prev, category: value || "" }))}
+      required={fillWithAI}
+    />
+  </Group>
 
       {!fillWithAI && (
         <>
@@ -218,7 +233,13 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           }}
         />
         
-        {/* Dropzone para desktop */}
+        {fillWithAI && (
+          <Switch
+            label="Publicar automáticamente"
+            checked={publishAutomatically}
+            onChange={(event) => setPublishAutomatically(event.currentTarget.checked)}
+          />
+        )}
         <Dropzone
           name="images"
           onDrop={(files) => setFormValues(prev => ({ ...prev, images: [...prev.images, ...files] }))}

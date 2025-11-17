@@ -4,11 +4,9 @@ import { UpdateCategoryStatusSchema } from "./services/product.zod"
 export const saveProduct = async (req: Request, res: Response, next: NextFunction) => {
     const {
         title,
-        description,
         price,
-        tags,
         category_id,
-        fillWithAI
+        fillWithAI,
     } = req.body
 
     try {

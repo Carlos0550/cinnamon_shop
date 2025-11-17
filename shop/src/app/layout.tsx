@@ -1,7 +1,6 @@
 import "./globals.css";
 import AppProvider from "../providers/AppProvider";
 import SiteLayout from "../Components/Layout/SiteLayout";
-import { AppContextProvider } from "@/providers/AppContext";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 

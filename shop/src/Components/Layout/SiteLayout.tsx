@@ -1,10 +1,8 @@
 "use client";
-import { Categories, useCategories } from "@/Api/useCategories";
 import { useAppContext } from "@/providers/AppContext";
-import { AppShell, Burger, Group, Anchor, Stack, ActionIcon, Input, Flex, MultiSelect, Title, Text, Avatar, Button } from "@mantine/core";
+import { AppShell, Burger, Group, Anchor, Stack,Flex,Text, Avatar, Button } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import Link from "next/link";
-import { FaShoppingCart } from "react-icons/fa";
 import LoginForm from "../Auth/LoginForm";
 import AuthModal from "../Modals/AuthModal/AuthModal";
 import { useAuth as useClerkAuth, useUser } from "@clerk/nextjs";
@@ -25,15 +23,9 @@ export default function SiteLayout({ children }: Props) {
   const {
     utils: {
       isMobile,
-      capitalizeTexts
     }
   } = useAppContext()
 
-  const {
-    data: categoriesData,
-  } = useCategories()
-
-  const categories: Categories[] = categoriesData?.data ?? []
   return (
     <AppShell
       header={{ height: 60 }}
@@ -93,33 +85,16 @@ export default function SiteLayout({ children }: Props) {
               )
             )}
           </Group>
-
-          {!isMobile ? (
-            <Flex
-              align="center"
-              justify="flex-end"
-              gap={10}
-            >
-              <Flex gap={10} align={"center"} justify={"center"}>
-                <Input mb={10} placeholder="Buscar" w={300} />
-                <MultiSelect mb={10} placeholder="Categorías" h={"auto"} maw={400} data={categories.map((category) => ({
-                  value: category.id,
-                  label: capitalizeTexts(category.title),
-                }))} />
-
-              </Flex>
-            </Flex>
-          ) : (
-            <ActionIcon>
-              <FaShoppingCart />
-            </ActionIcon>
-          )}
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar p="md" style={{ background: "var(--mantine-color-body)" }}>
         <Stack gap="sm" onClick={close}>
           <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Inicio</Anchor>
+          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Mi cuenta</Anchor>
+          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Mis ordenes</Anchor>
+          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>FAQ</Anchor>
+          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Contacto</Anchor>
         </Stack>
       </AppShell.Navbar>
 

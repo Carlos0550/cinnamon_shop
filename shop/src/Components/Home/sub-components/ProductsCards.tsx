@@ -11,7 +11,6 @@ function ProductsCards({ product }: Props) {
     const {
         utils: {
             isMobile,
-            windowWidth
         }
     } = useAppContext()
  

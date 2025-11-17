@@ -6,6 +6,7 @@ export type FetchProductsParams = {
     page: number;
     limit: number;
     title: string;
+    categoryId?: string;
 }
 
 export interface ProductCategory{
@@ -49,11 +50,17 @@ export default function useProducts(params: FetchProductsParams){
             const qp = new URLSearchParams({
                 page: params.page.toString(),
                 limit: params.limit.toString(),
-                title: params.title,
             })
+            if (params.title && params.title.trim().length > 0) {
+                qp.append('title', params.title.trim())
+            }
+            if (params.categoryId) {
+                qp.append('categoryId', params.categoryId)
+            }
             const res = await fetch(`${baseUrl}/products/public?${qp}`)
             const data = await res.json();
             return data as ProductsResponse;
-        }
+        },
+        placeholderData: (previousData) => previousData
     })
 }

@@ -21,7 +21,6 @@ export default function Home() {
 
   useEffect(() => {
     refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [start_date, end_date]);
 
   const revenueSeries = useMemo(() => {

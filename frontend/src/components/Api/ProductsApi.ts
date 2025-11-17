@@ -29,6 +29,7 @@ export type Product = {
   description?: string;
   category?: Category_info;
   created_at?: string | number | Date;
+  stock?: number;
 };
 
 export type Pagination = {
@@ -59,6 +60,8 @@ type SaveProductPayload = {
   deletedImageUrls?: string[];
   productId?: string;
   state?: ProductState;
+  publishAutomatically?: boolean;
+  stock?: number;
 };
 
 export const useSaveProduct = () => {
@@ -89,6 +92,9 @@ export const useSaveProduct = () => {
         if (value.description) {
           formData.append("description", value.description);
         }
+        if (typeof value.stock === "number") {
+          formData.append("stock", String(value.stock));
+        }
         if (value.productId) {
           formData.append("product_id", value.productId);
         }
@@ -104,6 +110,10 @@ export const useSaveProduct = () => {
 
         formData.append("fillWithAI", value.fillWithAI ? "true" : "false");
         formData.append("state", value.state || "active"); 
+
+        if(value.publishAutomatically) {
+          formData.append("publishAutomatically", "true");
+        }
 
         const res = await fetch(baseUrl + "/products/save-product", {
           method: "POST",
@@ -318,6 +328,12 @@ export const useUpdateProduct = () => {
         if (value.state) {
           formData.append("state", value.state);
         }
+        if (typeof value.stock === "number") {
+          formData.append("stock", String(value.stock));
+        }
+        if (typeof value.stock === "number") {
+          formData.append("stock", String(value.stock));
+        }
 
         console.log("Actualizando producto...")
         const res = await fetch(baseUrl + "/products/" + value.productId, {
@@ -387,6 +403,43 @@ export const useUpdateProductState = () => {
     onError: (error: Error) => {
       notifications.show({
         message: error?.message ?? "Error al actualizar el estado",
+        color: "red",
+      });
+    },
+  });
+};
+
+export const useUpdateProductStock = () => {
+  const queryClient = useQueryClient();
+  const {
+    auth: { token },
+  } = useAppContext();
+
+  return useMutation({
+    mutationKey: ["updateProductStock"],
+    mutationFn: async ({ productId, quantity }: { productId: string; quantity: number }) => {
+      const res = await fetch(`${baseUrl}/products/stock/${productId}/${quantity}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || "Error actualizando stock");
+      }
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      notifications.show({
+        message: "Stock actualizado",
+        color: "green",
+      });
+    },
+    onError: (error: Error) => {
+      notifications.show({
+        message: error?.message ?? "Error actualizando stock",
         color: "red",
       });
     },

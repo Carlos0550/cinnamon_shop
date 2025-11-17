@@ -64,10 +64,7 @@ export const analyzeProductImages = async (imageUrls: string[]): Promise<{ title
     return { title, description };
   } catch (error) {
     console.error('Error al analizar imágenes con OpenAI:', error);
-    return {
-      title: 'Producto Generado por IA',
-      description: 'Descripción generada automáticamente. Por favor, revise y edite según sea necesario.'
-    };
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };
 

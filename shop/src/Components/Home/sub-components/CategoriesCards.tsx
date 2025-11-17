@@ -14,7 +14,7 @@ export default function CategoriesCards({ categories }: { categories: Categories
       cols={{ base: 1, sm: 2, md: 2, lg: 2 }}
       spacing="md"
     >
-      {categories.map((category) => (
+      {Array.isArray(categories) && categories.slice(0, 4).map((category) => (
         <Card
           key={category.id}
           withBorder

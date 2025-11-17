@@ -51,6 +51,13 @@ router.patch(
     (req, res) => product_service.productChangeStatus(req, res)
 )
 
+router.patch(
+    "/stock/:product_id/:quantity",
+    requireAuth,
+    requireRole([1]),
+    (req, res) => product_service.updateStock(req, res)
+)
+
 //Public endpoints
 router.get("/public", (req, res) => product_service.getPublicProducts(req, res))
 router.get("/public/categories", (req, res) => product_service.getPublicCategories(req, res))

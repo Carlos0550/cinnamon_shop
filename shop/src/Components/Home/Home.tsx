@@ -1,5 +1,6 @@
 
-import { Box, Flex, Title, Text, Container, Input, MultiSelect } from "@mantine/core";
+
+import { Box, Flex, Title, Text, Container, Input, ActionIcon, NativeSelect, Loader, Stack } from "@mantine/core";
 
 import useProducts, { Products } from "@/Api/useProducts";
 import ProductsCards from "./sub-components/ProductsCards";
@@ -7,18 +8,24 @@ import { Categories, useCategories } from "@/Api/useCategories";
 import CategoriesCards from "./sub-components/CategoriesCards";
 import { useAppContext } from "@/providers/AppContext";
 import { useState } from "react";
+import { useDebouncedValue } from "@mantine/hooks";
+import { FaShoppingCart } from "react-icons/fa";
 import CinnamonLoader from "@/Components/CinnamonLoader/CinnamonLoader";
 
 export default function Home() {
     const [pagination] = useState({
         page: 1,
-        limit: 10,
+        limit: 30,
         total: 0,
     })
-    const { data, isLoading } = useProducts({
+    const [search, setSearch] = useState("")
+    const [debouncedSearch] = useDebouncedValue(search, 400)
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+    const { data, isLoading, isFetching } = useProducts({
         page: pagination.page,
         limit: pagination.limit,
-        title: '',
+        title: debouncedSearch,
+        categoryId: selectedCategories[0]
     })
     const { data: categoriesData } = useCategories()
     const categories: Categories[] = categoriesData?.data ?? []
@@ -29,15 +36,18 @@ export default function Home() {
             isMobile
         }
     } = useAppContext()
-    if (isLoading) {
+    
+    if (isLoading) { 
         return (
             <Flex h={"100vh"} justify="center" align="center">
                 <CinnamonLoader />
             </Flex>
         )
     }
+
+    
     return (
-        <Box>
+        <Box >
             <Flex direction="column" justify={"center"}>
                 <Box my={30}>
                     <Container size="xl">
@@ -47,8 +57,7 @@ export default function Home() {
                     </Container>
                 </Box>
 
-                {isMobile ? (
-                    <Box size="xl" p={10}>
+                <Box size="xl" p={10}>
                     <Flex direction={"column"} justify={"center"} align={"flex-start"}>
                         <Title order={2} mb={10}>
                             Nuestros productos
@@ -56,26 +65,53 @@ export default function Home() {
                         <Text c="dimmed" mb="md">Busca por nombre, categoría o descripción.</Text>
                     </Flex>
                     <Flex gap={10} wrap={"wrap"}>
-                        <Input mb={10} placeholder="Buscar" w={isMobile ? "100%" : 300} />
-                        <MultiSelect mb={10} searchable placeholder="Categorías" w={isMobile ? "100%" : 300} data={categories.map((category) => ({
-                            value: category.id,
-                            label: capitalizeTexts(category.title),
-                        }))} />
+                        <Input
+                            mb={10}
+                            placeholder="Buscar"
+                            w={isMobile ? "100%" : 300}
+                            value={search}
+                            onChange={(e) => setSearch(e.currentTarget.value)}
+                            rightSection={isFetching ? <Loader size="xs" /> : null}
+                        />
+                        <NativeSelect
+                            mb={10}
+                            value={selectedCategories[0]}
+                            onChange={(e) => setSelectedCategories([e.currentTarget.value])}
+                            data={[
+                                { value: "", label: "Todos" },
+                                ...categories.map((category) => ({
+                                    value: category.id,
+                                    label: capitalizeTexts(category.title),
+                                }))
+                            ]}
+                        />
                     </Flex>
                 </Box>
-                ) : (
-                    <Flex direction={"column"} justify={"center"} align={"flex-start"}>
-                        <Title order={2} mb={10}>
-                            Nuestros productos
-                        </Title>
-                        <Text c="dimmed" mb="md">Explorá todo nuestro catálogo de productos usando el buscador o filtrá por categorías.</Text>
-                    </Flex>
-                )}
-                <Flex wrap="wrap" justify="space-evenly" align="flex-start" h="100vh"  flex={1} gap={20}>
-                    {products.map((product) => (
-                        <ProductsCards key={product.id} product={product} />
-                    ))}
+                <Flex wrap="wrap" justify="space-evenly" align="flex-start" mih={Array.isArray(products) && products.length > 0 ? "100vh" : "10vh"} flex={1} gap={20}>
+                    {Array.isArray(products) && products.length > 0 ? (
+                        products.map((product) => (
+                            <ProductsCards key={product.id} product={product} />
+                        ))
+                    ) : (
+                        <Stack align="center">
+                            {isLoading ? (
+                                <Loader size="xs" />
+                            ) : (
+                                <Text c="dimmed">No hay productos disponibles</Text>
+                            )}
+                        </Stack>
+                    )}
                 </Flex>
+                <ActionIcon
+                    variant="filled"
+                    color="rose"
+                    radius="xl"
+                    size={isMobile ? "xl" : "xl"}
+                    style={{ position: "fixed", right: isMobile ? 16 : 24, bottom: isMobile ? 16 : 24, zIndex: 1000 }}
+                    aria-label="Carrito"
+                >
+                    <FaShoppingCart />
+                </ActionIcon>
             </Flex>
         </Box>
     )
