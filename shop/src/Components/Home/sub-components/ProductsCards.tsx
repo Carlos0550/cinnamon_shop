@@ -1,6 +1,8 @@
+"use client";
 import { Products } from '@/Api/useProducts'
 import { useAppContext } from '@/providers/AppContext'
 import { Badge, Button, Card, Flex, Group, Image, Text } from '@mantine/core'
+import { useRouter } from 'next/navigation'
 import { FaCartPlus, FaInfoCircle } from 'react-icons/fa'
 
 type Props = {
@@ -8,6 +10,7 @@ type Props = {
 }
 
 function ProductsCards({ product }: Props) {
+    const router = useRouter()
     const {
         utils: {
             isMobile,
@@ -16,7 +19,7 @@ function ProductsCards({ product }: Props) {
  
     const mobileCardWidth = "calc(50% - 10px)"; 
     return (
-        <Card shadow="sm"  radius="md" withBorder w={isMobile ? mobileCardWidth : 350}>
+        <Card style={{ cursor: 'pointer' }} shadow="sm" radius="md" withBorder w={isMobile ? mobileCardWidth : 350} onClick={() => router.push(`/${product.id}`)}>
             <Card.Section>
                 <Image
                     src={product.images[0]}

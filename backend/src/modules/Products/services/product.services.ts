@@ -700,6 +700,26 @@ class ProductServices {
             });
         }
     }
+
+    async getPublicProductById(req: Request, res: Response) {
+        try {
+            const { id } = req.params as { id: string }
+            if (!id) {
+                return res.status(400).json({ ok: false, error: "ID de producto requerido" })
+            }
+            const product = await prisma.products.findUnique({
+                where: { id },
+                include: { category: true }
+            })
+            if (!product || product.is_active !== true || product.state !== ProductState.active) {
+                return res.status(404).json({ ok: false, error: "Producto no encontrado" })
+            }
+            return res.status(200).json({ ok: true, data: { product } })
+        } catch (error) {
+            console.error("Error al obtener producto público por id:", error)
+            return res.status(500).json({ ok: false, error: "Error al obtener el producto" })
+        }
+    }
 }
 
 export default ProductServices
