@@ -1,8 +1,9 @@
-import { Container, SimpleGrid, Title, Text, Group, Badge, Stack, Button, Box } from "@mantine/core"
+import { Container, SimpleGrid, Title, Text, Group, Badge, Stack, Box } from "@mantine/core"
 import { notFound } from "next/navigation"
 import type { Products } from "@/Api/useProducts"
 import ImageGallery from "@/Components/ProductDetails/ImageGallery"
 import BackButton from "@/Components/Common/BackButton"
+import AddToCartButton from "@/Components/Cart/AddToCartButton"
 import type { Metadata } from "next"
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
@@ -61,7 +62,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </Box>
             )}
             <Group gap="sm">
-              <Button color="green">Agregar al carrito</Button>
+              <AddToCartButton productId={product.id} />
               <BackButton />
             </Group>
           </Stack>

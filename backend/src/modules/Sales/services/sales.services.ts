@@ -62,41 +62,41 @@ class SalesServices {
                     paymentMethods: paymentBreakdown as any,
                 }
             })
-            // Send email notification
-            try {
-                const user = parsedUserId ? await prisma.user.findUnique({ where: { id: parsedUserId } }) : null;
-                const html = sale_email_html({
-                    source,
-                    payment_method: primaryPaymentMethod,
-                    products: product_data.map(p => ({ title: p.title, price: Number(p.price) })),
-                    subtotal,
-                    taxPercent,
-                    finalTotal,
-                    saleId: (sale as any)?.id ?? undefined,
-                    saleDate: new Date(),
-                    buyerName: user?.name ?? undefined,
-                    buyerEmail: user?.email ?? undefined,
-                });
-                const admins = await prisma.user.findMany({ where: { role: 1 } });
-                const adminEmails = admins.map(u => u.email).filter(Boolean) as string[];
-                console.log(adminEmails)
-                const configuredRecipient = process.env.SALES_EMAIL_TO;
-                const toRecipients = adminEmails.length > 0
-                    ? adminEmails
-                    : (configuredRecipient ? configuredRecipient : (process.env.RESEND_FROM || ''));
-                if (Array.isArray(toRecipients) ? toRecipients.length > 0 : !!toRecipients) {
-                    await sendEmail({
-                        to: toRecipients as any,
-                        subject: 'Nueva venta realizada',
-                        text: `Nueva venta realizada - ${product_data.length} productos - Total: ${finalTotal}`,
-                        html,
+            setImmediate(async () => {
+                try {
+                    const user = parsedUserId ? await prisma.user.findUnique({ where: { id: parsedUserId } }) : null;
+                    const html = sale_email_html({
+                        source,
+                        payment_method: primaryPaymentMethod,
+                        products: product_data.map(p => ({ title: p.title, price: Number(p.price) })),
+                        subtotal,
+                        taxPercent,
+                        finalTotal,
+                        saleId: (sale as any)?.id ?? undefined,
+                        saleDate: new Date(),
+                        buyerName: user?.name ?? undefined,
+                        buyerEmail: user?.email ?? undefined,
                     });
-                } else {
-                    console.warn('No recipient configured for sale email');
+                    const admins = await prisma.user.findMany({ where: { role: 1 } });
+                    const adminEmails = admins.map(u => u.email).filter(Boolean) as string[];
+                    const configuredRecipient = process.env.SALES_EMAIL_TO;
+                    const toRecipients = adminEmails.length > 0
+                        ? adminEmails
+                        : (configuredRecipient ? configuredRecipient : (process.env.RESEND_FROM || ''));
+                    if (Array.isArray(toRecipients) ? toRecipients.length > 0 : !!toRecipients) {
+                        await sendEmail({
+                            to: toRecipients as any,
+                            subject: 'Nueva venta realizada',
+                            text: `Nueva venta realizada - ${product_data.length} productos - Total: ${finalTotal}`,
+                            html,
+                        });
+                    } else {
+                        console.warn('No recipient configured for sale email');
+                    }
+                } catch (err) {
+                    console.error('Error sending sale email', err);
                 }
-            } catch (err) {
-                console.error('Error sending sale email', err);
-            }
+            })
             return true
         } catch (error) {
             const error_msg = error instanceof Error ? error.message : String(error);

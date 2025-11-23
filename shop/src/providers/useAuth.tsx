@@ -112,6 +112,7 @@ export function useAuth() {
     localStorage.setItem('auth_exchange_done', '1');
     setState({ token, user, loading: false });
     return { token, user };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseUrl, isSignedIn, clerkUser]);
 
   const exchangeAttemptedRef = useRef(false);

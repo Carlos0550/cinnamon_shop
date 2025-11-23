@@ -66,6 +66,7 @@ export default function LoginForm({ onClose }: Props) {
       }
     };
     runExchange();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, showClerkSignIn]);
 
   return (

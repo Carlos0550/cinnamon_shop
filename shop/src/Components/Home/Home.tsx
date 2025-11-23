@@ -13,7 +13,7 @@ import { useDebouncedValue } from "@mantine/hooks";
 import { FaShoppingCart } from "react-icons/fa";
 import CinnamonLoader from "@/Components/CinnamonLoader/CinnamonLoader";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
+import Cart from "../Cart/Cart";
 export default function Home() {
     const router = useRouter()
     const pathname = usePathname()
@@ -43,7 +43,7 @@ export default function Home() {
             isMobile
         }
     } = useAppContext()
-    // Escribe filtros en la URL cuando cambian (debounced para título)
+    const [cartOpened, setCartOpened] = useState(false)
     useEffect(() => {
         const next = new URLSearchParams(Array.from(searchParams.entries()))
         if (debouncedSearch && debouncedSearch.trim().length > 0) {
@@ -58,11 +58,10 @@ export default function Home() {
             next.delete("categoryId")
         }
         const qs = next.toString()
-        router.replace(qs ? `${pathname}?${qs}` : pathname)
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearch, selectedCategories])
 
-    // Lee filtros desde la URL si cambian por navegación
     useEffect(() => {
         const spTitle = searchParams.get("title") || ""
         const spCat = searchParams.get("categoryId") || ""
@@ -143,10 +142,14 @@ export default function Home() {
                     size={isMobile ? "xl" : "xl"}
                     style={{ position: "fixed", right: isMobile ? 16 : 24, bottom: isMobile ? 16 : 24, zIndex: 1000 }}
                     aria-label="Carrito"
+                    onClick={() => setCartOpened(!cartOpened)}
                 >
                     <FaShoppingCart />
                 </ActionIcon>
             </Flex>
+            {cartOpened && (
+                <Cart onClose={() => setCartOpened(false)} />
+            )}
         </Box>
     )
 }

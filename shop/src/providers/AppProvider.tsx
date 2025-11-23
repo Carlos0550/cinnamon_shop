@@ -1,6 +1,7 @@
 "use client";
 
 import { MantineProvider, localStorageColorSchemeManager } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 import { theme } from "../theme";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css"
@@ -19,6 +20,7 @@ export default function AppProvider({ children }: Props) {
   return (
     <MantineProvider theme={theme} defaultColorScheme="light" colorSchemeManager={colorSchemeManager}>
       <QueryClientProvider client={queryClient}>
+        <Notifications position="top-right" />
         <AppContextProvider>
           {children}
         </AppContextProvider>
