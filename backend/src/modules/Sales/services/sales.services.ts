@@ -77,8 +77,8 @@ class SalesServices {
                         buyerName: user?.name ?? undefined,
                         buyerEmail: user?.email ?? undefined,
                     });
-                    const admins = await prisma.user.findMany({ where: { role: 1 } });
-                    const adminEmails = admins.map(u => u.email).filter(Boolean) as string[];
+                    const admins = await prisma.user.findMany({ where: { role: 1 }, select: { email: true } });
+                    const adminEmails = admins.map((u: { email: string | null }) => u.email).filter((e: string | null): e is string => !!e);
                     const configuredRecipient = process.env.SALES_EMAIL_TO;
                     const toRecipients = adminEmails.length > 0
                         ? adminEmails
@@ -216,11 +216,11 @@ class SalesServices {
             ]);
 
             const salesCount = currentSales.length;
-            const revenueTotal = currentSales.reduce((acc, s) => acc + Number(s.total || 0), 0);
+            const revenueTotal = currentSales.reduce((acc: number, s: { total: number | null }) => acc + Number(s.total || 0), 0);
             const avgOrderValue = salesCount > 0 ? revenueTotal / salesCount : 0;
 
             const prevCount = previousSales.length;
-            const prevRevenue = previousSales.reduce((acc, s) => acc + Number(s.total || 0), 0);
+            const prevRevenue = previousSales.reduce((acc: number, s: { total: number | null }) => acc + Number(s.total || 0), 0);
 
             const growthPercentRevenue = prevRevenue > 0 ? ((revenueTotal - prevRevenue) / prevRevenue) * 100 : (revenueTotal > 0 ? 100 : 0);
             const growthPercentCount = prevCount > 0 ? ((salesCount - prevCount) / prevCount) * 100 : (salesCount > 0 ? 100 : 0);

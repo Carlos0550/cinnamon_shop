@@ -163,16 +163,16 @@ class ProductServices {
                 })
             }
 
-            const status_to_number = {
+            const status_to_number: Record<CategoryStatus, number> = {
                 [CategoryStatus.active]: 1,
                 [CategoryStatus.inactive]: 2,
-                [CategoryStatus.deleted]: 3
+                [CategoryStatus.deleted]: 3,
             };
 
-            const categories_with_status = categories.map((c) => {
+            const categories_with_status = categories.map((c: { status: CategoryStatus }) => {
                 return {
                     ...c,
-                    status: status_to_number[c.status]
+                    status: status_to_number[c.status as CategoryStatus]
                 }
             })
             return res.status(200).json({
