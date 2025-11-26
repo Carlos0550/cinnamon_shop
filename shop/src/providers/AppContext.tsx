@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, useEffect, useRef } from 'react';
 import { useUtils } from './useUtils';
 import { useAuth } from './useAuth';
 import useCart from './useCart';
@@ -28,6 +28,14 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       cart
     ]
   );
+
+  const syncRef = useRef(cart.syncWithServer)
+  useEffect(() => { syncRef.current = cart.syncWithServer }, [cart.syncWithServer])
+  useEffect(() => {
+    const token = auth.state.token
+    if (!token) return
+    syncRef.current(utils.baseUrl, token)
+  }, [auth.state.token, utils.baseUrl])
 
   return <AppContext.Provider value={value}>{
     children

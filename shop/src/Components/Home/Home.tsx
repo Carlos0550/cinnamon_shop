@@ -14,6 +14,7 @@ import { FaShoppingCart } from "react-icons/fa";
 import CinnamonLoader from "@/Components/CinnamonLoader/CinnamonLoader";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Cart from "../Cart/Cart";
+import CartWrapper from "../Cart/CartWrapper";
 export default function Home() {
     const router = useRouter()
     const pathname = usePathname()
@@ -43,7 +44,7 @@ export default function Home() {
             isMobile
         }
     } = useAppContext()
-    const [cartOpened, setCartOpened] = useState(false)
+    
     useEffect(() => {
         const next = new URLSearchParams(Array.from(searchParams.entries()))
         if (debouncedSearch && debouncedSearch.trim().length > 0) {
@@ -135,21 +136,8 @@ export default function Home() {
                         </Stack>
                     )}
                 </Flex>
-                <ActionIcon
-                    variant="filled"
-                    color="rose"
-                    radius="xl"
-                    size={isMobile ? "xl" : "xl"}
-                    style={{ position: "fixed", right: isMobile ? 16 : 24, bottom: isMobile ? 16 : 24, zIndex: 1000 }}
-                    aria-label="Carrito"
-                    onClick={() => setCartOpened(!cartOpened)}
-                >
-                    <FaShoppingCart />
-                </ActionIcon>
             </Flex>
-            {cartOpened && (
-                <Cart onClose={() => setCartOpened(false)} />
-            )}
+            <CartWrapper/>
         </Box>
     )
 }

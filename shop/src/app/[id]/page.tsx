@@ -5,6 +5,7 @@ import ImageGallery from "@/Components/ProductDetails/ImageGallery"
 import BackButton from "@/Components/Common/BackButton"
 import AddToCartButton from "@/Components/Cart/AddToCartButton"
 import type { Metadata } from "next"
+import CartWrapper from "@/Components/Cart/CartWrapper"
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -68,6 +69,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </Stack>
         </Box>
       </SimpleGrid>
+      <CartWrapper />
     </Container>
   )
 }
