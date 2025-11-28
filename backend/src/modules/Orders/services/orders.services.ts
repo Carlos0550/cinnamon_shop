@@ -2,7 +2,7 @@ import { prisma } from "@/config/prisma"
 import { sendEmail } from "@/config/resend"
 import { sale_email_html } from "@/templates/sale_email"
 import { purchase_email_html } from "@/templates/purchase_email"
-
+import salesServices from "@/modules/Sales/services/sales.services"
 type OrderItemInput = { product_id: string; quantity: number }
 type CustomerInput = { name: string; email: string; phone?: string; street?: string; postal_code?: string; city?: string; province?: string; pickup?: boolean }
 
@@ -39,34 +39,22 @@ export default class OrdersServices {
         await prisma.cart.update({ where: { id: cart.id }, data: { total: 0 } })
       }
     }
-
-    await this.notify(order.id, snapshot, total, paymentMethod, customer)
+    setImmediate(async () => {
+      await this.notify(order.id, snapshot, total, paymentMethod, customer)
+      await salesServices.saveSale({
+          payment_method: paymentMethod as any,
+          source: "WEB",
+          product_ids: productIds,
+          user_sale:{
+            user_id: userId?.toString() || undefined,
+          }
+        })
+    })
     return { ok: true, order_id: order.id, total }
   }
 
   private async notify(orderId: string, items: { title: string; price: number; quantity: number }[], total: number, paymentMethod: string, customer: CustomerInput) {
-    const admins = await prisma.user.findMany({ where: { role: 1 }, select: { email: true } })
-    const adminEmails = admins.map(u => u.email).filter((e): e is string => !!e)
-
     const productRows = items.map(it => ({ title: `${it.title} x${it.quantity}`, price: Number(it.price) * Number(it.quantity) }))
-
-    const adminHtml = sale_email_html({
-      source: "Shop",
-      payment_method: paymentMethod,
-      products: productRows,
-      subtotal: total,
-      taxPercent: 0,
-      finalTotal: total,
-      saleId: orderId,
-      saleDate: new Date(),
-      buyerName: customer.name,
-      buyerEmail: customer.email,
-    })
-
-    if (adminEmails.length > 0) {
-      await sendEmail({ to: adminEmails as any, subject: `Nueva orden #${orderId}`, html: adminHtml })
-    }
-
     if (customer.email && customer.email.trim()) {
       const buyerHtml = purchase_email_html({
         payment_method: paymentMethod,

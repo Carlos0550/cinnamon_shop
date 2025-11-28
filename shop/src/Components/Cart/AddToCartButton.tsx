@@ -21,7 +21,7 @@ export default function AddToCartButton({ productId }: { productId: string }) {
   }
 
   return (
-    <Button color="green" onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : null}>
+    <Button variant="light" onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : null}>
       Agregar al carrito
     </Button>
   )

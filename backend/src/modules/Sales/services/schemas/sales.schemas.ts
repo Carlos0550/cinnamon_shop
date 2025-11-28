@@ -1,7 +1,7 @@
 export const SaleSource = ["WEB", "CAJA"] as const;
 export type SaleSource = typeof SaleSource[number];
 
-export const PaymentMethods = ["TARJETA", "EFECTIVO", "QR", "NINGUNO"] as const;
+export const PaymentMethods = ["TARJETA", "EFECTIVO", "QR", "NINGUNO", "TRANSFERENCIA"] as const;
 export type PaymentMethods = typeof PaymentMethods[number];
 
 export type UserSale = {

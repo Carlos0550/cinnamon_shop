@@ -97,12 +97,14 @@ function Cart({ opened = true, onClose }: CartProps) {
   useEffect(()=>{
     if(formValues.pickup){
       
-
+      
     if(!formValues.name || !formValues.email || !formValues.phone || !formValues.street || !formValues.postal_code || !formValues.city || !formValues.province || !formValues.selectedProvinceId || !formValues.selectedLocalityId){
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShippingInfoCompleted(false)
     }
     }
     setShippingInfoCompleted(true)
+    
   },[formValues])
 
   return (

@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import HomeComponent from "@/Components/Home/Home"
 
-// metadata is generated dynamically below via generateMetadata
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams

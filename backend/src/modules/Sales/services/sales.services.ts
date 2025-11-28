@@ -32,7 +32,6 @@ class SalesServices {
 
                 subtotal = product_data.reduce((acc, product) => acc + Number(product.price), 0);
             } else {
-                // Manual items: subtotal from quantity * price
                 subtotal = manualItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
                 product_data = manualItems.map(mi => ({ id: '', title: mi.title, price: Number(mi.quantity) * Number(mi.price) }));
             }
@@ -49,6 +48,7 @@ class SalesServices {
                 data: {
                     payment_method: primaryPaymentMethod,
                     source,
+                    user: user_id ? { connect: { id: parsedUserId } } : undefined,
                     total: Number(finalTotal),
                     ...(parsedUserId && Number.isInteger(parsedUserId)
                         ? { user: { connect: { id: parsedUserId } } }
@@ -62,9 +62,11 @@ class SalesServices {
                     paymentMethods: paymentBreakdown as any,
                 }
             })
+            
             setImmediate(async () => {
                 try {
                     const user = parsedUserId ? await prisma.user.findUnique({ where: { id: parsedUserId } }) : null;
+                    console.log(user)
                     const html = sale_email_html({
                         source,
                         payment_method: primaryPaymentMethod,
