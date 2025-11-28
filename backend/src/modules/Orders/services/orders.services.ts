@@ -3,6 +3,7 @@ import { sendEmail } from "@/config/resend"
 import { sale_email_html } from "@/templates/sale_email"
 import { purchase_email_html } from "@/templates/purchase_email"
 import salesServices from "@/modules/Sales/services/sales.services"
+import { PaymentMethod } from "@prisma/client"
 type OrderItemInput = { product_id: string; quantity: number }
 type CustomerInput = { name: string; email: string; phone?: string; street?: string; postal_code?: string; city?: string; province?: string; pickup?: boolean }
 
@@ -41,8 +42,9 @@ export default class OrdersServices {
     }
     setImmediate(async () => {
       await this.notify(order.id, snapshot, total, paymentMethod, customer)
+      const parsed_payment_method = paymentMethod === "EN_LOCAL" ? "NINGUNO" : paymentMethod as PaymentMethod
       await salesServices.saveSale({
-          payment_method: paymentMethod as any,
+          payment_method: parsed_payment_method,
           source: "WEB",
           product_ids: productIds,
           user_sale:{
