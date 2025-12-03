@@ -2,8 +2,14 @@
 import { useState, useTransition } from "react"
 import { Button, Loader } from "@mantine/core"
 import { useCartActions } from "@/Components/Cart/Hooks/useCart"
+import { useAppContext } from "@/providers/AppContext"
 
 export default function AddToCartButton({ productId }: { productId: string }) {
+  const {
+    utils:{
+      isMobile
+    }
+  } = useAppContext()
   const [isPending, startTransition] = useTransition()
   const [loading, setLoading] = useState(false)
   const busy = loading || isPending
@@ -21,8 +27,14 @@ export default function AddToCartButton({ productId }: { productId: string }) {
   }
 
   return (
-    <Button variant="light" onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : null}>
+    isMobile ? (
+      <Button variant="light" fullWidth onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : null}>
       Agregar al carrito
     </Button>
+    ) : (
+      <Button variant="light" onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : null}>
+      Agregar al carrito
+    </Button>
+    )
   )
 }

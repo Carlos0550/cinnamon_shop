@@ -46,10 +46,10 @@ function ProductsCards({ product }: Props) {
             )}
 
             {isMobile ? (
-                <Group justify="space-evenly" mt={10} gap={10} wrap='nowrap'>
-                <Button onClick={() => router.push(`/${product.id}`)}><FaInfoCircle /></Button>
-                <AddToCartButton productId={product.id} />
-            </Group>
+                <Flex justify="space-evenly" mt={10} gap={10} wrap='wrap'>
+                    <Button onClick={() => router.push(`/${product.id}`)} leftSection={<FaInfoCircle />} fullWidth>Más información</Button>
+                    <AddToCartButton productId={product.id} />
+                </Flex>
             ) : (
                 <Flex
                     justify="space-evenly"
