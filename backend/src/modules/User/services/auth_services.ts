@@ -9,21 +9,50 @@ import { new_user_html } from "@/templates/new_user";
 import { verifyToken as verifyClerkToken } from "@clerk/backend";
 
 class AuthServices {
-    async login(req: Request, res: Response) {
+    async loginAdmin(req: Request, res: Response) {
         const { email, password } = req.body;
-        const user = await prisma.user.findFirst({
-            where: {
-                email: email,
-                role: 1,
-            }
-        })
+        const rows: any[] = await prisma.$queryRaw`SELECT id, email, password, name, role, profile_image FROM "Admin" WHERE email = ${email} LIMIT 1`;
+        const user = rows[0];
 
         if (!user) {
             return res.status(400).json({ ok: false, error: 'invalid_email', message:"El correo electrónico no está registrado" });
         }
 
-        if (user.is_clerk) {
-            return res.status(400).json({ ok: false, error: 'use_clerk_login' });
+        const isPasswordValid = await comparePassword(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ ok: false, error: 'invalid_password', message:"La contraseña es incorrecta" });
+        }
+
+        const payload = {
+            sub: user.id.toString(),
+            email: user.email,
+            name: user.name,
+            role: 1,
+            is_clerk: false,
+            subjectType: 'admin',
+        }
+        const token = signToken(payload);
+
+        await redis.set(`user:${token}`, JSON.stringify(payload), 'EX', 60 * 60 * 24);
+        const user_without_password = {
+            ...user,
+            password: undefined,
+        }
+
+        return res.status(200).json({ ok: true, token, user: user_without_password });
+    }
+
+    async loginShop(req: Request, res: Response) {
+        const { email, password } = req.body;
+        const user = await prisma.user.findFirst({
+            where: {
+                email: email,
+                role: 2,
+            }
+        })
+
+        if (!user) {
+            return res.status(400).json({ ok: false, error: 'invalid_email', message:"El correo electrónico no está registrado" });
         }
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
@@ -34,8 +63,9 @@ class AuthServices {
             sub: user.id.toString(),
             email: user.email,
             name: user.name,
-            role: user.role,
+            role: 2,
             is_clerk: user.is_clerk ?? false,
+            subjectType: 'user',
         }
         const token = signToken(payload);
 
@@ -135,6 +165,7 @@ class AuthServices {
                 role: user.role,
                 profileImage: picture,
                 is_clerk: true,
+                subjectType: 'user',
             };
             const token = signToken(payload);
 
@@ -148,27 +179,19 @@ class AuthServices {
     }
 
 
-    async createUser(req: Request, res: Response) {
+    async registerAdmin(req: Request, res: Response) {
         const { email, password, name } = req.body;
-        const user_exists = await prisma.user.findFirst({
-            where: {
-                email: email,
-                role: 1,
-            }
-        })
+        const existingRows: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE email = ${email} LIMIT 1`;
+        const user_exists = existingRows[0];
 
         if (user_exists) {
             return res.status(400).json({ ok: false, error: 'email_already_registered' });
         }
         const normalized_name = name.trim().toLowerCase()
-        const user = await prisma.user.create({
-            data: {
-                email: email,
-                password: await hashPassword(password),
-                name: normalized_name,
-                role: 1
-            }
-        })
+        const hashed = await hashPassword(password);
+        await prisma.$executeRaw`INSERT INTO "Admin" (email, password, name, is_active, role, created_at, updated_at) VALUES (${email}, ${hashed}, ${normalized_name}, true, 1, NOW(), NOW())`;
+        const createdRows: any[] = await prisma.$queryRaw`SELECT id, email, name, role, profile_image, created_at, updated_at FROM "Admin" WHERE email = ${email} LIMIT 1`;
+        const user = createdRows[0];
 
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
         try {
@@ -188,27 +211,37 @@ class AuthServices {
 
     async newUser(req: Request, res: Response) {
         const { email, role_id, name } = req.body;
-        const user_exists = await prisma.user.findFirst({
-            where: {
-                email: email,
-                role: Number(role_id),
+        if (Number(role_id) === 1) {
+            const rows: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE email = ${email} LIMIT 1`;
+            const exists = rows[0];
+            if (exists) {
+                return res.status(400).json({ ok: false, error: 'email_already_registered' });
             }
-        })
+        } else {
+            const exists = await prisma.user.findFirst({ where: { email, role: 2 } });
+            if (exists) {
+                return res.status(400).json({ ok: false, error: 'email_already_registered' });
+            }
+        }
 
         var secure_password = Math.random().toString(36).slice(-8);
         var hashedPassword = await hashPassword(secure_password);
-        if (user_exists) {
-            return res.status(400).json({ ok: false, error: 'email_already_registered' });
-        }
         const normalized_name = name.trim().toLowerCase()
-        const user = await prisma.user.create({
-            data: {
-                email: email,
-                password: hashedPassword,
-                name: normalized_name,
-                role: Number(role_id),
-            }
-        })
+        let user: any;
+        if (Number(role_id) === 1) {
+            await prisma.$executeRaw`INSERT INTO "Admin" (email, password, name, is_active, role, created_at, updated_at) VALUES (${email}, ${hashedPassword}, ${normalized_name}, true, 1, NOW(), NOW())`;
+            const created: any[] = await prisma.$queryRaw`SELECT id, email, name, role, profile_image, created_at, updated_at FROM "Admin" WHERE email = ${email} LIMIT 1`;
+            user = created[0];
+        } else {
+            user = await prisma.user.create({
+                data: {
+                    email: email,
+                    password: hashedPassword,
+                    name: normalized_name,
+                    role: 2,
+                }
+            })
+        }
         let text_message = ''
         if (role_id == 2) {
             text_message = `

@@ -91,10 +91,10 @@ export default function SiteLayout({ children }: Props) {
       <AppShell.Navbar p="md" style={{ background: "var(--mantine-color-body)" }}>
         <Stack gap="sm" onClick={close}>
           <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Inicio</Anchor>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Mi cuenta</Anchor>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Mis ordenes</Anchor>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>FAQ</Anchor>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Contacto</Anchor>
+          <Anchor component={Link} onClick={() => window.location.reload()} href={"/account"}>Mi cuenta</Anchor>
+          <Anchor component={Link} onClick={() => window.location.reload()} href={"/orders"}>Mis ordenes</Anchor>
+          <Anchor component={Link} onClick={() => window.location.reload()} href={"/faq"}>FAQ</Anchor>
+          
         </Stack>
       </AppShell.Navbar>
 

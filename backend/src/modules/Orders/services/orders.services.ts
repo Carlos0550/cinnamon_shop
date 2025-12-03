@@ -40,21 +40,56 @@ export default class OrdersServices {
         await prisma.cart.update({ where: { id: cart.id }, data: { total: 0 } })
       }
     }
+    // Registrar la venta y vincular a la orden
+    const parsed_payment_method = paymentMethod === "EN_LOCAL" ? "NINGUNO" : paymentMethod as PaymentMethod
+    try {
+      const saleId = await salesServices.saveSale({
+        payment_method: parsed_payment_method,
+        source: "WEB",
+        product_ids: productIds,
+        user_sale:{ user_id: userId?.toString() || undefined },
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+      }) as any;
+      if (typeof saleId === 'string') {
+        await prisma.orders.update({ where: { id: order.id }, data: { saleId } });
+      }
+    } catch (err) {
+      console.error('order_sale_link_failed', err)
+    }
     setImmediate(async () => {
       await this.notify(order.id, snapshot, total, paymentMethod, customer)
-      const parsed_payment_method = paymentMethod === "EN_LOCAL" ? "NINGUNO" : paymentMethod as PaymentMethod
-      await salesServices.saveSale({
-          payment_method: parsed_payment_method,
-          source: "WEB",
-          product_ids: productIds,
-          user_sale:{
-            user_id: userId?.toString() || undefined,
-          }
-        })
+      // Descontar stock por cada ítem
+      try {
+        for (const it of snapshot) {
+          await prisma.$executeRaw`UPDATE "Products" SET stock = GREATEST(stock - ${it.quantity}, 0) WHERE id = ${it.id}`;
+        }
+      } catch (err) {
+        console.error('order_stock_decrement_failed', err)
+      }
     })
     return { ok: true, order_id: order.id, total }
   }
 
+  async listUserOrders(userId: number, page: number = 1, limit: number = 10) {
+    const skip = (Math.max(1, page) - 1) * Math.max(1, limit);
+    const [items, total] = await Promise.all([
+      prisma.orders.findMany({
+        where: { userId },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: Math.max(1, limit),
+        select: {
+          id: true,
+          items: true,
+          total: true,
+          payment_method: true,
+          created_at: true,
+        },
+      }),
+      prisma.orders.count({ where: { userId } }),
+    ]);
+    return { ok: true, items, page, total };
+  }
   private async notify(orderId: string, items: { title: string; price: number; quantity: number }[], total: number, paymentMethod: string, customer: CustomerInput) {
     const productRows = items.map(it => ({ title: `${it.title} x${it.quantity}`, price: Number(it.price) * Number(it.quantity) }))
     if (customer.email && customer.email.trim()) {

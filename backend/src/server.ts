@@ -5,11 +5,15 @@ import cors from 'cors';
 import { prisma } from '@/config/prisma';
 import { pingRedis } from '@/config/redis';
 import UserRouter from '@/modules/User/routes';
+import AdminAuthRouter from '@/modules/AuthAdmin/routes';
+import ShopAuthRouter from '@/modules/AuthShop/routes';
 import ProductRouter from '@/modules/Products/routes';
 import PromoRouter from '@/modules/Promos/routes';
 import SalesRouter from '@/modules/Sales/routes';
 import CartRouter from '@/modules/Cart/routes';
 import OrdersRouter from '@/modules/Orders/routes';
+import ProfileRouter from '@/modules/Profile/routes';
+import FaqRouter from '@/modules/FAQ/routes';
 import { initUploadsCleanupJob } from './jobs/cleanupUploads';
 import swaggerUi from 'swagger-ui-express';
 import spec from './docs/openapi';
@@ -39,7 +43,11 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
+app.use('/api/admin', AdminAuthRouter);
+app.use('/api/shop', ShopAuthRouter);
 app.use('/api', UserRouter);
+app.use('/api', ProfileRouter);
+app.use('/api/faqs', FaqRouter);
 app.use("/api/products", ProductRouter)
 app.use("/api/promos", PromoRouter)
 app.use("/api/sales", SalesRouter)

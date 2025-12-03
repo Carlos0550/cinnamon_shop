@@ -7,6 +7,7 @@ export type AuthUser = JwtPayload & {
   name?: string;
   role?: number;
   profileImage?: string;
+  subjectType?: 'admin' | 'user';
 };
 
 function getBearerToken(req: Request): string | null {
@@ -61,4 +62,22 @@ export function requireRole(roles: number[]) {
     }
     next();
   };
+}
+
+export async function attachAuthIfPresent(req: Request, _res: Response, next: NextFunction) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) return next();
+    try {
+      const payload = verifyToken<AuthUser>(token);
+      const session = await redis.get(`user:${token}`);
+      if (!session) return next();
+      (req as any).user = payload;
+    } catch {
+      // Ignorar errores y continuar sin usuario
+    }
+    return next();
+  } catch {
+    return next();
+  }
 }

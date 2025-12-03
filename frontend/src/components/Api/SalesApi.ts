@@ -43,12 +43,12 @@ export const useSaveSale = () => {
     })
 }
 
-export const useGetSales = (page: number = 1, per_page: number = 5, start_date?: string, end_date?: string) => {
+export const useGetSales = (page: number = 1, per_page: number = 5, start_date?: string, end_date?: string, pending?: boolean) => {
     const {
         auth: { token }
     } = useAppContext()
     return useQuery({
-        queryKey: ["get-sales", page, per_page, start_date, end_date],
+        queryKey: ["get-sales", page, per_page, start_date, end_date, pending],
         enabled: !!token,
         queryFn: async () => {
             const params: Record<string, string> = {
@@ -57,6 +57,7 @@ export const useGetSales = (page: number = 1, per_page: number = 5, start_date?:
             };
             if (start_date) params["start_date"] = start_date;
             if (end_date) params["end_date"] = end_date;
+            if (pending) params["pending"] = "true";
             const qs = new URLSearchParams(params).toString();
             const api = new URL(baseUrl + "/sales?" + qs)
             
@@ -70,6 +71,22 @@ export const useGetSales = (page: number = 1, per_page: number = 5, start_date?:
 
             return await result.json()
         }
+    })
+}
+
+export const useProcessSale = () => {
+    const qc = useQueryClient();
+    const { auth: { token } } = useAppContext();
+    return useMutation({
+        mutationKey: ['process_sale'],
+        mutationFn: async (id: string) => {
+            const res = await fetch(`${baseUrl}/sales/${id}/process`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+            const json = await res.json();
+            if (!res.ok || !json?.success) throw new Error(json?.message || json?.err || 'process_failed');
+            return json;
+        },
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ['get-sales'] }); showNotification({ message: 'Orden procesada y cliente notificado', color: 'green' }) },
+        onError: (e: any) => { showNotification({ message: e?.message || 'Error al procesar orden', color: 'red' }) }
     })
 }
 

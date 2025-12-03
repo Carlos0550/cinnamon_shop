@@ -5,8 +5,8 @@ import { requireAuth, requireRole } from '@/middlewares/auth.middleware';
 const authServices = new AuthServices();
 const router = Router();
 
-router.post('/login', login, authServices.login);
-router.post('/register', createUser, authServices.createUser);
+router.post('/login', login, (req, res) => authServices.loginAdmin(req, res));
+router.post('/register', createUser, (req, res) => authServices.registerAdmin(req, res));
 router.post("/new", CreateUserController, authServices.newUser)
 // Intercambio de sesión Clerk -> token propio
 router.post('/clerk-login', (req, _res, next) => next(), (req, res) => authServices.clerkLogin(req, res));

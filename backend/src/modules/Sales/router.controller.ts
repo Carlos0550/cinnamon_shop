@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import SalesServices from "./services/sales.services";
 import { SaleRequest, SalesSummaryRequest } from "./services/schemas/sales.schemas";
+import { requireAuth, requireRole } from "@/middlewares/auth.middleware";
 
 export const saveSale = async (req: Request, res: Response) => {
     try {
@@ -14,10 +15,11 @@ export const saveSale = async (req: Request, res: Response) => {
             })
         }
         const response = await SalesServices.saveSale(request);
-        if(response === true){
+        if(response === true || typeof response === 'string'){
             res.status(200).json({
                 success: true,
-                message: "Venta guardada exitosamente."
+                message: "Venta guardada exitosamente.",
+                saleId: typeof response === 'string' ? response : undefined
             })
         } else {
             res.status(400).json({
@@ -42,6 +44,8 @@ export const getSales = async (req: Request, res: Response) => {
         const per_page = Number((req.query.per_page || req.query.limit)) || 10;
         const start_date = (req.query.start_date as string | undefined) || undefined;
         const end_date = (req.query.end_date as string | undefined) || undefined;
+        const pending = String(req.query.pending || '').trim().toLowerCase() === 'true';
+        (global as any).__pendingFilter = pending;
         const response = await SalesServices.getSales({ page, per_page, start_date, end_date });
 
         if (Array.isArray(response?.sales)) {
@@ -95,5 +99,18 @@ export const getSalesAnalytics = async (req: Request, res: Response) => {
         })
     }
 }
+
+export const processSale = [requireAuth, requireRole([1]), async (req: Request, res: Response) => {
+    try {
+        const id = String((req.params as any)?.id || '');
+        if (!id) return res.status(400).json({ success: false, message: 'missing_id' });
+        const rs = await SalesServices.markProcessed(id);
+        if ((rs as any)?.success) return res.status(200).json({ success: true });
+        return res.status(400).json({ success: false, err: (rs as any)?.message || 'process_failed' });
+    } catch (error: any) {
+        console.log(error.message);
+        res.status(500).json({ success: false, err: error.message, message: 'internal_error' });
+    }
+}]
 
 

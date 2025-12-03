@@ -67,9 +67,24 @@ model User {
   shipping_province String?
   cart Cart?
 
-  @@unique([email, role])
+  @@unique([email])
   @@index([is_active])
   @@index([role])
+  @@index([created_at])
+}
+
+model Admin {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password      String
+  name          String
+  is_active     Boolean  @default(true)
+  profile_image String?
+  role          Int      @default(1)
+  created_at    DateTime @default(now()) @db.Timestamptz(3)
+  updated_at    DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([is_active])
   @@index([created_at])
 }
 
@@ -157,6 +172,9 @@ model Sales {
   manualProducts Json?         @default("[]")
   loadedManually Boolean       @default(false)
   paymentMethods Json?         @default("[]")
+  processed      Boolean       @default(false)
+
+  orders         Orders[]
 
   @@index([created_at])
   @@index([userId])
@@ -197,7 +215,25 @@ model Orders {
   created_at     DateTime @default(now()) @db.Timestamptz(3)
   buyer_email    String?
   buyer_name     String?
+  saleId         String?
+  sale           Sales?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([created_at])
+  @@index([saleId])
+}
+
+model FAQ {
+  id           String   @id @default(cuid())
+  question     String
+  answer       String
+  position     Int      @default(0)
+  is_active    Boolean  @default(true)
+  deleted_at   DateTime?
+  created_at   DateTime @default(now()) @db.Timestamptz(3)
+  updated_at   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([is_active, position])
+  @@index([deleted_at])
   @@index([created_at])
 }

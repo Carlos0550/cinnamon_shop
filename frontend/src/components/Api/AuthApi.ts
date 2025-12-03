@@ -52,7 +52,7 @@ export const useLogin = () => {
   return useMutation({
     mutationKey: ["login"],
     mutationFn: async ({ email, password }: { email: string, password: string }) => {
-      const response = await fetch(`${baseUrl}/login`, {
+      const response = await fetch(`${baseUrl}/admin/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export const useRegister = () => {
   return useMutation({
     mutationKey: ["register"],
     mutationFn: async ({ name, email, password }: { name: string, email: string, password: string }) => {
-      const response = await fetch(`${baseUrl}/register`, {
+      const response = await fetch(`${baseUrl}/admin/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

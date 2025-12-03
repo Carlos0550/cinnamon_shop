@@ -1,0 +1,1 @@
+ALTER TABLE "Sales" ADD COLUMN "processed" BOOLEAN NOT NULL DEFAULT false;

@@ -68,7 +68,7 @@ export default class CartServices {
       const existing = await prisma.orderItems.findFirst({ where: { cartId: cart.id, productId: incoming.product_id } })
       const priceChanged = typeof incoming.price === "number" && Number(incoming.price) !== Number(product.price)
       if (existing) {
-        await prisma.orderItems.update({ where: { id: existing.id }, data: { quantity: existing.quantity + Math.max(1, Number(incoming.quantity) || 1), price_has_changed: priceChanged || existing.price_has_changed } })
+        await prisma.orderItems.update({ where: { id: existing.id }, data: { quantity: Math.max(1, Number(incoming.quantity) || 1), price_has_changed: priceChanged || existing.price_has_changed } })
       } else {
         await prisma.orderItems.create({ data: { cart: { connect: { id: cart.id } }, product: { connect: { id: incoming.product_id } }, quantity: Math.max(1, Number(incoming.quantity) || 1), price_has_changed: priceChanged } })
       }
@@ -84,4 +84,3 @@ export default class CartServices {
     return total
   }
 }
-

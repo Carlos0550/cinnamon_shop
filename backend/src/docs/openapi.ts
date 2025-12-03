@@ -5,6 +5,8 @@ import { PromoCreateRequestSchema, DeletePromoRequestSchema } from '@/modules/Pr
 import { SaveProductRequestSchema, SaveCategoryRequestSchema, GetProductsQuerySchema, UpdateProductRequestSchema } from '@/modules/Products/services/product.zod';
 import { LoginRequestSchema, RegisterRequestSchema, NewUserRequestSchema, GetUsersQuerySchema } from '@/modules/User/services/user.zod';
 import { SalesSchema } from '@/modules/Sales/services/schemas/sales.zod';
+import { ProfileUpdateSchema } from '@/modules/Profile/services/profile.zod';
+import { FaqCreateSchema, FaqUpdateSchema } from '@/modules/FAQ/services/faq.zod';
 extendZodWithOpenApi(z);
 
 const registry = new OpenAPIRegistry();
@@ -26,6 +28,9 @@ registry.register('RegisterRequest', RegisterRequestSchema);
 registry.register('NewUserRequest', NewUserRequestSchema);
 registry.register('GetUsersQuery', GetUsersQuerySchema);
 registry.register('SalesSaveRequest', SalesSchema);
+registry.register('ProfileUpdateRequest', ProfileUpdateSchema);
+registry.register('FaqCreateRequest', FaqCreateSchema);
+registry.register('FaqUpdateRequest', FaqUpdateSchema);
 
 
 registry.registerPath({
@@ -309,3 +314,83 @@ const spec = generator.generateDocument({
 });
 
 export default spec;
+// Profile
+registry.registerPath({
+  method: 'get',
+  path: '/profile/me',
+  summary: 'Obtener perfil del usuario autenticado',
+  security: [{ bearerAuth: [] }],
+  responses: { 200: { description: 'Perfil obtenido' }, 401: { description: 'No autenticado' } },
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/profile/me',
+  summary: 'Actualizar perfil del usuario',
+  security: [{ bearerAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: ProfileUpdateSchema } } } },
+  responses: { 200: { description: 'Perfil actualizado' }, 400: { description: 'Validación inválida' }, 401: { description: 'No autenticado' } },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/profile/avatar',
+  summary: 'Actualizar avatar del usuario',
+  security: [{ bearerAuth: [] }],
+  request: { body: { content: { 'multipart/form-data': { schema: z.object({ image: z.any() }) } } } },
+  responses: { 200: { description: 'Avatar actualizado' }, 400: { description: 'Validación inválida' }, 401: { description: 'No autenticado' } },
+});
+
+// Orders
+registry.registerPath({
+  method: 'get',
+  path: '/orders/me',
+  summary: 'Listar órdenes del usuario',
+  security: [{ bearerAuth: [] }],
+  request: { query: z.object({ page: z.string().optional(), limit: z.string().optional() }) },
+  responses: { 200: { description: 'Órdenes listadas' }, 401: { description: 'No autenticado' } },
+});
+
+// FAQs
+registry.registerPath({
+  method: 'get',
+  path: '/faqs',
+  summary: 'Listar FAQs públicas',
+  responses: { 200: { description: 'FAQs públicas' } },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/faqs/admin',
+  summary: 'Listar FAQs para administración',
+  security: [{ bearerAuth: [] }],
+  responses: { 200: { description: 'FAQs listadas' }, 401: { description: 'No autenticado' } },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/faqs',
+  summary: 'Crear FAQ',
+  security: [{ bearerAuth: [] }],
+  request: { body: { content: { 'application/json': { schema: FaqCreateSchema } } } },
+  responses: { 201: { description: 'FAQ creada' }, 400: { description: 'Validación inválida' }, 401: { description: 'No autenticado' } },
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/faqs/{id}',
+  summary: 'Actualizar FAQ',
+  security: [{ bearerAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: FaqUpdateSchema } } } },
+  responses: { 200: { description: 'FAQ actualizada' }, 400: { description: 'Validación inválida' }, 401: { description: 'No autenticado' } },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/faqs/{id}',
+  summary: 'Eliminar FAQ (soft-delete)',
+  security: [{ bearerAuth: [] }],
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: { 200: { description: 'FAQ eliminada' }, 401: { description: 'No autenticado' } },
+});

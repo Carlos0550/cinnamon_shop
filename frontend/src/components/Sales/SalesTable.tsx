@@ -1,9 +1,9 @@
-import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea, SegmentedControl } from "@mantine/core"
+import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea, SegmentedControl, Checkbox } from "@mantine/core"
 import { DatePickerInput } from "@mantine/dates"
 import { useMediaQuery } from "@mantine/hooks"
 import { theme } from "@/theme"
 import type { Product } from "../Api/ProductsApi"
-import { useGetSales } from "../Api/SalesApi"
+import { useGetSales, useProcessSale } from "../Api/SalesApi"
 import type { PaymentMethods, SaleSource, ManualProductItem } from "./SalesForm"
 import ModalWrapper from "@/components/Common/ModalWrapper"
 import React, { useMemo, useState, useEffect } from "react"
@@ -76,7 +76,9 @@ export default function SalesTable() {
   const start_date = toDateOnly(startEndFromPreset.start)
   const end_date = toDateOnly(startEndFromPreset.end)
 
-  const { data, isLoading } = useGetSales(currentPage, perPage, start_date, end_date)
+  const [pendingOnly, setPendingOnly] = useState<boolean>(false)
+  const { data, isLoading } = useGetSales(currentPage, perPage, start_date, end_date, pendingOnly)
+  const processSaleMutation = useProcessSale()
 
   const sales: Sales[] = (data?.sales ?? []) as Sales[]
   const pagination = data?.pagination as undefined | {
@@ -133,6 +135,7 @@ export default function SalesTable() {
             { label: "Personalizado", value: "PERSONALIZADO" },
           ]}
         />
+        <Checkbox label="Órdenes pendientes" checked={pendingOnly} onChange={(e) => { setPendingOnly(e.currentTarget.checked); setCurrentPage(1); }} />
         {preset === "PERSONALIZADO" && (
           <DatePickerInput
             type="range"
@@ -257,6 +260,12 @@ export default function SalesTable() {
                         <Table.Td>
                           <Group gap="xs">
                             <Button size="xs" variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
+                            {sale.source === 'WEB' && (
+                              <Checkbox size="xs" label="Procesada"
+                                checked={false}
+                                onChange={() => processSaleMutation.mutate(sale.id)}
+                              />
+                            )}
                           </Group>
                         </Table.Td>
                       </Table.Tr>

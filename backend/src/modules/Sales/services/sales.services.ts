@@ -2,12 +2,13 @@ import { prisma } from "@/config/prisma";
 import { SaleRequest, SalesSummaryRequest } from "./schemas/sales.schemas";
 import { sendEmail } from "@/config/resend";
 import { sale_email_html } from "@/templates/sale_email";
+import { order_ready_email_html } from "@/templates/order_ready_email";
 import dayjs, { DEFAULT_TZ, nowTz } from "@/config/dayjs";
 
 
 class SalesServices {
     async saveSale(request: SaleRequest) {
-        const { payment_method, source, product_ids, user_sale } = request;
+        const { payment_method, source, product_ids, user_sale, items } = request;
         const { user_id } = user_sale || {};
 
         try {
@@ -17,19 +18,17 @@ class SalesServices {
             let subtotal = 0;
 
             if (!isManual) {
-                const int_product_ids = Array.from(product_ids || []).map(String);
-                product_data = await prisma.products.findMany({
-                    where: {
-                        id: {
-                            in: int_product_ids
-                        }
-                    }
-                }) as any;
-
-                if (product_data.length !== int_product_ids.length) {
-                    throw new Error("Some products not found");
-                }
-
+                const incoming = Array.isArray(items) && items.length > 0
+                    ? items.map(it => ({ id: String(it.product_id), quantity: Math.max(1, Number(it.quantity) || 1) }))
+                    : Array.from(product_ids || []).map(id => ({ id: String(id), quantity: 1 }));
+                const uniqueIds = Array.from(new Set(incoming.map(i => i.id)));
+                const found = await prisma.products.findMany({ where: { id: { in: uniqueIds } } }) as any;
+                const byId = new Map(found.map((p: any) => [p.id, p]));
+                product_data = incoming.map((i) => {
+                    const p = byId.get(i.id);
+                    if (!p) throw new Error(`Product not found: ${i.id}`);
+                    return { id: (p as any).id, title: `${(p as any).title} x${i.quantity}`, price: Number((p as any).price) * i.quantity };
+                });
                 subtotal = product_data.reduce((acc, product) => acc + Number(product.price), 0);
             } else {
                 subtotal = manualItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
@@ -54,9 +53,7 @@ class SalesServices {
                         ? { user: { connect: { id: parsedUserId } } }
                         : {}),
                     tax: taxPercent,
-                    products: !isManual ? {
-                        connect: product_data.map(product => ({ id: product.id }))
-                    } : undefined,
+                    products: !isManual ? { connect: Array.from(new Set(product_data.map(p => p.id).filter(Boolean))).map(id => ({ id })) } : undefined,
                     manualProducts: isManual ? manualItems as any : undefined,
                     loadedManually: isManual,
                     paymentMethods: paymentBreakdown as any,
@@ -79,8 +76,8 @@ class SalesServices {
                         buyerName: user?.name ?? undefined,
                         buyerEmail: user?.email ?? undefined,
                     });
-                    const admins = await prisma.user.findMany({ where: { role: 1 }, select: { email: true } });
-                    const adminEmails = admins.map((u: { email: string | null }) => u.email).filter((e: string | null): e is string => !!e);
+                    const admins: any[] = await prisma.$queryRaw`SELECT email FROM "Admin" WHERE is_active = true`;
+                    const adminEmails = admins.map((u: { email: string }) => u.email).filter((e: string): e is string => !!e);
                     const configuredRecipient = process.env.SALES_EMAIL_TO;
                     const toRecipients = adminEmails.length > 0
                         ? adminEmails
@@ -95,11 +92,23 @@ class SalesServices {
                     } else {
                         console.warn('No recipient configured for sale email');
                     }
+                    // Descontar stock por cada producto (solo si no es manual)
+                    if (!isManual) {
+                        const counts = new Map<string, number>();
+                        if (Array.isArray(items) && items.length > 0) {
+                            items.forEach(i => counts.set(String(i.product_id), (counts.get(String(i.product_id)) || 0) + Math.max(1, Number(i.quantity) || 1)));
+                        } else {
+                            (product_ids || []).forEach(id => counts.set(String(id), (counts.get(String(id)) || 0) + 1));
+                        }
+                        for (const [id, qty] of counts.entries()) {
+                            await prisma.$executeRaw`UPDATE "Products" SET stock = GREATEST(stock - ${qty}, 0) WHERE id = ${id}`;
+                        }
+                    }
                 } catch (err) {
                     console.error('Error sending sale email', err);
                 }
             })
-            return true
+            return (sale as any)?.id || true
         } catch (error) {
             const error_msg = error instanceof Error ? error.message : String(error);
             console.log(error);
@@ -110,7 +119,7 @@ class SalesServices {
         }
     }
 
-    async getSales({ page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
+  async getSales({ page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
         try {
             const take = Math.max(1, Number(per_page) || 5);
             const currentPage = Math.max(1, Number(page) || 1);
@@ -134,6 +143,11 @@ class SalesServices {
                     lte: end.toDate(),
                 }
             };
+            const pending = (global as any)?.__pendingFilter || false;
+            if (pending) {
+                where.source = 'WEB' as any;
+                where.processed = false;
+            }
 
             const [total, sales] = await Promise.all([
                 await prisma.sales.count({ where }),
@@ -293,7 +307,22 @@ class SalesServices {
         }
     }
 
-    
+    async markProcessed(id: string) {
+        try {
+            const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true } });
+            if (!sale) return { success: false, message: 'sale_not_found' };
+            if ((sale as any).processed) return { success: true };
+            await prisma.sales.update({ where: { id }, data: { processed: true } });
+            if (sale.user?.email) {
+                const html = order_ready_email_html({ saleId: sale.id, buyerName: sale.user?.name || undefined, payment_method: String(sale.payment_method) });
+                await sendEmail({ to: sale.user.email, subject: `Tu orden #${sale.id} está lista`, html });
+            }
+            return { success: true };
+        } catch (error) {
+            const error_msg = error instanceof Error ? error.message : String(error);
+            console.log(error);
+            return { success: false, message: error_msg };
+        }
+    }
 }
-
 export default new SalesServices();

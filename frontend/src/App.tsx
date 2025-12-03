@@ -7,6 +7,7 @@ import Categories from '@/pages/Categories'
 import Users from '@/pages/Users'
 import Login from './pages/Login'
 import { Promos } from './pages/Promos'
+import FAQ from './pages/FAQ'
 import { Sales } from './pages/Sales'
 
 export default function App() {
@@ -20,6 +21,8 @@ export default function App() {
           <Route path="users" element={<Users />} />
           <Route path="sales" element={<Sales />} />
           <Route path="promos" element={<Promos />} />
+          <Route path="faq" element={<FAQ />} />
+          
         </Route>
       </Routes>
   )

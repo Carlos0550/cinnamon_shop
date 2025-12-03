@@ -29,7 +29,7 @@ export function useAuth() {
     (async () => {
       try {
         setState((s) => ({ ...s, loading: true }));
-        const res = await fetch(`${baseUrl}/validate-token`, {
+        const res = await fetch(`${baseUrl}/shop/validate-token`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error('invalid_token');
@@ -51,7 +51,7 @@ export function useAuth() {
 
   const signIn = useCallback(async (email: string, password: string) => {
     setState((s) => ({ ...s, loading: true }));
-    const res = await fetch(`${baseUrl}/login`, {
+    const res = await fetch(`${baseUrl}/shop/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -87,7 +87,7 @@ export function useAuth() {
       setState((s) => ({ ...s, loading: false }));
       return;
     }
-    const res = await fetch(`${baseUrl}/clerk-login`, {
+    const res = await fetch(`${baseUrl}/shop/clerk-login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
