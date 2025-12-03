@@ -52,6 +52,43 @@ export async function uploadImage(
   }
 }
 
+export async function uploadToBucket(
+  file: Buffer,
+  fileName: string,
+  bucket: string,
+  folder: string = '',
+  contentType?: string
+): Promise<{ path: string | null; error: any }> {
+  try {
+    const filePath = folder ? `${folder}/${fileName}` : fileName;
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, { upsert: true, contentType: contentType || 'application/octet-stream' });
+    if (error) {
+      console.error('uploadToBucket_failed', { error, bucket, filePath });
+      return { path: null, error };
+    }
+    return { path: filePath, error: null };
+  } catch (error) {
+    console.error('uploadToBucket_exception', { error, bucket, fileName });
+    return { path: null, error };
+  }
+}
+
+export async function createSignedUrl(bucket: string, filePath: string, expiresInSec: number = 3600): Promise<{ url: string | null; error: any }> {
+  try {
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, expiresInSec);
+    if (error) {
+      console.error('createSignedUrl_failed', { error, bucket, filePath });
+      return { url: null, error };
+    }
+    return { url: data?.signedUrl || null, error: null };
+  } catch (error) {
+    console.error('createSignedUrl_exception', { error, bucket, filePath });
+    return { url: null, error };
+  }
+}
+
 export async function deleteImage(filePath: string): Promise<{ success: boolean; error: any }> {
   try {
     const { error } = await supabase.storage

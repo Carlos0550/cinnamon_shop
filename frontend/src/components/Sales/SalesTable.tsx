@@ -79,6 +79,18 @@ export default function SalesTable() {
   const [pendingOnly, setPendingOnly] = useState<boolean>(false)
   const { data, isLoading } = useGetSales(currentPage, perPage, start_date, end_date, pendingOnly)
   const processSaleMutation = useProcessSale()
+  const [receiptOpen, setReceiptOpen] = useState<boolean>(false)
+  const [receiptUrl, setReceiptUrl] = useState<string>("")
+  const openReceipt = async (saleId: string) => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${baseUrl}/sales/${saleId}/receipt`, { headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` } })
+      const json = await res.json();
+      if (!res.ok || !json?.success || !json?.url) return;
+      setReceiptUrl(json.url);
+      setReceiptOpen(true);
+    } catch {}
+  }
 
   const sales: Sales[] = (data?.sales ?? []) as Sales[]
   const pagination = data?.pagination as undefined | {
@@ -266,6 +278,22 @@ export default function SalesTable() {
                                 onChange={() => processSaleMutation.mutate(sale.id)}
                               />
                             )}
+                            <Button size="xs" variant="light" onClick={() => openReceipt(sale.id)}>Ver comprobante</Button>
+                            {sale.user && (
+                              <Button size="xs" variant="light" onClick={() => alert(`Usuario: ${sale.user?.name || ''} (${sale.user?.email || ''})`)}>Ver usuario</Button>
+                            )}
+                            {sale.source === 'WEB' && (
+                              <Button size="xs" variant="light" color="red" onClick={() => {
+                                const reason = prompt('Motivo de la declinación:') || '';
+                                if (reason.trim()) {
+                                  fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/sales/${sale.id}/decline`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` },
+                                    body: JSON.stringify({ reason })
+                                  }).then(() => window.location.reload());
+                                }
+                              }}>Declinar</Button>
+                            )}
                           </Group>
                         </Table.Td>
                       </Table.Tr>
@@ -379,6 +407,19 @@ export default function SalesTable() {
               )
             })()}
           </Stack>
+        </ModalWrapper>
+      )}
+      {receiptOpen && (
+        <ModalWrapper
+          opened={receiptOpen}
+          onClose={() => { setReceiptOpen(false); setReceiptUrl("") }}
+          title={<Text fw={600}>Comprobante</Text>}
+          size={"lg"}
+          fullScreen={isMobile}
+        >
+          <Box>
+            <iframe src={receiptUrl} style={{ width: '100%', height: 520, border: 'none' }} />
+          </Box>
         </ModalWrapper>
       )}
     </Box>

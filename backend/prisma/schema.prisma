@@ -173,6 +173,8 @@ model Sales {
   loadedManually Boolean       @default(false)
   paymentMethods Json?         @default("[]")
   processed      Boolean       @default(false)
+  declined       Boolean       @default(false)
+  decline_reason String?
 
   orders         Orders[]
 
@@ -217,6 +219,7 @@ model Orders {
   buyer_name     String?
   saleId         String?
   sale           Sales?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  transfer_receipt_path String?
 
   @@index([userId])
   @@index([created_at])

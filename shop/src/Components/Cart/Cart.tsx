@@ -1,6 +1,6 @@
 'use client'
 import { useAppContext } from '@/providers/AppContext'
-import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select } from '@mantine/core'
+import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select, Badge } from '@mantine/core'
 import { useState, useEffect } from 'react'
 import { FaMinus, FaPlus } from 'react-icons/fa'
 
@@ -21,6 +21,7 @@ function Cart({ opened = true, onClose }: CartProps) {
   const [provinces, setProvinces] = useState<{ id: string; nombre: string }[]>([])
   const [localities, setLocalities] = useState<{ id: string; nombre: string }[]>([])
   const [processingOrder, setProcessingOrder] = useState(false)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
 
   const initShipping = () => {
 
@@ -88,6 +89,17 @@ function Cart({ opened = true, onClose }: CartProps) {
     setProcessingOrder(true)
     const rs = await processOrder(utils.baseUrl, auth.state.token)
     if (rs.ok) {
+      if (formValues.orderMethod === 'TRANSFERENCIA' && receiptFile && rs.order_id) {
+        try {
+          const fd = new FormData()
+          fd.append('file', receiptFile)
+          const up = await fetch(`${utils.baseUrl}/orders/${rs.order_id}/receipt`, { method: 'POST', headers: { Authorization: `Bearer ${auth.state.token}` }, body: fd })
+          const j = await up.json().catch(() => null)
+          if (!up.ok || !j?.ok) {
+            alert('La orden fue creada, pero el comprobante no se pudo subir.')
+          }
+        } catch {}
+      }
       setProcessingOrder(false)
       onClose()
     }
@@ -179,6 +191,17 @@ function Cart({ opened = true, onClose }: CartProps) {
             <Stepper.Step label="Pago">
               <Stack>
                 <Select searchable label="Método de pago" data={[{ label: 'Transferencia bancaria', value: 'TRANSFERENCIA' }, { label: 'Acordar en el negocio', value: 'EN_LOCAL' }]} value={formValues.orderMethod} onChange={(value) => setFormValues({ ...formValues, orderMethod: (value === 'TRANSFERENCIA' || value === 'EN_LOCAL') ? value : 'EN_LOCAL' })} />
+                {formValues.orderMethod === 'TRANSFERENCIA' && (
+                  <Stack gap="xs">
+                    <Group gap="sm">
+                      <Badge variant="light">Alias: Roo.recalde</Badge>
+                      <Badge variant="light">Nombre: Recalde Rocio Candelaria</Badge>
+                      <Badge variant="light">Banco: Mercado Pago</Badge>
+                    </Group>
+                    <Text size="sm" c="dimmed">Adjunta tu comprobante de transferencia (imagen/PDF):</Text>
+                    <input type="file" accept="image/*,application/pdf" onChange={(e) => setReceiptFile(e.target.files?.[0] || null)} />
+                  </Stack>
+                )}
                 <Group justify="space-between">
                   <Button variant="outline" onClick={() => setFormValues({ ...formValues, activeStep: 0 })}>Volver</Button>
                   <Button color="green" onClick={submitOrder} disabled={processingOrder} loading={processingOrder}>Confirmar compra</Button>

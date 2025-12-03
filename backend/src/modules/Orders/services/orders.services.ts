@@ -4,6 +4,8 @@ import { sale_email_html } from "@/templates/sale_email"
 import { purchase_email_html } from "@/templates/purchase_email"
 import salesServices from "@/modules/Sales/services/sales.services"
 import { PaymentMethod } from "@prisma/client"
+import fs from 'fs'
+import { uploadToBucket } from '@/config/supabase'
 type OrderItemInput = { product_id: string; quantity: number }
 type CustomerInput = { name: string; email: string; phone?: string; street?: string; postal_code?: string; city?: string; province?: string; pickup?: boolean }
 
@@ -15,10 +17,11 @@ export default class OrdersServices {
     const snapshot = products.map(p => ({ id: p.id, title: p.title, price: Number(p.price), quantity: itemsMap.get(p.id) || 1 }))
     const total = snapshot.reduce((acc, it) => acc + Number(it.price) * Number(it.quantity), 0)
 
+    const paymentNormalized: PaymentMethod = (String(paymentMethod).toUpperCase() === 'EN_LOCAL') ? 'NINGUNO' : (String(paymentMethod).toUpperCase() as PaymentMethod)
     const order = await prisma.orders.create({
       data: {
         total,
-        payment_method: paymentMethod,
+        payment_method: paymentNormalized,
         items: snapshot as any,
         buyer_email: customer.email || undefined,
         buyer_name: customer.name || undefined,
@@ -41,7 +44,7 @@ export default class OrdersServices {
       }
     }
     // Registrar la venta y vincular a la orden
-    const parsed_payment_method = paymentMethod === "EN_LOCAL" ? "NINGUNO" : paymentMethod as PaymentMethod
+    const parsed_payment_method = paymentNormalized
     try {
       const saleId = await salesServices.saveSale({
         payment_method: parsed_payment_method,
@@ -70,6 +73,27 @@ export default class OrdersServices {
     return { ok: true, order_id: order.id, total }
   }
 
+  async getOrderById(orderId: string) {
+    return prisma.orders.findUnique({ where: { id: orderId }, select: { id: true, payment_method: true, userId: true, transfer_receipt_path: true } })
+  }
+
+  async saveTransferReceipt(orderId: string, file: Express.Multer.File) {
+    try {
+      const order = await prisma.orders.findUnique({ where: { id: orderId } });
+      if (!order) return { ok: false, status: 404, error: 'order_not_found' };
+      if (String(order.payment_method).toUpperCase() !== 'TRANSFERENCIA') return { ok: false, status: 400, error: 'invalid_payment_method' };
+      const buffer: Buffer = file.buffer ?? fs.readFileSync(file.path);
+      const uniqueName = `receipt-${orderId}-${Date.now()}`;
+      const up = await uploadToBucket(buffer, uniqueName, 'comprobantes', '', file.mimetype);
+      if (!up.path) return { ok: false, status: 500, error: 'upload_failed' };
+      await prisma.orders.update({ where: { id: orderId }, data: { transfer_receipt_path: up.path } });
+      return { ok: true, path: up.path };
+    } catch (err) {
+      console.error('saveTransferReceipt_error', err);
+      return { ok: false, status: 500, error: 'internal_error' };
+    }
+  }
+
   async listUserOrders(userId: number, page: number = 1, limit: number = 10) {
     const skip = (Math.max(1, page) - 1) * Math.max(1, limit);
     const [items, total] = await Promise.all([
@@ -88,7 +112,8 @@ export default class OrdersServices {
       }),
       prisma.orders.count({ where: { userId } }),
     ]);
-    return { ok: true, items, page, total };
+    const totalPages = Math.ceil(total / Math.max(1, limit)) || 1;
+    return { ok: true, items, page, total, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 };
   }
   private async notify(orderId: string, items: { title: string; price: number; quantity: number }[], total: number, paymentMethod: string, customer: CustomerInput) {
     const productRows = items.map(it => ({ title: `${it.title} x${it.quantity}`, price: Number(it.price) * Number(it.quantity) }))

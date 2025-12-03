@@ -135,7 +135,7 @@ function useCart() {
             clearCart()
             setFormValues({ pickup: false, name: '', email: '', phone: '', street: '', postal_code: '', city: '', province: '', selectedProvinceId: '', selectedLocalityId: '', orderMethod: 'EN_LOCAL', activeStep: 0, checkoutOpen: false })
             showNotification({ title: 'Pago confirmado', message: 'Tu compra fue procesada correctamente.', color: 'green', autoClose: 3000 })
-            return { ok: true }
+            return { ok: true, order_id: json?.order_id, total: json?.total }
         } catch {
             showNotification({ title: 'Error de conexión', message: 'No se pudo contactar al servidor.', color: 'red', autoClose: 3000 })
             return { ok: false }

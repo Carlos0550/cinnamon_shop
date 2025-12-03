@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import SalesServices from "./services/sales.services";
 import { SaleRequest, SalesSummaryRequest } from "./services/schemas/sales.schemas";
 import { requireAuth, requireRole } from "@/middlewares/auth.middleware";
+import { prisma } from "@/config/prisma";
+import { createSignedUrl } from "@/config/supabase";
 
 export const saveSale = async (req: Request, res: Response) => {
     try {
@@ -107,6 +109,36 @@ export const processSale = [requireAuth, requireRole([1]), async (req: Request, 
         const rs = await SalesServices.markProcessed(id);
         if ((rs as any)?.success) return res.status(200).json({ success: true });
         return res.status(400).json({ success: false, err: (rs as any)?.message || 'process_failed' });
+    } catch (error: any) {
+        console.log(error.message);
+        res.status(500).json({ success: false, err: error.message, message: 'internal_error' });
+    }
+}]
+
+export const declineSale = [requireAuth, requireRole([1]), async (req: Request, res: Response) => {
+    try {
+        const id = String((req.params as any)?.id || '');
+        const reason = String((req.body as any)?.reason || '').trim();
+        if (!id) return res.status(400).json({ success: false, message: 'missing_id' });
+        if (!reason) return res.status(400).json({ success: false, message: 'missing_reason' });
+        const rs = await SalesServices.decline(id, reason);
+        if ((rs as any)?.success) return res.status(200).json({ success: true });
+        return res.status(400).json({ success: false, err: (rs as any)?.message || 'decline_failed' });
+    } catch (error: any) {
+        console.log(error.message);
+        res.status(500).json({ success: false, err: error.message, message: 'internal_error' });
+    }
+}]
+
+export const getSaleReceipt = [requireAuth, requireRole([1]), async (req: Request, res: Response) => {
+    try {
+        const id = String((req.params as any)?.id || '');
+        if (!id) return res.status(400).json({ success: false, message: 'missing_id' });
+        const order = await prisma.orders.findFirst({ where: { saleId: id } });
+        if (!order?.transfer_receipt_path) return res.status(404).json({ success: false, message: 'receipt_not_found' });
+        const signed = await createSignedUrl('comprobantes', order.transfer_receipt_path, 3600);
+        if (!signed.url) return res.status(500).json({ success: false, message: 'signed_url_failed' });
+        return res.status(200).json({ success: true, url: signed.url });
     } catch (error: any) {
         console.log(error.message);
         res.status(500).json({ success: false, err: error.message, message: 'internal_error' });

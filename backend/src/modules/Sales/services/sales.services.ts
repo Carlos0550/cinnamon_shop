@@ -3,6 +3,7 @@ import { SaleRequest, SalesSummaryRequest } from "./schemas/sales.schemas";
 import { sendEmail } from "@/config/resend";
 import { sale_email_html } from "@/templates/sale_email";
 import { order_ready_email_html } from "@/templates/order_ready_email";
+import { order_declined_email_html } from "@/templates/order_declined_email";
 import dayjs, { DEFAULT_TZ, nowTz } from "@/config/dayjs";
 
 
@@ -316,6 +317,23 @@ class SalesServices {
             if (sale.user?.email) {
                 const html = order_ready_email_html({ saleId: sale.id, buyerName: sale.user?.name || undefined, payment_method: String(sale.payment_method) });
                 await sendEmail({ to: sale.user.email, subject: `Tu orden #${sale.id} está lista`, html });
+            }
+            return { success: true };
+        } catch (error) {
+            const error_msg = error instanceof Error ? error.message : String(error);
+            console.log(error);
+            return { success: false, message: error_msg };
+        }
+    }
+
+    async decline(id: string, reason: string) {
+        try {
+            const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true } });
+            if (!sale) return { success: false, message: 'sale_not_found' };
+            await prisma.sales.update({ where: { id }, data: { declined: true, decline_reason: reason, processed: false } });
+            if (sale.user?.email) {
+                const html = order_declined_email_html({ saleId: sale.id, buyerName: sale.user?.name || undefined, reason });
+                await sendEmail({ to: sale.user.email, subject: `Tu orden #${sale.id} fue declinada`, html });
             }
             return { success: true };
         } catch (error) {
