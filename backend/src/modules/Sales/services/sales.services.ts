@@ -77,8 +77,8 @@ class SalesServices {
                         buyerName: user?.name ?? undefined,
                         buyerEmail: user?.email ?? undefined,
                     });
-                    //const admins: any[] = await prisma.admin.findMany({ where: { is_active: true } })
-                    const admins: any[] = ["carlospelinski03@gmail.com"] //testing
+                    const admins: any[] = await prisma.admin.findMany({ where: { is_active: true } })
+                    //const admins: any[] = ["carlospelinski03@gmail.com"] //testing
                     const adminEmails = admins.map((u: { email: string }) => u.email).filter((e: string): e is string => !!e);
                     const configuredRecipient = process.env.SALES_EMAIL_TO;
                     const toRecipients = adminEmails.length > 0
