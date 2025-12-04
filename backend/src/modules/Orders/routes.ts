@@ -23,7 +23,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   res.json(rs)
 })
 
-router.post('/:id/receipt', requireAuth, uploadSingleImage('file'), handleImageUploadError, async (req: Request, res: Response) => {
+router.post('/:id/receipt', uploadSingleImage('file'), handleImageUploadError, async (req: Request, res: Response) => {
   try {
     const id = String((req.params as any)?.id || '');
     if (!id) return res.status(400).json({ ok: false, error: 'missing_order_id' });

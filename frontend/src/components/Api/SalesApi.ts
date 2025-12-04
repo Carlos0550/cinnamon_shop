@@ -13,7 +13,7 @@ export const useSaveSale = () => {
         mutationKey: ["save-sale"],
         mutationFn: async (request: SaleRequest) => {
             const api = new URL(baseUrl + "/sales/save")
-            
+
             const result = await fetch(api, {
                 headers: {
                     "Content-Type": "application/json",
@@ -60,7 +60,7 @@ export const useGetSales = (page: number = 1, per_page: number = 5, start_date?:
             if (pending) params["pending"] = "true";
             const qs = new URLSearchParams(params).toString();
             const api = new URL(baseUrl + "/sales?" + qs)
-            
+
             const result = await fetch(api, {
                 headers: {
                     "Content-Type": "application/json",
@@ -131,4 +131,64 @@ export const useGetSalesAnalytics = (start_date?: string, end_date?: string) => 
             return json.analytics as SalesAnalyticsResponse;
         }
     })
+}
+
+export const useGetSaleReceipt = () => {
+    const { auth: { token } } = useAppContext();
+    return useMutation({
+        mutationKey: ['get-sale-receipt'],
+        mutationFn: async (saleId: string) => {
+            const res = await fetch(`${baseUrl}/sales/${saleId}/receipt`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const json = await res.json();
+            if (!res.ok || !json?.success || !json?.url) {
+                throw new Error(json?.message || json?.err || 'receipt_not_found');
+            }
+            return json.url as string;
+        },
+        onError: (e: any) => {
+            showNotification({
+                message: e?.message || 'Error al obtener el comprobante',
+                color: 'red'
+            });
+        }
+    });
+}
+
+export const useDeclineSale = () => {
+    const qc = useQueryClient();
+    const { auth: { token } } = useAppContext();
+    return useMutation({
+        mutationKey: ['decline-sale'],
+        mutationFn: async ({ saleId, reason }: { saleId: string; reason: string }) => {
+            const res = await fetch(`${baseUrl}/sales/${saleId}/decline`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason })
+            });
+            const json = await res.json();
+            if (!res.ok || !json?.success) {
+                throw new Error(json?.message || json?.err || 'decline_failed');
+            }
+            return json;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['get-sales'] });
+            showNotification({
+                title: 'Venta declinada',
+                message: 'La venta ha sido declinada correctamente',
+                color: 'green'
+            });
+        },
+        onError: (e: any) => {
+            showNotification({
+                message: e?.message || 'Error al declinar la venta',
+                color: 'red'
+            });
+        }
+    });
 }

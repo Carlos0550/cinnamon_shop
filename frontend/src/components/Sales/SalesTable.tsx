@@ -1,9 +1,9 @@
-import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea, SegmentedControl, Checkbox } from "@mantine/core"
+import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea, SegmentedControl, Checkbox, Textarea } from "@mantine/core"
 import { DatePickerInput } from "@mantine/dates"
 import { useMediaQuery } from "@mantine/hooks"
 import { theme } from "@/theme"
 import type { Product } from "../Api/ProductsApi"
-import { useGetSales, useProcessSale } from "../Api/SalesApi"
+import { useGetSales, useProcessSale, useGetSaleReceipt, useDeclineSale } from "../Api/SalesApi"
 import type { PaymentMethods, SaleSource, ManualProductItem } from "./SalesForm"
 import ModalWrapper from "@/components/Common/ModalWrapper"
 import React, { useMemo, useState, useEffect } from "react"
@@ -23,6 +23,8 @@ export type Sales = {
   products: Product[],
   manualProducts?: ManualProductItem[],
   loadedManually?: boolean,
+  processed?: boolean
+  declined?: boolean
 }
 
 export default function SalesTable() {
@@ -79,17 +81,19 @@ export default function SalesTable() {
   const [pendingOnly, setPendingOnly] = useState<boolean>(false)
   const { data, isLoading } = useGetSales(currentPage, perPage, start_date, end_date, pendingOnly)
   const processSaleMutation = useProcessSale()
+  const getReceiptMutation = useGetSaleReceipt()
+  const declineSaleMutation = useDeclineSale()
+
   const [receiptOpen, setReceiptOpen] = useState<boolean>(false)
   const [receiptUrl, setReceiptUrl] = useState<string>("")
-  const openReceipt = async (saleId: string) => {
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const res = await fetch(`${baseUrl}/sales/${saleId}/receipt`, { headers: { Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` } })
-      const json = await res.json();
-      if (!res.ok || !json?.success || !json?.url) return;
-      setReceiptUrl(json.url);
-      setReceiptOpen(true);
-    } catch {}
+
+  const openReceipt = (saleId: string) => {
+    getReceiptMutation.mutate(saleId, {
+      onSuccess: (url) => {
+        setReceiptUrl(url);
+        setReceiptOpen(true);
+      }
+    });
   }
 
   const sales: Sales[] = (data?.sales ?? []) as Sales[]
@@ -123,6 +127,31 @@ export default function SalesTable() {
     if (!value) return "—"
     const d = new Date(value)
     return isNaN(d.getTime()) ? String(value) : d.toLocaleString('es-AR')
+  }
+
+  const [declineModalOpen, setDeclineModalOpen] = useState(false)
+  const [saleToDecline, setSaleToDecline] = useState<string | null>(null)
+  const [declineReason, setDeclineReason] = useState("")
+
+  const handleDeclineSale = (saleId: string) => {
+    setSaleToDecline(saleId)
+    setDeclineReason("")
+    setDeclineModalOpen(true)
+  }
+
+  const confirmDecline = () => {
+    if (!saleToDecline || !declineReason.trim()) return
+
+    declineSaleMutation.mutate(
+      { saleId: saleToDecline, reason: declineReason },
+      {
+        onSuccess: () => {
+          setDeclineModalOpen(false)
+          setSaleToDecline(null)
+          setDeclineReason("")
+        }
+      }
+    );
   }
 
   useEffect(() => {
@@ -210,8 +239,24 @@ export default function SalesTable() {
                     <Text>Productos</Text>
                     <Badge>{itemsCount}</Badge>
                   </Group>
-                  <Group justify="flex-end">
+
+                  <Group gap="xs" wrap="wrap">
                     <Button variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
+                    {sale.source === 'WEB' && (
+                      <Checkbox disabled={sale.processed} size="xs" label="Procesada"
+                        checked={sale.processed!}
+                        onChange={() => processSaleMutation.mutate(sale.id)}
+                      />
+                    )}
+                    <Button size="xs" variant="light" onClick={() => openReceipt(sale.id)}>Ver comprobante</Button>
+                    {sale.user && (
+                      <Button size="xs" variant="light" onClick={() => alert(`Usuario: ${sale.user?.name || ''} (${sale.user?.email || ''})`)}>Ver usuario</Button>
+                    )}
+                    {sale.source === 'WEB' && (
+                      <Button size="xs" variant="light" color="red"
+                        disabled={sale.processed || sale.declined}
+                        onClick={() => handleDeclineSale(sale.id)}>Declinar</Button>
+                    )}
                   </Group>
                 </Stack>
               </Paper>
@@ -273,8 +318,8 @@ export default function SalesTable() {
                           <Group gap="xs">
                             <Button size="xs" variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
                             {sale.source === 'WEB' && (
-                              <Checkbox size="xs" label="Procesada"
-                                checked={false}
+                              <Checkbox disabled={sale.processed} size="xs" label="Procesada"
+                                checked={sale.processed!}
                                 onChange={() => processSaleMutation.mutate(sale.id)}
                               />
                             )}
@@ -283,16 +328,7 @@ export default function SalesTable() {
                               <Button size="xs" variant="light" onClick={() => alert(`Usuario: ${sale.user?.name || ''} (${sale.user?.email || ''})`)}>Ver usuario</Button>
                             )}
                             {sale.source === 'WEB' && (
-                              <Button size="xs" variant="light" color="red" onClick={() => {
-                                const reason = prompt('Motivo de la declinación:') || '';
-                                if (reason.trim()) {
-                                  fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/sales/${sale.id}/decline`, {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}` },
-                                    body: JSON.stringify({ reason })
-                                  }).then(() => window.location.reload());
-                                }
-                              }}>Declinar</Button>
+                              <Button disabled={sale.processed || sale.declined} size="xs" variant="light" color="red" onClick={() => handleDeclineSale(sale.id)}>Declinar</Button>
                             )}
                           </Group>
                         </Table.Td>
@@ -420,6 +456,28 @@ export default function SalesTable() {
           <Box>
             <iframe src={receiptUrl} style={{ width: '100%', height: 520, border: 'none' }} />
           </Box>
+        </ModalWrapper>
+      )}
+      {declineModalOpen && (
+        <ModalWrapper
+          opened={declineModalOpen}
+          onClose={() => setDeclineModalOpen(false)}
+          title={<Text fw={600}>Declinar Venta</Text>}
+        >
+          <Stack>
+            <Text size="sm">Por favor ingrese el motivo de la declinación:</Text>
+            <Textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.currentTarget.value)}
+              placeholder="Motivo..."
+              minRows={3}
+              data-autofocus
+            />
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setDeclineModalOpen(false)}>Cancelar</Button>
+              <Button color="red" onClick={confirmDecline} disabled={!declineReason.trim()}>Declinar</Button>
+            </Group>
+          </Stack>
         </ModalWrapper>
       )}
     </Box>

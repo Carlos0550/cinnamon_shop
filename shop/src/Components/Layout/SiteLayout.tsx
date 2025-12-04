@@ -1,6 +1,6 @@
 "use client";
 import { useAppContext } from "@/providers/AppContext";
-import { AppShell, Burger, Group, Anchor, Stack,Flex,Text, Avatar, Button } from "@mantine/core";
+import { AppShell, Burger, Group, Anchor, Stack, Flex, Text, Avatar, Button } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import Link from "next/link";
 import LoginForm from "../Auth/LoginForm";
@@ -90,11 +90,11 @@ export default function SiteLayout({ children }: Props) {
 
       <AppShell.Navbar p="md" style={{ background: "var(--mantine-color-body)" }}>
         <Stack gap="sm" onClick={close}>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/"}>Inicio</Anchor>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/account"}>Mi cuenta</Anchor>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/orders"}>Mis ordenes</Anchor>
-          <Anchor component={Link} onClick={() => window.location.reload()} href={"/faq"}>FAQ</Anchor>
-          
+          <Anchor component={Link} href={"/"}>Inicio</Anchor>
+          <Anchor component={Link} href={"/account"}>Mi cuenta</Anchor>
+          <Anchor component={Link} href={"/orders"}>Mis ordenes</Anchor>
+          <Anchor component={Link} href={"/faq"}>FAQ</Anchor>
+
         </Stack>
       </AppShell.Navbar>
 

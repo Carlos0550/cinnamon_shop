@@ -93,12 +93,12 @@ function Cart({ opened = true, onClose }: CartProps) {
         try {
           const fd = new FormData()
           fd.append('file', receiptFile)
-          const up = await fetch(`${utils.baseUrl}/orders/${rs.order_id}/receipt`, { method: 'POST', headers: { Authorization: `Bearer ${auth.state.token}` }, body: fd })
+          const up = await fetch(`${utils.baseUrl}/orders/${rs.order_id}/receipt`, { method: 'POST', body: fd })
           const j = await up.json().catch(() => null)
           if (!up.ok || !j?.ok) {
             alert('La orden fue creada, pero el comprobante no se pudo subir.')
           }
-        } catch {}
+        } catch { }
       }
       setProcessingOrder(false)
       onClose()
@@ -106,18 +106,18 @@ function Cart({ opened = true, onClose }: CartProps) {
     setProcessingOrder(false)
   }
 
-  useEffect(()=>{
-    if(formValues.pickup){
-      
-      
-    if(!formValues.name || !formValues.email || !formValues.phone || !formValues.street || !formValues.postal_code || !formValues.city || !formValues.province || !formValues.selectedProvinceId || !formValues.selectedLocalityId){
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShippingInfoCompleted(false)
-    }
+  useEffect(() => {
+    if (formValues.pickup) {
+
+
+      if (!formValues.name || !formValues.email || !formValues.phone || !formValues.street || !formValues.postal_code || !formValues.city || !formValues.province || !formValues.selectedProvinceId || !formValues.selectedLocalityId) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setShippingInfoCompleted(false)
+      }
     }
     setShippingInfoCompleted(true)
-    
-  },[formValues])
+
+  }, [formValues])
 
   return (
     <Modal opened={opened} onClose={onClose} title="Mi carrito">

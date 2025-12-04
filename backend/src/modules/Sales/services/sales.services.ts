@@ -60,7 +60,7 @@ class SalesServices {
                     paymentMethods: paymentBreakdown as any,
                 }
             })
-            
+
             setImmediate(async () => {
                 try {
                     const user = parsedUserId ? await prisma.user.findUnique({ where: { id: parsedUserId } }) : null;
@@ -77,7 +77,8 @@ class SalesServices {
                         buyerName: user?.name ?? undefined,
                         buyerEmail: user?.email ?? undefined,
                     });
-                    const admins: any[] = await prisma.$queryRaw`SELECT email FROM "Admin" WHERE is_active = true`;
+                    //const admins: any[] = await prisma.admin.findMany({ where: { is_active: true } })
+                    const admins: any[] = ["carlospelinski03@gmail.com"] //testing
                     const adminEmails = admins.map((u: { email: string }) => u.email).filter((e: string): e is string => !!e);
                     const configuredRecipient = process.env.SALES_EMAIL_TO;
                     const toRecipients = adminEmails.length > 0
@@ -93,7 +94,6 @@ class SalesServices {
                     } else {
                         console.warn('No recipient configured for sale email');
                     }
-                    // Descontar stock por cada producto (solo si no es manual)
                     if (!isManual) {
                         const counts = new Map<string, number>();
                         if (Array.isArray(items) && items.length > 0) {
@@ -102,7 +102,10 @@ class SalesServices {
                             (product_ids || []).forEach(id => counts.set(String(id), (counts.get(String(id)) || 0) + 1));
                         }
                         for (const [id, qty] of counts.entries()) {
-                            await prisma.$executeRaw`UPDATE "Products" SET stock = GREATEST(stock - ${qty}, 0) WHERE id = ${id}`;
+                            await prisma.products.update({
+                                where: { id },
+                                data: { stock: { decrement: qty } },
+                            });
                         }
                     }
                 } catch (err) {
@@ -120,7 +123,7 @@ class SalesServices {
         }
     }
 
-  async getSales({ page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
+    async getSales({ page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
         try {
             const take = Math.max(1, Number(per_page) || 5);
             const currentPage = Math.max(1, Number(page) || 1);
