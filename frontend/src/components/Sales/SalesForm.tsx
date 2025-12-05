@@ -42,7 +42,7 @@ export function SalesForm({ onClose }: Props) {
         product_ids: [],
         total: 0,
         tax: 0,
-        loadedManually: false,
+        loadedManually: true,
         manualProducts: [],
         payment_methods: [{ method: "EFECTIVO", amount: 0 }],
     })
@@ -150,9 +150,9 @@ export function SalesForm({ onClose }: Props) {
     const remainingBase = formValue.tax > 0 ? subtotal : finalTotal;
     const remainingAmount = Math.max(remainingBase - paymentSum, 0);
 
-    useEffect(()=>{
+    useEffect(() => {
         console.log("Sales Form Values", formValue)
-    },[formValue])
+    }, [formValue])
     return (
         <Box>
 
