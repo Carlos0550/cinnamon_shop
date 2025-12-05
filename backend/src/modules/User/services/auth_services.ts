@@ -15,12 +15,12 @@ class AuthServices {
         const user = rows[0];
 
         if (!user) {
-            return res.status(400).json({ ok: false, error: 'invalid_email', message:"El correo electrónico no está registrado" });
+            return res.status(400).json({ ok: false, error: 'invalid_email', message: "El correo electrónico no está registrado" });
         }
 
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ ok: false, error: 'invalid_password', message:"La contraseña es incorrecta" });
+            return res.status(401).json({ ok: false, error: 'invalid_password', message: "La contraseña es incorrecta" });
         }
 
         const payload = {
@@ -52,11 +52,11 @@ class AuthServices {
         })
 
         if (!user) {
-            return res.status(400).json({ ok: false, error: 'invalid_email', message:"El correo electrónico no está registrado" });
+            return res.status(400).json({ ok: false, error: 'invalid_email', message: "El correo electrónico no está registrado" });
         }
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ ok: false, error: 'invalid_password', message:"La contraseña es incorrecta" });
+            return res.status(401).json({ ok: false, error: 'invalid_password', message: "La contraseña es incorrecta" });
         }
 
         const payload = {
@@ -123,8 +123,8 @@ class AuthServices {
             const picture = profileImage || payloadClaims?.picture || undefined;
 
             const existingByClerkId = clerkUserId ? await prisma.user.findUnique({ where: { clerk_user_id: clerkUserId } }) : null;
-            
-            let user = existingByClerkId ;
+
+            let user = existingByClerkId;
 
             if (!user) {
                 const secure_password = Math.random().toString(36).slice(-12);
@@ -144,7 +144,7 @@ class AuthServices {
                 try {
                     await prisma.user.update({
                         where: { id: user.id },
-                        data: { 
+                        data: {
                             name: normalized_name,
                             is_clerk: true,
                             clerk_user_id: clerkUserId,
@@ -152,7 +152,7 @@ class AuthServices {
                         }
                     });
                     user = { ...user, name: normalized_name, is_clerk: true, clerk_user_id: clerkUserId, profile_image: picture } as any;
-                } catch {}
+                } catch { }
             }
 
             if (!user) {
@@ -289,59 +289,100 @@ class AuthServices {
     }
 
     async getUsers(req: Request, res: Response) {
-        const {
-            page,
-            limit,
-            search
-        } = req.query
+        const { page, limit, search, type } = req.query as any
 
         const pageQ = Number(page) || 1
         const limitQ = Number(limit) || 10
-        const searchQ = search?.toString().toLowerCase() || ''
+        const searchQ = (search ? String(search) : '').toLowerCase()
+        const typeQ = String(type || 'user').toLowerCase() === 'admin' ? 'admin' : 'user'
 
-        const where: any = {}
+        if (typeQ === 'admin') {
+            try {
+                const pattern = `%${searchQ}%`
+                let countRows: any[] = []
+                let rows: any[] = []
+                if (searchQ) {
+                    countRows = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Admin" WHERE name ILIKE ${pattern} OR email ILIKE ${pattern}`
+                    rows = await prisma.$queryRaw`SELECT id, name, email, role, is_active FROM "Admin" WHERE name ILIKE ${pattern} OR email ILIKE ${pattern} ORDER BY created_at DESC LIMIT ${limitQ} OFFSET ${(pageQ - 1) * limitQ}`
+                } else {
+                    countRows = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Admin"`
+                    rows = await prisma.$queryRaw`SELECT id, name, email, role, is_active FROM "Admin" ORDER BY created_at DESC LIMIT ${limitQ} OFFSET ${(pageQ - 1) * limitQ}`
+                }
+                const count = Number(countRows?.[0]?.count || 0)
+                const users = rows.map((r: any) => ({ id: String(r.id), name: r.name, email: r.email, role: 1, is_active: !!r.is_active }))
+                const total_pages = Math.ceil(count / limitQ)
+                const pagination = { total: count, page: pageQ, limit: limitQ, totalPages: total_pages, hasNextPage: pageQ < total_pages, hasPrevPage: pageQ > 1 }
+                return res.status(200).json({ ok: true, users, pagination })
+            } catch (err) {
+                return res.status(500).json({ ok: false, error: 'internal_error' })
+            }
+        }
 
+        const where: any = { role: 2 }
         if (searchQ) {
             where.OR = [
-                {
-                    name: {
-                        contains: searchQ
-                    }
-                },
-                {
-                    email: {
-                        contains: searchQ
-                    }
-                }
+                { name: { contains: searchQ } },
+                { email: { contains: searchQ } }
             ]
         }
         const [count, users] = await Promise.all([
-            prisma.user.count({
-                where
-            }),
+            prisma.user.count({ where }),
             prisma.user.findMany({
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                },
+                select: { id: true, name: true, email: true, role: true, is_active: true },
                 where,
                 skip: (pageQ - 1) * limitQ,
                 take: limitQ,
+                orderBy: { created_at: 'desc' }
             })
         ])
-
         const total_pages = Math.ceil(count / limitQ)
-        const pagination = {
-            total: count,
-            page: pageQ,
-            limit: limitQ,
-            totalPages: total_pages,
-            hasNextPage: pageQ < total_pages,
-            hasPrevPage: pageQ > 1
+        const pagination = { total: count, page: pageQ, limit: limitQ, totalPages: total_pages, hasNextPage: pageQ < total_pages, hasPrevPage: pageQ > 1 }
+        return res.status(200).json({ ok: true, users: users.map(u => ({ ...u, id: String(u.id) })), pagination })
+    }
+
+    async disableUser(req: Request, res: Response) {
+        const { id } = req.params as any
+        const type = String((req.query as any)?.type || 'user').toLowerCase()
+        if (type === 'admin') {
+            const exists: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE id = ${Number(id)} LIMIT 1`
+            if (!exists?.[0]) return res.status(404).json({ ok: false, error: 'user_not_found' })
+            await prisma.$executeRaw`UPDATE "Admin" SET is_active = FALSE, updated_at = NOW() WHERE id = ${Number(id)}`
+            return res.status(200).json({ ok: true })
         }
-        return res.status(200).json({ ok: true, users, pagination })
+        const found = await prisma.user.findUnique({ where: { id: Number(id) } })
+        if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
+        await prisma.user.update({ where: { id: Number(id) }, data: { is_active: false } })
+        return res.status(200).json({ ok: true })
+    }
+
+    async enableUser(req: Request, res: Response) {
+        const { id } = req.params as any
+        const type = String((req.query as any)?.type || 'user').toLowerCase()
+        if (type === 'admin') {
+            const exists: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE id = ${Number(id)} LIMIT 1`
+            if (!exists?.[0]) return res.status(404).json({ ok: false, error: 'user_not_found' })
+            await prisma.$executeRaw`UPDATE "Admin" SET is_active = TRUE, updated_at = NOW() WHERE id = ${Number(id)}`
+            return res.status(200).json({ ok: true })
+        }
+        const found = await prisma.user.findUnique({ where: { id: Number(id) } })
+        if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
+        await prisma.user.update({ where: { id: Number(id) }, data: { is_active: true } })
+        return res.status(200).json({ ok: true })
+    }
+
+    async deleteUser(req: Request, res: Response) {
+        const { id } = req.params as any
+        const type = String((req.query as any)?.type || 'user').toLowerCase()
+        if (type === 'admin') {
+            const exists: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE id = ${Number(id)} LIMIT 1`
+            if (!exists?.[0]) return res.status(404).json({ ok: false, error: 'user_not_found' })
+            await prisma.$executeRaw`DELETE FROM "Admin" WHERE id = ${Number(id)}`
+            return res.status(200).json({ ok: true })
+        }
+        const found = await prisma.user.findUnique({ where: { id: Number(id) } })
+        if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
+        await prisma.user.delete({ where: { id: Number(id) } })
+        return res.status(200).json({ ok: true })
     }
 }
 

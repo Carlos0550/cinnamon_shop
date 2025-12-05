@@ -1,19 +1,21 @@
 import { useEffect, useState } from "react";
-import { useGetUsers } from "../Api/AuthApi";
-import { Box, Table, Flex, Text, Group, Button, Badge, Card, Stack, useMantineTheme } from "@mantine/core";
+import { useGetUsers, useDisableUser, useEnableUser, useDeleteUser } from "../Api/AuthApi";
+import { Box, Table, Flex, Text, Group, Button, Badge, Card, Stack, useMantineTheme, SegmentedControl } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 
 type Users = {
     id: string,
     name: string,
     email: string,
-    role: number
+    role: number,
+    is_active: boolean,
 }
 
 export function UsersTable({
     search
 }: { search: string }) {
     const [users, setUsers] = useState<Users[]>([]);
+    const [filterType, setFilterType] = useState<'user' | 'admin'>('user');
     const [pagination, setPagination] = useState<{
         total: number,
         page: number,
@@ -41,7 +43,10 @@ export function UsersTable({
             page,
         })
     }
-    const { data, isLoading } = useGetUsers(currentPage, pagination.limit || 10, search);
+    const { data, isLoading } = useGetUsers(currentPage, pagination.limit || 10, search, filterType);
+    const { mutate: disableUser } = useDisableUser();
+    const { mutate: enableUser } = useEnableUser();
+    const { mutate: deleteUser } = useDeleteUser();
 
 
     useEffect(() => {
@@ -71,6 +76,17 @@ export function UsersTable({
     }
   return (
     <Box>
+        <Group justify="space-between" mb="md">
+            <Text fw={600}>Filtrar por tipo</Text>
+            <SegmentedControl
+                value={filterType}
+                onChange={(v) => setFilterType(v as 'user' | 'admin')}
+                data={[
+                    { label: 'Usuarios', value: 'user' },
+                    { label: 'Administradores', value: 'admin' },
+                ]}
+            />
+        </Group>
         {isMobile ? (
             <Stack gap="sm">
                 {users.map((user) => (
@@ -81,6 +97,18 @@ export function UsersTable({
                                 <Text size="sm" c="dimmed">{user.email}</Text>
                             </Box>
                             {renderBadgeByRole(user.role)}
+                        </Group>
+                        <Group mt="sm" gap="xs">
+                            <Button size="xs" variant="light"
+                                onClick={() => (user.is_active ? disableUser({ id: user.id, type: user.role === 1 ? 'admin' : 'user' }) : enableUser({ id: user.id, type: user.role === 1 ? 'admin' : 'user' }))}
+                            >
+                                {user.is_active ? 'Inhabilitar' : 'Habilitar'}
+                            </Button>
+                            <Button size="xs" color="red" variant="light"
+                                onClick={() => deleteUser({ id: user.id, type: user.role === 1 ? 'admin' : 'user' })}
+                            >
+                                Eliminar
+                            </Button>
                         </Group>
                     </Card>
                 ))}
@@ -104,6 +132,8 @@ export function UsersTable({
                         <Table.Th>Nombre</Table.Th>
                         <Table.Th>Email</Table.Th>
                         <Table.Th>Rol</Table.Th>
+                        <Table.Th>Estado</Table.Th>
+                        <Table.Th>Acciones</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -112,6 +142,23 @@ export function UsersTable({
                             <Table.Td>{capitalizeNames(user.name)}</Table.Td>
                             <Table.Td>{user.email}</Table.Td>
                             <Table.Td>{renderBadgeByRole(user.role)}</Table.Td>
+                            <Table.Td>
+                                {user.is_active ? <Badge color="green">Activo</Badge> : <Badge color="gray">Inhabilitado</Badge>}
+                            </Table.Td>
+                            <Table.Td>
+                                <Group gap="xs">
+                                    <Button size="xs" variant="light"
+                                        onClick={() => (user.is_active ? disableUser({ id: user.id, type: user.role === 1 ? 'admin' : 'user' }) : enableUser({ id: user.id, type: user.role === 1 ? 'admin' : 'user' }))}
+                                    >
+                                        {user.is_active ? 'Inhabilitar' : 'Habilitar'}
+                                    </Button>
+                                    <Button size="xs" color="red" variant="light"
+                                        onClick={() => deleteUser({ id: user.id, type: user.role === 1 ? 'admin' : 'user' })}
+                                    >
+                                        Eliminar
+                                    </Button>
+                                </Group>
+                            </Table.Td>
                         </Table.Tr>
                     ))}
                 </Table.Tbody>
