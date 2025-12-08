@@ -2,9 +2,10 @@
 import { Products } from '@/Api/useProducts'
 import AddToCartButton from '@/Components/Cart/AddToCartButton';
 import { useAppContext } from '@/providers/AppContext'
-import { Badge, Button, Card, Flex, Group, Image, Text } from '@mantine/core'
+import { Badge, Button, Card, Flex, Group, Image, Text, Loader } from '@mantine/core'
 import { useRouter } from 'next/navigation'
 import { FaCartPlus, FaInfoCircle } from 'react-icons/fa'
+import { useState } from 'react'
 
 type Props = {
     product: Products
@@ -18,6 +19,7 @@ function ProductsCards({ product }: Props) {
         },
 
     } = useAppContext()
+    const [navigating, setNavigating] = useState(false)
  
     const mobileCardWidth = "calc(50% - 10px)"; 
     return (
@@ -47,7 +49,7 @@ function ProductsCards({ product }: Props) {
 
             {isMobile ? (
                 <Flex justify="space-evenly" mt={10} gap={10} wrap='wrap'>
-                    <Button onClick={() => router.push(`/${product.id}`)} leftSection={<FaInfoCircle />} fullWidth>Más información</Button>
+                    <Button onClick={() => { setNavigating(true); router.push(`/${product.id}`) }} leftSection={<FaInfoCircle />} fullWidth disabled={navigating} rightSection={navigating ? <Loader size="xs" /> : null}>Más información</Button>
                     <AddToCartButton productId={product.id} />
                 </Flex>
             ) : (
@@ -57,7 +59,7 @@ function ProductsCards({ product }: Props) {
                     gap={10}
                     wrap='nowrap'
                 >
-                    <Button  onClick={() => router.push(`/${product.id}`)} leftSection={<FaInfoCircle />}>Más info</Button>
+                    <Button onClick={() => { setNavigating(true); router.push(`/${product.id}`) }} leftSection={<FaInfoCircle />} disabled={navigating} rightSection={navigating ? <Loader size="xs" /> : null}>Más info</Button>
                     <AddToCartButton productId={product.id} />
                 </Flex>
             )}
