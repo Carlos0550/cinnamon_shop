@@ -2,10 +2,11 @@
 import { useGetProfile, useUpdateProfile, useUploadAvatar } from '@/Api/useProfile';
 import { useAppContext } from '@/providers/AppContext';
 import { Avatar, Button, Grid, Group, Stack, Text, TextInput, Title } from '@mantine/core';
+import { PasswordInput } from '@mantine/core';
 import { useEffect, useState, ChangeEvent } from 'react';
 
 export default function AccountPage() {
-  const { auth } = useAppContext();
+  const { auth, utils } = useAppContext();
   const { data } = useGetProfile();
   const update = useUpdateProfile();
   const upload = useUploadAvatar();
@@ -34,6 +35,27 @@ export default function AccountPage() {
   const onAvatar = async (file?: File | null) => {
     if (file) await upload.mutateAsync(file);
   };
+  const [oldPass, setOldPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmNew, setConfirmNew] = useState('');
+  const [changing, setChanging] = useState(false);
+  const [changeError, setChangeError] = useState<string | null>(null);
+  const onChangePassword = async () => {
+    setChangeError(null);
+    if (!oldPass || !newPass || !confirmNew) { setChangeError('Completa todos los campos'); return; }
+    if (newPass !== confirmNew) { setChangeError('La nueva contraseña no coincide'); return; }
+    setChanging(true);
+    try {
+      const res = await fetch(`${utils.baseUrl}/shop/password/change`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.state.token}` }, body: JSON.stringify({ old_password: oldPass, new_password: newPass }) });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({} as any));
+        throw new Error(err?.error || 'change_failed');
+      }
+      setOldPass(''); setNewPass(''); setConfirmNew('');
+    } catch (e) {
+      const er = e as Error; setChangeError(er.message || 'Error al cambiar contraseña');
+    } finally { setChanging(false); }
+  }
 
   const profileImage = data?.user?.profile_image || auth.state.user?.profileImage || '';
   const email = data?.user?.email || auth.state.user?.email || '';
@@ -57,6 +79,16 @@ export default function AccountPage() {
         <Grid.Col span={12}><TextInput label="Provincia" value={form.shipping_province} onChange={onChange('shipping_province')} /></Grid.Col>
       </Grid>
       <Button onClick={onSave} loading={update.isPending}>Guardar cambios</Button>
+      <Stack>
+        <Title order={4}>Cambiar contraseña</Title>
+        <PasswordInput label="Contraseña actual" value={oldPass} onChange={(e) => setOldPass(e.currentTarget.value)} />
+        <PasswordInput label="Nueva contraseña" value={newPass} onChange={(e) => setNewPass(e.currentTarget.value)} />
+        <PasswordInput label="Confirmar nueva" value={confirmNew} onChange={(e) => setConfirmNew(e.currentTarget.value)} />
+        {changeError && <Text c="red">{changeError}</Text>}
+        <Group>
+          <Button color="green" onClick={onChangePassword} loading={changing}>Actualizar contraseña</Button>
+        </Group>
+      </Stack>
     </Stack>
   );
 }

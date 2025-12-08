@@ -1,7 +1,6 @@
 "use client";
 import useOrders from '@/Api/useOrders';
 import { Table, Pagination, Badge, Button, Card, Group, Stack, Text, Title } from '@mantine/core';
-import { useAppContext } from '@/providers/AppContext';
 import { useState } from 'react';
 import dayjs from 'dayjs';
 
@@ -10,22 +9,8 @@ export default function OrdersPage() {
   const [limit, setLimit] = useState(10);
   const { data } = useOrders(page, limit);
   const items = data?.items || [];
-  const { auth, utils } = useAppContext();
-  const baseUrl = utils.baseUrl;
-  const token = auth.state.token;
 
-  const uploadReceipt = async (orderId: string, file?: File | null) => {
-    if (!file) return;
-    const form = new FormData();
-    form.append('file', file);
-    const res = await fetch(`${baseUrl}/orders/${orderId}/receipt`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json?.ok) {
-      alert(json?.error || 'No se pudo subir el comprobante');
-      return;
-    }
-    alert('Comprobante subido');
-  };
+
   return (
     <Stack>
       <Title order={2}>Mis ordenes</Title>
@@ -68,12 +53,7 @@ export default function OrdersPage() {
               </Table.Tbody>
             </Table>
           )}
-          {String(o.payment_method).toUpperCase() === 'TRANSFERENCIA' && (
-            <Group mt="sm">
-              <input type="file" accept="image/*,application/pdf" onChange={(e) => uploadReceipt(o.id, e.target.files?.[0] || null)} />
-              <Button variant="light" onClick={() => window.open(`${baseUrl}/orders/${o.id}/receipt`, '_blank')}>Ver comprobante (admin)</Button>
-            </Group>
-          )}
+          
         </Card>
       ))}
       {items.length === 0 && <Text c="dimmed">No tienes órdenes aún.</Text>}

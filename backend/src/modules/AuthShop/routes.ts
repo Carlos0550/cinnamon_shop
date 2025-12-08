@@ -7,6 +7,8 @@ const authServices = new AuthServices();
 
 router.post('/login', (req, _res, next) => next(), (req, res) => authServices.loginShop(req, res));
 router.post('/clerk-login', (req, _res, next) => next(), (req, res) => authServices.clerkLogin(req, res));
+router.post('/password/reset', (req, _res, next) => next(), (req, res) => authServices.resetPasswordShop(req, res));
+router.post('/password/change', requireAuth, (req, res) => authServices.changePasswordShop(req, res));
 
 router.get('/validate-token', requireAuth, (req, res) => {
   const user = (req as any).user;

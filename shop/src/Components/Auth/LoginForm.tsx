@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useAppContext } from "@/providers/AppContext";
-import { Button, Stack, TextInput, Title, Text, Flex, PasswordInput } from "@mantine/core";
+import { Button, Stack, TextInput, Title, Text, Flex, PasswordInput, Group } from "@mantine/core";
 import { Form, useForm } from "@mantine/form";
 import { SignIn, useAuth as useClerkAuth } from "@clerk/nextjs";
 import { FcGoogle } from "react-icons/fc";
@@ -16,6 +16,8 @@ export default function LoginForm({ onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showClerkSignIn, setShowClerkSignIn] = useState(false);
+  const [recoverMode, setRecoverMode] = useState(false);
+  const [recoverEmail, setRecoverEmail] = useState("");
   const { isSignedIn } = useClerkAuth();
 
   const form = useForm({
@@ -48,6 +50,26 @@ export default function LoginForm({ onClose }: Props) {
     }
   };
 
+  const onRecover = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch(`${utils.baseUrl}/shop/password/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: recoverEmail }) });
+      const ok = res.ok;
+      if (!ok) {
+        const err = await res.json().catch(() => ({} as any));
+        throw new Error(err?.error || 'reset_failed');
+      }
+      showNotification({ title: 'Correo enviado', message: 'Revisa tu bandeja: te enviamos una contraseña temporal de 6 dígitos.', color: 'green', autoClose: 4000 });
+      setRecoverMode(false);
+    } catch (e) {
+      const er = e as Error;
+      setError(er.message || 'Error al recuperar contraseña');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const exchangedRef = useRef(false);
   useEffect(() => {
     const runExchange = async () => {
@@ -73,6 +95,7 @@ export default function LoginForm({ onClose }: Props) {
     <Flex direction="column" gap="xs" maw={520} align="center" justify={"space-between"}>
         <Title order={3}>Iniciar sesión</Title>
         <Stack w={"100%"} p={"md"}>
+          {!recoverMode && (
           <Form form={form} onSubmit={onSubmit}>
           <Stack gap="sm">
             <TextInput
@@ -90,8 +113,20 @@ export default function LoginForm({ onClose }: Props) {
             <Button type="submit" loading={loading}>
               Entrar
             </Button>
+            <Button variant="subtle" onClick={() => setRecoverMode(true)}>Recuperar contraseña</Button>
           </Stack>
         </Form>
+        )}
+        {recoverMode && (
+          <Stack gap="sm">
+            <TextInput label="Correo" placeholder="tu@correo.com" value={recoverEmail} onChange={(e) => setRecoverEmail(e.currentTarget.value)} />
+            {error && <Text c="red">{error}</Text>}
+            <Group justify="space-between">
+              <Button variant="light" onClick={() => setRecoverMode(false)}>Volver</Button>
+              <Button onClick={onRecover} loading={loading} disabled={loading || !recoverEmail}>Enviar código</Button>
+            </Group>
+          </Stack>
+        )}
         </Stack>
       {!showClerkSignIn && (
         <Flex direction={"column"} mt="md" gap="sm" align="center" justify={"space-between"}>

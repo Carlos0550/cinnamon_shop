@@ -178,7 +178,42 @@ class AuthServices {
         }
     }
 
+    async resetPasswordShop(req: Request, res: Response) {
+        try {
+            const { email } = req.body as { email?: string };
+            if (!email) return res.status(400).json({ ok: false, error: 'missing_email' });
+            const user = await prisma.user.findFirst({ where: { email, role: 2 } });
+            if (!user) return res.status(404).json({ ok: false, error: 'user_not_found' });
+            const code = String(Math.floor(100000 + Math.random() * 900000));
+            const hashed = await hashPassword(code);
+            await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+            try {
+                await sendEmail({ to: user.email, subject: 'Recuperación de contraseña', text: `Tu nueva contraseña temporal es: ${code}. Ingresa y cámbiala desde tu cuenta.` });
+            } catch {}
+            return res.status(200).json({ ok: true });
+        } catch (err) {
+            return res.status(500).json({ ok: false, error: 'reset_password_failed' });
+        }
+    }
 
+    async changePasswordShop(req: Request, res: Response) {
+        try {
+            const { old_password, new_password } = req.body as { old_password?: string; new_password?: string };
+            if (!old_password || !new_password) return res.status(400).json({ ok: false, error: 'missing_fields' });
+            const userClaim = (req as any).user;
+            const user = await prisma.user.findUnique({ where: { id: Number(userClaim.sub || userClaim.id) } });
+            if (!user) return res.status(404).json({ ok: false, error: 'user_not_found' });
+            const ok = await comparePassword(old_password, user.password);
+            if (!ok) return res.status(401).json({ ok: false, error: 'invalid_old_password' });
+            const hashed = await hashPassword(new_password);
+            await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+            return res.status(200).json({ ok: true });
+        } catch (err) {
+            return res.status(500).json({ ok: false, error: 'change_password_failed' });
+        }
+    }
+
+    
     async registerAdmin(req: Request, res: Response) {
         const { email, password, name } = req.body;
         const existingRows: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE email = ${email} LIMIT 1`;
@@ -383,6 +418,41 @@ class AuthServices {
         if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
         await prisma.user.delete({ where: { id: Number(id) } })
         return res.status(200).json({ ok: true })
+    }
+
+    async resetPasswordAdmin(req: Request, res: Response) {
+        try {
+            const { email } = req.body as { email?: string };
+            if (!email) return res.status(400).json({ ok: false, error: 'missing_email' });
+            const rows: any[] = await prisma.$queryRaw`SELECT id, email FROM "Admin" WHERE email = ${email} LIMIT 1`;
+            const admin = rows[0];
+            if (!admin) return res.status(404).json({ ok: false, error: 'user_not_found' });
+            const code = String(Math.floor(100000 + Math.random() * 900000));
+            const hashed = await hashPassword(code);
+            await prisma.$executeRaw`UPDATE "Admin" SET password = ${hashed}, updated_at = NOW() WHERE id = ${admin.id}`;
+            try { await sendEmail({ to: admin.email, subject: 'Recuperación de contraseña', text: `Tu nueva contraseña temporal es: ${code}. Ingresa y cámbiala desde tu perfil.` }); } catch {}
+            return res.status(200).json({ ok: true });
+        } catch (err) {
+            return res.status(500).json({ ok: false, error: 'reset_password_failed' });
+        }
+    }
+
+    async changePasswordAdmin(req: Request, res: Response) {
+        try {
+            const { old_password, new_password } = req.body as { old_password?: string; new_password?: string };
+            if (!old_password || !new_password) return res.status(400).json({ ok: false, error: 'missing_fields' });
+            const claim = (req as any).user;
+            const rows: any[] = await prisma.$queryRaw`SELECT id, password FROM "Admin" WHERE id = ${Number(claim.sub || claim.id)} LIMIT 1`;
+            const admin = rows[0];
+            if (!admin) return res.status(404).json({ ok: false, error: 'user_not_found' });
+            const ok = await comparePassword(old_password, admin.password);
+            if (!ok) return res.status(401).json({ ok: false, error: 'invalid_old_password' });
+            const hashed = await hashPassword(new_password);
+            await prisma.$executeRaw`UPDATE "Admin" SET password = ${hashed}, updated_at = NOW() WHERE id = ${admin.id}`;
+            return res.status(200).json({ ok: true });
+        } catch (err) {
+            return res.status(500).json({ ok: false, error: 'change_password_failed' });
+        }
     }
 }
 

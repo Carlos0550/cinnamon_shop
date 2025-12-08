@@ -13,6 +13,8 @@ export type LoginFormValues = {
 export default function LoginForm(){
   const [values, setValues] = useState<LoginFormValues>({ email: "", password: "" });
   const [error, setError] = useState<string>("");
+  const [recoverMode, setRecoverMode] = useState<boolean>(false);
+  const [recoverEmail, setRecoverEmail] = useState<string>("");
   const {
     utils:{
       capitalizeTexts,
@@ -64,38 +66,51 @@ export default function LoginForm(){
     loginHook.mutate(values);
   };
 
+  const handleRecover = async () => {
+    setError("");
+    if (!recoverEmail) { setError("Ingresa tu email"); return; }
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:3000/api"}/admin/password/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: recoverEmail }) });
+      const ok = res.ok;
+      if (!ok) {
+        const err = await res.json().catch(() => ({} as any));
+        throw new Error(err?.error || 'reset_failed');
+      }
+      showNotification({ title: 'Correo enviado', message: 'Te enviamos una contraseña temporal de 6 dígitos.', color: 'green' });
+      setRecoverMode(false);
+      setRecoverEmail("");
+    } catch (e) {
+      const er = e as Error; setError(er.message || 'Error al recuperar contraseña');
+    }
+  }
+
   return (
-    <Paper withBorder p="md" radius="md" component="form" onSubmit={handleSubmit} w={isMobile ? "100%" : 420}>
+    <Paper withBorder p="md" radius="md" w={isMobile ? "100%" : 420}>
       <Stack>
         <Title order={4}>Iniciar sesión</Title>
-        <TextInput
-          label="Email"
-          placeholder="tu@email.com"
-          value={values.email}
-          onChange={(e) => {
-            const val = e.currentTarget.value;
-            setValues((v) => ({ ...v, email: val }));
-          }}
-          required
-        />
-        <PasswordInput
-          label="Contraseña"
-          placeholder="••••••••"
-          value={values.password}
-          onChange={(e) => {
-            const val = e.currentTarget.value;
-            setValues((v) => ({ ...v, password: val }));
-          }}
-          required
-        />
-        {error && (
-          <Text c="red" size="sm">
-            {error}
-          </Text>
+        {!recoverMode && (
+          <form onSubmit={handleSubmit}>
+            <Stack>
+              <TextInput label="Email" placeholder="tu@email.com" value={values.email} onChange={(e) => setValues((v) => ({ ...v, email: (e.target as HTMLInputElement).value }))} required />
+              <PasswordInput label="Contraseña" placeholder="••••••••" value={values.password} onChange={(e) => setValues((v) => ({ ...v, password: (e.target as HTMLInputElement).value }))} required />
+              {error && <Text c="red" size="sm">{error}</Text>}
+              <Group justify="space-between">
+                <Button variant="subtle" onClick={() => setRecoverMode(true)}>Recuperar contraseña</Button>
+                <Button type="submit" loading={loginHook.isPending} disabled={loginHook.isPending}>Entrar</Button>
+              </Group>
+            </Stack>
+          </form>
         )}
-        <Group justify="flex-end">
-          <Button type="submit" loading={loginHook.isPending} disabled={loginHook.isPending}>Entrar</Button>
-        </Group>
+        {recoverMode && (
+          <Stack>
+            <TextInput label="Email" placeholder="tu@email.com" value={recoverEmail} onChange={(e) => setRecoverEmail((e.target as HTMLInputElement).value)} />
+            {error && <Text c="red" size="sm">{error}</Text>}
+            <Group justify="space-between">
+              <Button variant="light" onClick={() => setRecoverMode(false)}>Volver</Button>
+              <Button onClick={handleRecover}>Enviar código</Button>
+            </Group>
+          </Stack>
+        )}
       </Stack>
     </Paper>
   );
