@@ -57,7 +57,7 @@ export default function LoginForm({ onClose }: Props) {
       const res = await fetch(`${utils.baseUrl}/shop/password/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: recoverEmail }) });
       const ok = res.ok;
       if (!ok) {
-        const err = await res.json().catch(() => ({} as any));
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(err?.error || 'reset_failed');
       }
       showNotification({ title: 'Correo enviado', message: 'Revisa tu bandeja: te enviamos una contraseña temporal de 6 dígitos.', color: 'green', autoClose: 4000 });
