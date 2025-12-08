@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import HomeComponent from "@/Components/Home/Home"
 
 
@@ -50,7 +51,9 @@ export default async function Home({ searchParams }: { searchParams?: Record<str
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
-      <HomeComponent />
+      <Suspense fallback={null}>
+        <HomeComponent />
+      </Suspense>
     </>
   )
 }
