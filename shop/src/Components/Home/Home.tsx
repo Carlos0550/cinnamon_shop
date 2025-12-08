@@ -45,23 +45,27 @@ export default function Home() {
         }
     } = useAppContext()
     
-    useEffect(() => {
-        const next = new URLSearchParams(Array.from(searchParams.entries()))
-        if (debouncedSearch && debouncedSearch.trim().length > 0) {
-            next.set("title", debouncedSearch.trim())
-        } else {
-            next.delete("title")
-        }
-        const cat = selectedCategories[0] || ""
-        if (cat) {
-            next.set("categoryId", cat)
-        } else {
-            next.delete("categoryId")
-        }
-        const qs = next.toString()
-        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedSearch, selectedCategories])
+  useEffect(() => {
+    const next = new URLSearchParams(Array.from(searchParams.entries()))
+    if (debouncedSearch && debouncedSearch.trim().length > 0) {
+      next.set("title", debouncedSearch.trim())
+    } else {
+      next.delete("title")
+    }
+    const cat = selectedCategories[0] || ""
+    if (cat) {
+      next.set("categoryId", cat)
+    } else {
+      next.delete("categoryId")
+    }
+    const qs = next.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    if (cat) {
+      const el = typeof document !== 'undefined' ? document.getElementById('productos') : null
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, selectedCategories])
 
     useEffect(() => {
         const spTitle = searchParams.get("title") || ""
@@ -121,12 +125,12 @@ export default function Home() {
                         />
                     </Flex>
                 </Box>
-                <Flex wrap="wrap" justify="space-evenly" align="flex-start" mih={Array.isArray(products) && products.length > 0 ? "100vh" : "10vh"} flex={1} gap={20}>
-                    {Array.isArray(products) && products.length > 0 ? (
-                        products.map((product) => (
-                            <ProductsCards key={product.id} product={product} />
-                        ))
-                    ) : (
+                <Flex id="productos" wrap="wrap" justify="space-evenly" align="flex-start" mih={Array.isArray(products) && products.length > 0 ? "100vh" : "10vh"} flex={1} gap={20}>
+                  {Array.isArray(products) && products.length > 0 ? (
+                      products.map((product) => (
+                          <ProductsCards key={product.id} product={product} />
+                      ))
+                  ) : (
                         <Stack align="center">
                             {isLoading ? (
                                 <Loader size="xs" />

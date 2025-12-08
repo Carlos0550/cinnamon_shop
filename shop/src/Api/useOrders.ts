@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAppContext } from '@/providers/AppContext';
 
+type OrderItem = { title: string; price: number; quantity: number };
 type Order = {
   id: string;
-  items: any;
+  items: OrderItem[];
   total: number;
   payment_method: string;
   created_at: string;
@@ -23,4 +24,3 @@ export default function useOrders(page: number = 1, limit: number = 10) {
     enabled: !!state.token,
   });
 }
-

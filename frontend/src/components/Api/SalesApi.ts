@@ -68,8 +68,9 @@ export const useGetSales = (page: number = 1, per_page: number = 5, start_date?:
                 },
                 method: "GET",
             })
-
-            return await result.json()
+            const data = await result.json()
+            console.log(data)
+            return data
         }
     })
 }
@@ -147,11 +148,13 @@ export const useGetSaleReceipt = () => {
             }
             return json.url as string;
         },
-        onError: (e: any) => {
+        onError: (data) => {
             showNotification({
-                message: e?.message || 'Error al obtener el comprobante',
-                color: 'red'
-            });
+                title: data.message === "receipt_not_found" ? "Comprobante no encontrado" : "Error al buscar el comprobante.",
+                message: data.message === "receipt_not_found" ? "No se encontró el comprobante para esta venta." : "Por favor, intente de nuevo.",
+                autoClose: 4000
+            })
+            return
         }
     });
 }

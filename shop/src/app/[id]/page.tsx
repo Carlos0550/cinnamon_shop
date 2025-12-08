@@ -1,7 +1,8 @@
-import { Container, SimpleGrid, Title, Text, Group, Badge, Stack, Box } from "@mantine/core"
+import { Container, SimpleGrid, Title, Text, Group, Badge, Stack, Box, Flex } from "@mantine/core"
 import { notFound } from "next/navigation"
 import type { Products } from "@/Api/useProducts"
 import ImageGallery from "@/Components/ProductDetails/ImageGallery"
+import ProductsCards from "@/Components/Home/sub-components/ProductsCards"
 import BackButton from "@/Components/Common/BackButton"
 import AddToCartButton from "@/Components/Cart/AddToCartButton"
 import type { Metadata } from "next"
@@ -16,6 +17,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
   const json = await res.json().catch(() => null)
   const product: Products | null = (json?.data?.product || json?.data || json || null) as Products | null
+
+  let similar: Products[] = []
+  try {
+    const categoryId = product?.category?.id
+    if (categoryId) {
+      const sRes = await fetch(`${baseUrl}/products/public?categoryId=${encodeURIComponent(categoryId)}&limit=10`, { next: { revalidate: 120 } })
+      const sJson = await sRes.json().catch(() => null)
+      const list: Products[] = Array.isArray(sJson?.data?.products) ? (sJson.data.products as Products[]) : []
+      similar = list.filter((p: Products) => p.id !== product.id)
+    }
+  } catch { }
 
   if (!product) {
     return notFound()
@@ -69,6 +81,18 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </Stack>
         </Box>
       </SimpleGrid>
+
+      {similar.length > 0 && (
+        <Box mt="xl">
+          <Title order={3} mb="sm">Descubre productos similares</Title>
+          <Text c="dimmed" mb="md">Basado en la categoría seleccionada</Text>
+          <Flex wrap="wrap" gap={16} justify="flex-start">
+            {similar.map((p) => (
+              <ProductsCards key={p.id} product={p} />
+            ))}
+          </Flex>
+        </Box>
+      )}
       <CartWrapper />
     </Container>
   )

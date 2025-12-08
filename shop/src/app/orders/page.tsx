@@ -58,7 +58,7 @@ export default function OrdersPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {o.items.map((it: any, idx: number) => (
+                {o.items.map((it, idx: number) => (
                   <Table.Tr key={idx}>
                     <Table.Td>{it.title}</Table.Td>
                     <Table.Td>{it.quantity}</Table.Td>

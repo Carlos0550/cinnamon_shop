@@ -2,12 +2,22 @@
 import { Categories } from "@/Api/useCategories";
 import { useAppContext } from "@/providers/AppContext";
 import { Card, CardSection, Image, Text, Group, SimpleGrid, Button, Center, ThemeIcon } from "@mantine/core";
+import { useRouter } from "next/navigation";
 
 
 export default function CategoriesCards({ categories }: { categories: Categories[] }) {
   const {
     utils: { capitalizeTexts },
   } = useAppContext();
+  const router = useRouter();
+
+  const goToCategory = (id: string) => {
+    router.push(`/?categoryId=${id}#productos`, { scroll: false });
+    setTimeout(() => {
+      const el = typeof document !== 'undefined' ? document.getElementById('productos') : null;
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   return (
     <SimpleGrid
@@ -21,6 +31,7 @@ export default function CategoriesCards({ categories }: { categories: Categories
           shadow="sm"
           radius="md"
           style={{ transition: "transform 150ms ease" }}
+          onClick={() => goToCategory(category.id)}
           onMouseEnter={(e) => ((e.currentTarget.style.transform = "translateY(-2px)"))}
           onMouseLeave={(e) => ((e.currentTarget.style.transform = "translateY(0)"))}
         >
@@ -51,7 +62,7 @@ export default function CategoriesCards({ categories }: { categories: Categories
             Explorá productos de esta categoría
           </Text>
           <Group mt="md">
-            <Button variant="light" color="rose">
+            <Button variant="light" color="rose" onClick={() => goToCategory(category.id)}>
               Ver más
             </Button>
           </Group>

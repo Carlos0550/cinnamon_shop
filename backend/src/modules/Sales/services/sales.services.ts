@@ -153,7 +153,7 @@ class SalesServices {
                 where.processed = false;
             }
 
-            const [total, sales] = await Promise.all([
+            const [total, sales,totalSalesByDate] = await Promise.all([
                 await prisma.sales.count({ where }),
                 await prisma.sales.findMany({
                     skip,
@@ -161,12 +161,20 @@ class SalesServices {
                     where,
                     include: {
                         products: true,
-                        user: true
+                        user: true,
+                        orders: true
                     },
                     orderBy: [{ created_at: 'desc' } as any]
+                }),
+
+                await prisma.sales.aggregate({
+                    where,
+                    _sum: {
+                        total: true
+                    }
                 })
             ])
-
+            console.log("Sales",sales[0].orders)
             const totalPages = Math.ceil(total / take) || 1;
             const pagination = {
                 total,
@@ -175,9 +183,12 @@ class SalesServices {
                 totalPages,
                 hasNextPage: currentPage < totalPages,
                 hasPrevPage: currentPage > 1,
+                start_date: start.format('YYYY-MM-DD'),
+                end_date: end.format('YYYY-MM-DD'),
+                
             };
-
-            return { sales, pagination };
+            const parsed_totalSalesByDate = totalSalesByDate._sum.total || 0;
+            return { sales, pagination, totalSalesByDate: parsed_totalSalesByDate };
         } catch (error) {
             const error_msg = error instanceof Error ? error.message : String(error);
             console.log(error);
@@ -313,15 +324,19 @@ class SalesServices {
 
     async markProcessed(id: string) {
         try {
-            const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true } });
+            const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true, orders:true } });
             if (!sale) return { success: false, message: 'sale_not_found' };
             if ((sale as any).processed) return { success: true };
             await prisma.sales.update({ where: { id }, data: { processed: true } });
-            if (sale.user?.email) {
-                const html = order_ready_email_html({ saleId: sale.id, buyerName: sale.user?.name || undefined, payment_method: String(sale.payment_method) });
-                await sendEmail({ to: sale.user.email, subject: `Tu orden #${sale.id} está lista`, html });
+            const buyer_email = sale.orders[0].buyer_email || sale.user?.email;
+            const buyerName = sale.orders[0].buyer_name || sale.user?.name || undefined;
+            console.log("buyer_email", buyer_email);
+            if (buyer_email) {
+                const html = order_ready_email_html({ saleId: sale.id, buyerName, payment_method: String(sale.payment_method) });
+                await sendEmail({ to: buyer_email, subject: `Tu orden #${sale.id} está lista`, html });
+                return { success: true };
             }
-            return { success: true };
+            return { success: false, message: 'email_not_found' };
         } catch (error) {
             const error_msg = error instanceof Error ? error.message : String(error);
             console.log(error);
@@ -331,12 +346,14 @@ class SalesServices {
 
     async decline(id: string, reason: string) {
         try {
-            const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true } });
+            const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true, orders:true } });
             if (!sale) return { success: false, message: 'sale_not_found' };
             await prisma.sales.update({ where: { id }, data: { declined: true, decline_reason: reason, processed: false } });
-            if (sale.user?.email) {
-                const html = order_declined_email_html({ saleId: sale.id, buyerName: sale.user?.name || undefined, reason });
-                await sendEmail({ to: sale.user.email, subject: `Tu orden #${sale.id} fue declinada`, html });
+            const buyer_email = sale.orders[0].buyer_email || sale.user?.email;
+            const buyerName = sale.orders[0].buyer_name || sale.user?.name || undefined;
+            if (buyer_email) {
+                const html = order_declined_email_html({ saleId: sale.id, buyerName, reason });
+                await sendEmail({ to: buyer_email, subject: `Tu orden #${sale.id} fue declinada`, html });
             }
             return { success: true };
         } catch (error) {

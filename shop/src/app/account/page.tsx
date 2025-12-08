@@ -2,7 +2,7 @@
 import { useGetProfile, useUpdateProfile, useUploadAvatar } from '@/Api/useProfile';
 import { useAppContext } from '@/providers/AppContext';
 import { Avatar, Button, Grid, Group, Stack, Text, TextInput, Title } from '@mantine/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ChangeEvent } from 'react';
 
 export default function AccountPage() {
   const { auth } = useAppContext();
@@ -14,18 +14,20 @@ export default function AccountPage() {
   useEffect(() => {
     const u = data?.user;
     if (u) {
-      setForm({
-        name: u.name || '',
-        phone: u.phone || '',
-        shipping_street: u.shipping_street || '',
-        shipping_postal_code: u.shipping_postal_code || '',
-        shipping_city: u.shipping_city || '',
-        shipping_province: u.shipping_province || '',
-      });
+      setTimeout(() => {
+        setForm({
+          name: u.name || '',
+          phone: u.phone || '',
+          shipping_street: u.shipping_street || '',
+          shipping_postal_code: u.shipping_postal_code || '',
+          shipping_city: u.shipping_city || '',
+          shipping_province: u.shipping_province || '',
+        });
+      }, 0);
     }
   }, [data?.user]);
 
-  const onChange = (k: keyof typeof form) => (e: any) => setForm(s => ({ ...s, [k]: e.target.value }));
+  const onChange = (k: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) => setForm(s => ({ ...s, [k]: e.target.value }));
   const onSave = async () => {
     await update.mutateAsync(form);
   };
@@ -58,4 +60,3 @@ export default function AccountPage() {
     </Stack>
   );
 }
-

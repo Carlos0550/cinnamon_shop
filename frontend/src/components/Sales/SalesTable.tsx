@@ -20,6 +20,7 @@ export type Sales = {
     name?: string,
     email?: string,
   } | null,
+  orders?: { buyer_name?: string; buyer_email?: string; buyer_phone?: string }[],
   products: Product[],
   manualProducts?: ManualProductItem[],
   loadedManually?: boolean,
@@ -92,6 +93,12 @@ export default function SalesTable() {
       onSuccess: (url) => {
         setReceiptUrl(url);
         setReceiptOpen(true);
+        return
+      },
+      onError: () => {
+        setReceiptUrl("");
+        setReceiptOpen(false);
+        return
       }
     });
   }
@@ -110,6 +117,8 @@ export default function SalesTable() {
 
   const [viewProductsOpen, setViewProductsOpen] = useState<boolean>(false)
   const [selectedSale, setSelectedSale] = useState<Sales | null>(null)
+  const [viewBuyerOpen, setViewBuyerOpen] = useState<boolean>(false)
+  const [buyerSale, setBuyerSale] = useState<Sales | null>(null)
 
   useEffect(() => { setCurrentPage(1) }, [preset, range])
 
@@ -121,6 +130,16 @@ export default function SalesTable() {
   const closeProducts = () => {
     setViewProductsOpen(false)
     setSelectedSale(null)
+  }
+
+  const openBuyer = (sale: Sales) => {
+    setBuyerSale(sale)
+    setViewBuyerOpen(true)
+  }
+
+  const closeBuyer = () => {
+    setViewBuyerOpen(false)
+    setBuyerSale(null)
   }
 
   const formatDate = (value?: string) => {
@@ -155,11 +174,37 @@ export default function SalesTable() {
   }
 
   useEffect(() => {
-    if (sales && Array.isArray(sales) && sales.length > 0) {
-      const total = sales.reduce((acc, sale) => acc + Number(sale.total || 0), 0)
-      setTotalToday(total)
+    if (data && Array.isArray(data.sales) && data.sales.length > 0) {
+      console.log(data.sales)
+      setTotalToday(data.totalSalesByDate || 0)
     }
-  }, [sales])
+  }, [data])
+
+  const renderActionButtons = (sale: Sales) => {
+    return (
+      <Group gap="xs" wrap="wrap">
+        <Button variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
+        {sale.source === 'WEB' && (
+          <React.Fragment>
+            {processSaleMutation.isPending ? (
+              <Loader size={"xs"} type="bars"/>
+            ) : (
+              <Checkbox disabled={sale.processed || processSaleMutation.isPending || sale.declined} size="xs" label="Procesada"
+                checked={sale.processed! }
+                onChange={() => processSaleMutation.mutate(sale.id)}
+              />
+            )}
+            <Button disabled={getReceiptMutation.isPending} loading={getReceiptMutation.isPending} size="xs" variant="light" onClick={() => openReceipt(sale.id)}>Ver comprobante</Button>
+            <Button size="xs" variant="light" color="red"
+              disabled={sale.processed || sale.declined}
+              onClick={() => handleDeclineSale(sale.id)}>Declinar
+            </Button>
+          </React.Fragment>
+        )}
+        <Button size="xs" variant="light" onClick={() => openBuyer(sale)}>Ver comprador</Button>
+      </Group>
+    )
+  }
   return (
     <Box>
       <Group mb="md" gap="md" align="center" wrap="wrap">
@@ -233,31 +278,13 @@ export default function SalesTable() {
                   </Group>
                   <Group justify="space-between">
                     <Text>Cliente</Text>
-                    <Text>{sale.user?.name || '—'} {sale.user?.email ? `(${sale.user.email})` : ''}</Text>
+                    <Text>{sale.user?.name || sale.orders?.[0]?.buyer_name || '—'} {sale.user?.email || sale.orders?.[0]?.buyer_email ? `(${sale.user?.email || sale.orders?.[0]?.buyer_email})` : ''}</Text>
                   </Group>
                   <Group justify="space-between">
                     <Text>Productos</Text>
                     <Badge>{itemsCount}</Badge>
                   </Group>
-
-                  <Group gap="xs" wrap="wrap">
-                    <Button variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
-                    {sale.source === 'WEB' && (
-                      <Checkbox disabled={sale.processed} size="xs" label="Procesada"
-                        checked={sale.processed!}
-                        onChange={() => processSaleMutation.mutate(sale.id)}
-                      />
-                    )}
-                    <Button size="xs" variant="light" onClick={() => openReceipt(sale.id)}>Ver comprobante</Button>
-                    {sale.user && (
-                      <Button size="xs" variant="light" onClick={() => alert(`Usuario: ${sale.user?.name || ''} (${sale.user?.email || ''})`)}>Ver usuario</Button>
-                    )}
-                    {sale.source === 'WEB' && (
-                      <Button size="xs" variant="light" color="red"
-                        disabled={sale.processed || sale.declined}
-                        onClick={() => handleDeclineSale(sale.id)}>Declinar</Button>
-                    )}
-                  </Group>
+                  {renderActionButtons(sale)}
                 </Stack>
               </Paper>
             )
@@ -298,8 +325,8 @@ export default function SalesTable() {
                         <Table.Td>{formatDate(sale.created_at)}</Table.Td>
                         <Table.Td>
                           <Stack gap={2}>
-                            <Text fw={600}>{sale.user?.name || '—'}</Text>
-                            <Text c="dimmed" size="sm">{sale.user?.email || '—'}</Text>
+                            <Text fw={600}>{sale.user?.name || sale.orders?.[0]?.buyer_name || '—'}</Text>
+                            <Text c="dimmed" size="sm">{sale.user?.email || sale.orders?.[0]?.buyer_email || '—'}</Text>
                           </Stack>
                         </Table.Td>
                         <Table.Td>
@@ -315,22 +342,7 @@ export default function SalesTable() {
                           <Badge>{itemsCount}</Badge>
                         </Table.Td>
                         <Table.Td>
-                          <Group gap="xs">
-                            <Button size="xs" variant="light" onClick={() => openProducts(sale)}>Ver productos</Button>
-                            {sale.source === 'WEB' && (
-                              <Checkbox disabled={sale.processed} size="xs" label="Procesada"
-                                checked={sale.processed!}
-                                onChange={() => processSaleMutation.mutate(sale.id)}
-                              />
-                            )}
-                            <Button size="xs" variant="light" onClick={() => openReceipt(sale.id)}>Ver comprobante</Button>
-                            {sale.user && (
-                              <Button size="xs" variant="light" onClick={() => alert(`Usuario: ${sale.user?.name || ''} (${sale.user?.email || ''})`)}>Ver usuario</Button>
-                            )}
-                            {sale.source === 'WEB' && (
-                              <Button disabled={sale.processed || sale.declined} size="xs" variant="light" color="red" onClick={() => handleDeclineSale(sale.id)}>Declinar</Button>
-                            )}
-                          </Group>
+                          {renderActionButtons(sale)}
                         </Table.Td>
                       </Table.Tr>
                     )
@@ -443,6 +455,35 @@ export default function SalesTable() {
               )
             })()}
           </Stack>
+        </ModalWrapper>
+      )}
+      {viewBuyerOpen && buyerSale && (
+        <ModalWrapper
+          opened={viewBuyerOpen}
+          onClose={closeBuyer}
+          title={<Text fw={600}>Datos del comprador</Text>}
+        >
+          {(() => {
+            const name = buyerSale.user?.name || buyerSale.orders?.[0]?.buyer_name || ''
+            const email = buyerSale.user?.email || buyerSale.orders?.[0]?.buyer_email || ''
+            const phone = buyerSale.orders?.[0]?.buyer_phone || ''
+            return (
+              <Stack>
+                <Group justify="space-between">
+                  <Text>Nombre</Text>
+                  <Text fw={600}>{name || '—'}</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text>Email</Text>
+                  <Text fw={600}>{email || '—'}</Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text>Teléfono</Text>
+                  <Text fw={600}>{phone || '—'}</Text>
+                </Group>
+              </Stack>
+            )
+          })()}
         </ModalWrapper>
       )}
       {receiptOpen && (

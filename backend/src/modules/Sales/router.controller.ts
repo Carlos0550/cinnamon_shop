@@ -55,7 +55,8 @@ export const getSales = async (req: Request, res: Response) => {
             res.status(200).json({
                 success: true,
                 sales: response.sales,
-                pagination: response.pagination
+                pagination: response.pagination,
+                totalSalesByDate: response.totalSalesByDate || 0
             })
         } else {
             res.status(400).json({

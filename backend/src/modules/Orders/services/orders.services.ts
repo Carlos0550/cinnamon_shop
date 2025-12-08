@@ -1,6 +1,5 @@
 import { prisma } from "@/config/prisma"
 import { sendEmail } from "@/config/resend"
-import { sale_email_html } from "@/templates/sale_email"
 import { purchase_email_html } from "@/templates/purchase_email"
 import salesServices from "@/modules/Sales/services/sales.services"
 import { PaymentMethod } from "@prisma/client"
@@ -17,13 +16,14 @@ export default class OrdersServices {
     const snapshot = products.map(p => ({ id: p.id, title: p.title, price: Number(p.price), quantity: itemsMap.get(p.id) || 1 }))
     const total = snapshot.reduce((acc, it) => acc + Number(it.price) * Number(it.quantity), 0)
 
-    const paymentNormalized: PaymentMethod = (String(paymentMethod).toUpperCase() === 'EN_LOCAL') ? 'NINGUNO' : (String(paymentMethod).toUpperCase() as PaymentMethod)
+    const paymentNormalized: PaymentMethod = (String(paymentMethod).toUpperCase() === 'EN_LOCAL') ? 'EFECTIVO' : (String(paymentMethod).toUpperCase() as PaymentMethod)
     const order = await prisma.orders.create({
       data: {
         total,
         payment_method: paymentNormalized,
         items: snapshot as any,
         buyer_email: customer.email || undefined,
+        buyer_phone: customer.phone || undefined,
         buyer_name: customer.name || undefined,
         ...(userId && Number.isInteger(userId) ? { user: { connect: { id: userId } } } : {}),
       }
@@ -43,7 +43,6 @@ export default class OrdersServices {
         await prisma.cart.update({ where: { id: cart.id }, data: { total: 0 } })
       }
     }
-    // Registrar la venta y vincular a la orden
     const parsed_payment_method = paymentNormalized
     try {
       const saleId = await salesServices.saveSale({
@@ -61,7 +60,6 @@ export default class OrdersServices {
     }
     setImmediate(async () => {
       await this.notify(order.id, snapshot, total, paymentMethod, customer)
-      // Descontar stock por cada ítem
       try {
         for (const it of snapshot) {
           await prisma.$executeRaw`UPDATE "Products" SET stock = GREATEST(stock - ${it.quantity}, 0) WHERE id = ${it.id}`;

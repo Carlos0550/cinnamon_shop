@@ -217,6 +217,7 @@ model Orders {
   created_at     DateTime @default(now()) @db.Timestamptz(3)
   buyer_email    String?
   buyer_name     String?
+  buyer_phone    String?
   saleId         String?
   sale           Sales?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
   transfer_receipt_path String?
