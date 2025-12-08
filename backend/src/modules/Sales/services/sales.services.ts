@@ -107,10 +107,10 @@ class SalesServices {
                             (product_ids || []).forEach(id => counts.set(String(id), (counts.get(String(id)) || 0) + 1));
                         }
                         for (const [id, qty] of counts.entries()) {
-                            await prisma.products.update({
-                                where: { id },
-                                data: { stock: { decrement: qty } },
-                            });
+                            await prisma.$executeRaw`UPDATE "Products"
+                              SET stock = GREATEST(stock - ${qty}, 0),
+                                  state = CASE WHEN GREATEST(stock - ${qty}, 0) = 0 THEN 'out_stock'::"ProductState" ELSE state END
+                              WHERE id = ${id}`;
                         }
                     }
                 } catch (err) {

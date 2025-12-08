@@ -62,7 +62,10 @@ export default class OrdersServices {
       await this.notify(order.id, snapshot, total, paymentMethod, customer)
       try {
         for (const it of snapshot) {
-          await prisma.$executeRaw`UPDATE "Products" SET stock = GREATEST(stock - ${it.quantity}, 0) WHERE id = ${it.id}`;
+          await prisma.$executeRaw`UPDATE "Products" 
+            SET stock = GREATEST(stock - ${it.quantity}, 0),
+                state = CASE WHEN GREATEST(stock - ${it.quantity}, 0) = 0 THEN 'out_stock'::"ProductState" ELSE state END
+            WHERE id = ${it.id}`;
         }
       } catch (err) {
         console.error('order_stock_decrement_failed', err)
