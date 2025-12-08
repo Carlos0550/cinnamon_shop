@@ -96,8 +96,10 @@ class AuthServices {
                 console.error('clerk_login_missing_secret_key');
                 return res.status(500).json({ ok: false, error: 'missing_clerk_secret_key' });
             }
+            const issuer = process.env.CLERK_ISSUER_URL || process.env.CLERK_PUBLISHABLE_KEY?.includes('clerk.') ? undefined : undefined;
             const verified = await verifyClerkToken(clerkToken, {
                 secretKey: process.env.CLERK_SECRET_KEY,
+                ...(issuer ? { issuer } : {}),
             });
             const { email, name, profileImage } = req.body as {
                 email?: string;

@@ -81,8 +81,8 @@ export function useAuth() {
     const email = clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || '';
     const name = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || email.split('@')[0];
     const profileImage = clerkUser?.imageUrl || '';
-    // Solicitar un Clerk JWT (no el session token) para intercambio con backend
-    let clerkToken = await getToken({ template: 'integration_fallback' }).catch(() => null);
+    const template = process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE;
+    let clerkToken = template ? await getToken({ template }).catch(() => null) : null;
     if (!clerkToken) {
       clerkToken = await getToken().catch(() => null);
     }
@@ -136,8 +136,8 @@ export function useAuth() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_exchange_done');
     setState({ token: null, user: null, loading: false });
-    // Intentar cerrar sesión también en Clerk si existe
     try { await clerkSignOut(); } catch {}
+    window.location.reload()
   }, [clerkSignOut]);
 
   const isAuthenticated = !!state.token && !!state.user;

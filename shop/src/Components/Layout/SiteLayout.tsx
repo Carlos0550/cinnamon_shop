@@ -52,6 +52,7 @@ export default function SiteLayout({ children }: Props) {
                 <Group align="center" gap="sm">
                   <Avatar src={auth.state.user?.profileImage} alt={fullName} radius="xl" />
                   <Text size="sm" c="dimmed">{fullName || email || "Usuario"}</Text>
+                  <Button variant="light" size="xs" onClick={auth.signOut}>Salir</Button>
                 </Group>
               ) : (
                 <Group align="center" gap="sm">
