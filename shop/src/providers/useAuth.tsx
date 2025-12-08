@@ -81,7 +81,11 @@ export function useAuth() {
     const email = clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || '';
     const name = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || email.split('@')[0];
     const profileImage = clerkUser?.imageUrl || '';
-    const clerkToken = await getToken();
+    // Solicitar un Clerk JWT (no el session token) para intercambio con backend
+    let clerkToken = await getToken({ template: 'integration_fallback' }).catch(() => null);
+    if (!clerkToken) {
+      clerkToken = await getToken().catch(() => null);
+    }
 
     if (!clerkToken) {
       setState((s) => ({ ...s, loading: false }));
