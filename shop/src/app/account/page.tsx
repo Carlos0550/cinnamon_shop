@@ -4,9 +4,18 @@ import { useAppContext } from '@/providers/AppContext';
 import { Avatar, Button, Grid, Group, Stack, Text, TextInput, Title } from '@mantine/core';
 import { PasswordInput } from '@mantine/core';
 import { useEffect, useState, ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { showNotification } from '@mantine/notifications';
 
 export default function AccountPage() {
   const { auth, utils } = useAppContext();
+  const router = useRouter();
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      showNotification({ message: 'Debes iniciar sesión para acceder a esta página', color: 'red', id: 'account-page' });
+      router.push('/');
+    }
+  }, [auth.isAuthenticated, router]);
   const { data } = useGetProfile();
   const update = useUpdateProfile();
   const upload = useUploadAvatar();

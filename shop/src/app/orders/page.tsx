@@ -1,10 +1,22 @@
 "use client";
 import useOrders from '@/Api/useOrders';
 import { Table, Pagination, Badge, Button, Card, Group, Stack, Text, Title } from '@mantine/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useAppContext } from '@/providers/AppContext';
+import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
+import { showNotification } from '@mantine/notifications';
 
 export default function OrdersPage() {
+  const { auth } = useAppContext();
+  const router = useRouter();
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      showNotification({ message: 'Debes iniciar sesión para acceder a esta página', color: 'red', id: 'orders-page' });
+      router.push('/');
+      return
+    }
+  }, [auth.isAuthenticated, router]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const { data } = useOrders(page, limit);

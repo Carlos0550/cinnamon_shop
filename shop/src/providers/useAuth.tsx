@@ -41,6 +41,7 @@ export function useAuth() {
           is_clerk: !!data.is_clerk,
         };
         setState({ token, user, loading: false });
+        try { document.cookie = `auth_token=${token}; Max-Age=${60 * 60 * 24}; Path=/`; } catch {}
       } catch {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_exchange_done');
@@ -71,6 +72,7 @@ export function useAuth() {
     };
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_exchange_done', '1');
+    try { document.cookie = `auth_token=${token}; Max-Age=${60 * 60 * 24}; Path=/`; } catch {}
     setState({ token, user, loading: false });
     return { token, user };
   }, [baseUrl]);
@@ -114,6 +116,7 @@ export function useAuth() {
     };
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_exchange_done', '1');
+    try { document.cookie = `auth_token=${token}; Max-Age=${60 * 60 * 24}; Path=/`; } catch {}
     setState({ token, user, loading: false });
     return { token, user };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,6 +139,7 @@ export function useAuth() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_exchange_done');
     setState({ token: null, user: null, loading: false });
+    try { document.cookie = `auth_token=; Max-Age=0; Path=/`; } catch {}
     try { await clerkSignOut(); } catch {}
     window.location.reload()
   }, [clerkSignOut]);
