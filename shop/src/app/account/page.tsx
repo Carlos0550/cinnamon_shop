@@ -57,7 +57,7 @@ export default function AccountPage() {
     try {
       const res = await fetch(`${utils.baseUrl}/shop/password/change`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.state.token}` }, body: JSON.stringify({ old_password: oldPass, new_password: newPass }) });
       if (!res.ok) {
-        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        const err = await res.json().catch(() => ({} as any));
         throw new Error(err?.error || 'change_failed');
       }
       setOldPass(''); setNewPass(''); setConfirmNew('');
