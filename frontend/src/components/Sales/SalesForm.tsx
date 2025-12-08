@@ -1,4 +1,6 @@
 import { Box, Grid, Text, Select, Card, Group, Stack, Badge, ActionIcon, Divider, Paper, Loader, Button, TextInput, Switch, Textarea } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
+import dayjs from "dayjs";
 import { useState, useMemo, useEffect } from "react";
 import { FiTrash, FiShoppingCart } from "react-icons/fi";
 import { useGetAllProducts, type GetProductsParams, type Product } from "@/components/Api/ProductsApi";
@@ -30,6 +32,7 @@ export type SaleRequest = {
     total?: number
     tax: number
     payment_methods?: { method: PaymentMethods; amount: number }[]
+    sale_date?: string
 }
 
 type Props = {
@@ -39,6 +42,12 @@ type Props = {
 export function SalesForm({ onClose, sale }: Props) {
     const saveSale = useSaveSale();
     const updateSale = useUpdateSale();
+    const formatDateOnly = (d: unknown) => {
+        const m = dayjs(d as any);
+        return m.isValid() ? m.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD');
+    };
+
+    const [saleDate, setSaleDate] = useState<Date | null>(dayjs().toDate());
     const [formValue, setFormValue] = useState<SaleRequest>({
         payment_method: "EFECTIVO",
         source: "CAJA",
@@ -48,6 +57,7 @@ export function SalesForm({ onClose, sale }: Props) {
         loadedManually: true,
         manualProducts: [],
         payment_methods: [{ method: "EFECTIVO", amount: 0 }],
+        sale_date: formatDateOnly(new Date()),
     })
 
     const [manualText, setManualText] = useState<string>("");
@@ -97,17 +107,21 @@ export function SalesForm({ onClose, sale }: Props) {
         const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
         const items: ManualProductItem[] = [];
         const re = /^(\d+)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9\s-]+?)\s+(\d+(?:\.\d+)?)$/;
+        let invalid = 0;
         for (const line of lines) {
+
             const m = line.match(re);
-            if (!m) continue; // Ignora líneas inválidas
+            if (!m) { invalid++; continue; }
             const quantity = Number(m[1]);
             const title = m[2].trim();
             const price = Number(m[3]);
             if (!Number.isFinite(quantity) || !Number.isFinite(price)) continue;
             items.push({ quantity, title, price });
         }
+        setManualInvalidCount(invalid);
         return items;
     };
+    const [manualInvalidCount, setManualInvalidCount] = useState<number>(0);
     const handleChangeValues = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
@@ -152,6 +166,7 @@ export function SalesForm({ onClose, sale }: Props) {
 
     const remainingBase = formValue.tax > 0 ? subtotal : finalTotal;
     const remainingAmount = Math.max(remainingBase - paymentSum, 0);
+    const manualInvalid = useMemo(() => formValue.loadedManually && (manualInvalidCount > 0 || (formValue.manualProducts?.length || 0) === 0), [formValue.loadedManually, manualInvalidCount, formValue.manualProducts]);
 
     useEffect(() => {
         console.log("Sales Form Values", formValue)
@@ -160,6 +175,8 @@ export function SalesForm({ onClose, sale }: Props) {
     useEffect(() => {
         if (!sale) return;
         const pm = Array.isArray((sale as any).paymentMethods) ? (sale as any).paymentMethods : [];
+        const d = dayjs(sale.created_at).toDate();
+        setSaleDate(d);
         setFormValue({
             payment_method: sale.payment_method,
             source: sale.source,
@@ -168,6 +185,7 @@ export function SalesForm({ onClose, sale }: Props) {
             loadedManually: !!sale.loadedManually,
             manualProducts: (sale.manualProducts || []) as any,
             payment_methods: pm,
+            sale_date: formatDateOnly(d),
         });
         setSelectedProducts((sale.products || []) as any);
         const mt = Array.isArray(sale.manualProducts) ? sale.manualProducts.map(mi => `${mi.quantity} ${mi.title} ${mi.price}`).join("\n") : "";
@@ -184,6 +202,14 @@ export function SalesForm({ onClose, sale }: Props) {
                     onChange={handleChangeValues}
                 />
                 <Grid gutter={16}>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                        <DateInput
+                            label="Fecha de venta"
+                            value={saleDate}
+                            onChange={(value) => { const v = value || null; setSaleDate(v as Date | null); setFormValue(s => ({ ...s, sale_date: v ? dayjs(v).format('YYYY-MM-DD') : undefined })); }}
+                            locale="es"
+                        />
+                    </Grid.Col>
                     <Grid.Col span={{ base: 12, md: 6 }}>
                         {!formValue.loadedManually ? (
                             <Stack gap="sm">
@@ -234,16 +260,21 @@ export function SalesForm({ onClose, sale }: Props) {
                                 </Card>
                             </Stack>
                         ) : (
-                            <Textarea
-                                label="Productos manuales"
-                                placeholder='Formato: "CANTIDAD PRODUCTO PRECIO" por línea. Ej: "1 gloss 1500"'
-                                name="manualText"
-                                value={manualText}
-                                autosize
-                                minRows={3}
-                                maxRows={40}
-                                onChange={handleChangeValues}
-                            />
+                            <Stack gap="xs">
+                                <Textarea
+                                    label="Productos manuales"
+                                    placeholder='Formato: "CANTIDAD PRODUCTO PRECIO" por línea. Ej: "1 gloss 1500"'
+                                    name="manualText"
+                                    value={manualText}
+                                    autosize
+                                    minRows={3}
+                                    maxRows={40}
+                                    onChange={handleChangeValues}
+                                />
+                                {manualInvalid && (
+                                    <Text c="red" size="sm">Hay productos con formato inválido o vacío. Corrige antes de guardar.</Text>
+                                )}
+                            </Stack>
                         )}
 
                     </Grid.Col>
@@ -335,7 +366,7 @@ export function SalesForm({ onClose, sale }: Props) {
                         </Stack>
                     </Grid.Col>
                     <Button
-                        disabled={saveSale.isPending || updateSale.isPending}
+                        disabled={(saveSale.isPending || updateSale.isPending) || manualInvalid}
                         loading={saveSale.isPending || updateSale.isPending}
                         onClick={() => {
                             const payload = { ...formValue, total: finalTotal };

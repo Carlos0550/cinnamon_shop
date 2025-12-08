@@ -193,10 +193,10 @@ export default function SalesTable() {
         {sale.source === 'WEB' && (
           <React.Fragment>
             {processSaleMutation.isPending ? (
-              <Loader size={"xs"} type="bars"/>
+              <Loader size={"xs"} type="bars" />
             ) : (
               <Checkbox disabled={sale.processed || processSaleMutation.isPending || sale.declined} size="xs" label="Procesada"
-                checked={sale.processed! }
+                checked={sale.processed!}
                 onChange={() => processSaleMutation.mutate(sale.id)}
               />
             )}
@@ -220,6 +220,14 @@ export default function SalesTable() {
         </ActionIcon>
       </Group>
     )
+  }
+
+  const renderStatusBadge = (sale: Sales) => {
+    if (sale.source === "WEB") {
+      if (sale.processed) return <Badge color="green">Procesada</Badge>
+      if (sale.declined) return <Badge color="red">Declinada</Badge>
+      return <Badge color="yellow">Pendiente</Badge>
+    }
   }
   return (
     <Box>
@@ -267,9 +275,8 @@ export default function SalesTable() {
             const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
             return (
               <Paper key={sale.id} withBorder p="md" radius="md" >
-
                 <Stack gap="xs">
-                  <Badge color={sale.declined ? "red" : sale.processed ? "green" : "orange"} variant="light">{sale.declined ? "Declinada" : sale.processed ? "Procesada" : "Pendiente"}</Badge>
+                {renderStatusBadge(sale)}
                   <Group justify="space-between">
                     <Text fw={600}>Venta #{sale.id}</Text>
                     <Badge variant="light">{sale.source}</Badge>
@@ -320,6 +327,7 @@ export default function SalesTable() {
               <Table striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
+                    <Table.Th></Table.Th>
                     <Table.Th>Fecha</Table.Th>
                     <Table.Th>Cliente</Table.Th>
                     <Table.Th>Método</Table.Th>
@@ -339,6 +347,7 @@ export default function SalesTable() {
                     const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
                     return (
                       <Table.Tr key={sale.id}>
+                        <Table.Td>{renderStatusBadge(sale)}</Table.Td>
                         <Table.Td>{formatDate(sale.created_at)}</Table.Td>
                         <Table.Td>
                           <Stack gap={2}>

@@ -44,6 +44,10 @@ class SalesServices {
             const taxAmount = subtotal * (taxPercent / 100);
             const finalTotal = subtotal + taxAmount;
 
+            const saleDateStr = (request as any)?.sale_date as string | undefined;
+            const parsedSaleDate = saleDateStr && dayjs.tz(saleDateStr, 'YYYY-MM-DD', DEFAULT_TZ);
+            const createdAtOverride = parsedSaleDate && parsedSaleDate.isValid() ? parsedSaleDate.startOf('day').toDate() : undefined;
+
             const sale = await prisma.sales.create({
                 data: {
                     payment_method: primaryPaymentMethod,
@@ -54,6 +58,7 @@ class SalesServices {
                         ? { user: { connect: { id: parsedUserId } } }
                         : {}),
                     tax: taxPercent,
+                    ...(createdAtOverride ? { created_at: createdAtOverride } : {}),
                     products: !isManual ? { connect: Array.from(new Set(product_data.map(p => p.id).filter(Boolean))).map(id => ({ id })) } : undefined,
                     manualProducts: isManual ? manualItems as any : undefined,
                     loadedManually: isManual,
@@ -73,7 +78,7 @@ class SalesServices {
                         taxPercent,
                         finalTotal,
                         saleId: (sale as any)?.id ?? undefined,
-                        saleDate: new Date(),
+                        saleDate: (createdAtOverride as Date) || ((sale as any)?.created_at as Date) || new Date(),
                         buyerName: user?.name ?? undefined,
                         buyerEmail: user?.email ?? undefined,
                     });
@@ -157,6 +162,10 @@ class SalesServices {
             const primaryPaymentMethod = (request.payment_methods && request.payment_methods[0]?.method) || request.payment_method || existing.payment_method as any;
             const paymentBreakdown = Array.isArray(request.payment_methods) ? request.payment_methods : [];
 
+            const saleDateStr = (request as any)?.sale_date as string | undefined;
+            const parsedSaleDate = saleDateStr && dayjs.tz(saleDateStr, 'YYYY-MM-DD', DEFAULT_TZ);
+            const createdAtOverride = parsedSaleDate && parsedSaleDate.isValid() ? parsedSaleDate.startOf('day').toDate() : undefined;
+
             const updated = await prisma.sales.update({
                 where: { id },
                 data: {
@@ -164,6 +173,7 @@ class SalesServices {
                     source: request.source || existing.source as any,
                     tax: taxPercent,
                     total: Number(finalTotal),
+                    ...(createdAtOverride ? { created_at: createdAtOverride } : {}),
                     loadedManually: isManual,
                     manualProducts: isManual ? manualItems as any : undefined,
                     paymentMethods: paymentBreakdown as any,
@@ -244,7 +254,9 @@ class SalesServices {
                     }
                 })
             ])
-            console.log("Sales",sales[0].orders)
+            if (Array.isArray(sales) && sales.length > 0) {
+                console.log("Sales", (sales[0] as any)?.orders)
+            }
             const totalPages = Math.ceil(total / take) || 1;
             const pagination = {
                 total,

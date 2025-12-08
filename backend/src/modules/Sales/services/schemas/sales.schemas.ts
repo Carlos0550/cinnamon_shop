@@ -18,6 +18,7 @@ export type SaleRequest = {
     manualProducts?: { quantity: number; title: string; price: number }[]
     payment_methods?: { method: PaymentMethods; amount: number }[]
     items?: { product_id: string; quantity: number }[]
+    sale_date?: string
 }
 
 export type SalesSummaryRequest = {
