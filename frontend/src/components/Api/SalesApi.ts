@@ -195,3 +195,39 @@ export const useDeclineSale = () => {
         }
     });
 }
+
+export const useUpdateSale = () => {
+    const qc = useQueryClient();
+    const { auth: { token } } = useAppContext();
+    return useMutation({
+        mutationKey: ['update-sale'],
+        mutationFn: async ({ id, request }: { id: string; request: SaleRequest }) => {
+            const res = await fetch(`${baseUrl}/sales/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(request),
+            });
+            const json = await res.json();
+            if (!res.ok || !json?.success) throw new Error(json?.message || json?.err || 'update_failed');
+            return json;
+        },
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ['get-sales'] }); showNotification({ message: 'Venta actualizada', color: 'green' }) },
+        onError: (e: any) => { showNotification({ message: e?.message || 'Error al actualizar venta', color: 'red' }) },
+    });
+}
+
+export const useDeleteSale = () => {
+    const qc = useQueryClient();
+    const { auth: { token } } = useAppContext();
+    return useMutation({
+        mutationKey: ['delete-sale'],
+        mutationFn: async (id: string) => {
+            const res = await fetch(`${baseUrl}/sales/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+            const json = await res.json();
+            if (!res.ok || !json?.success) throw new Error(json?.message || json?.err || 'delete_failed');
+            return json;
+        },
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ['get-sales'] }); showNotification({ message: 'Venta eliminada', color: 'green' }) },
+        onError: (e: any) => { showNotification({ message: e?.message || 'Error al eliminar venta', color: 'red' }) },
+    });
+}

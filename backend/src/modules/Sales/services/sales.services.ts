@@ -123,6 +123,76 @@ class SalesServices {
         }
     }
 
+    async updateSale(id: string, request: SaleRequest) {
+        try {
+            const existing = await prisma.sales.findUnique({ where: { id }, include: { products: true, user: true } });
+            if (!existing) return { success: false, message: 'sale_not_found' };
+
+            const isManual = !!request.loadedManually;
+            const manualItems = Array.isArray(request.manualProducts) ? request.manualProducts : [];
+            let subtotal = 0;
+            let connectProductIds: string[] = [];
+
+            if (!isManual) {
+                const incoming = Array.isArray(request.items) && request.items.length > 0
+                    ? request.items.map(it => ({ id: String(it.product_id), quantity: Math.max(1, Number(it.quantity) || 1) }))
+                    : Array.from(request.product_ids || []).map(id => ({ id: String(id), quantity: 1 }));
+                const uniqueIds = Array.from(new Set(incoming.map(i => i.id)));
+                const found = await prisma.products.findMany({ where: { id: { in: uniqueIds } } }) as any;
+                const byId = new Map(found.map((p: any) => [p.id, p]));
+                subtotal = incoming.reduce((acc, i) => {
+                    const p = byId.get(i.id);
+                    if (!p) return acc;
+                    return acc + Number((p as any).price) * i.quantity;
+                }, 0);
+                connectProductIds = uniqueIds;
+            } else {
+                subtotal = manualItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
+            }
+
+            const taxPercent = Number(request.tax) || 0;
+            const taxAmount = subtotal * (taxPercent / 100);
+            const finalTotal = subtotal + taxAmount;
+
+            const primaryPaymentMethod = (request.payment_methods && request.payment_methods[0]?.method) || request.payment_method || existing.payment_method as any;
+            const paymentBreakdown = Array.isArray(request.payment_methods) ? request.payment_methods : [];
+
+            const updated = await prisma.sales.update({
+                where: { id },
+                data: {
+                    payment_method: primaryPaymentMethod as any,
+                    source: request.source || existing.source as any,
+                    tax: taxPercent,
+                    total: Number(finalTotal),
+                    loadedManually: isManual,
+                    manualProducts: isManual ? manualItems as any : undefined,
+                    paymentMethods: paymentBreakdown as any,
+                    products: !isManual ? { set: connectProductIds.map(pid => ({ id: pid })) } : { set: [] },
+                },
+                include: { products: true, user: true }
+            });
+
+            return { success: true, sale: updated };
+        } catch (error) {
+            const error_msg = error instanceof Error ? error.message : String(error);
+            console.log(error);
+            return { success: false, message: error_msg };
+        }
+    }
+
+    async deleteSale(id: string) {
+        try {
+            const existing = await prisma.sales.findUnique({ where: { id } });
+            if (!existing) return { success: false, message: 'sale_not_found' };
+            await prisma.sales.delete({ where: { id } });
+            return { success: true };
+        } catch (error) {
+            const error_msg = error instanceof Error ? error.message : String(error);
+            console.log(error);
+            return { success: false, message: error_msg };
+        }
+    }
+
     async getSales({ page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
         try {
             const take = Math.max(1, Number(per_page) || 5);
@@ -145,7 +215,7 @@ class SalesServices {
                 created_at: {
                     gte: start.toDate(),
                     lte: end.toDate(),
-                }
+                },
             };
             const pending = (global as any)?.__pendingFilter || false;
             if (pending) {

@@ -2,7 +2,8 @@ import { Box, Grid, Text, Select, Card, Group, Stack, Badge, ActionIcon, Divider
 import { useState, useMemo, useEffect } from "react";
 import { FiTrash, FiShoppingCart } from "react-icons/fi";
 import { useGetAllProducts, type GetProductsParams, type Product } from "@/components/Api/ProductsApi";
-import { useSaveSale } from "../Api/SalesApi";
+import { useSaveSale, useUpdateSale } from "../Api/SalesApi";
+import type { Sales } from "./SalesTable";
 export const SaleSource = ["WEB", "CAJA"] as const;
 export type SaleSource = typeof SaleSource[number];
 
@@ -32,10 +33,12 @@ export type SaleRequest = {
 }
 
 type Props = {
-    onClose: () => void
+    onClose: () => void,
+    sale?: Sales
 }
-export function SalesForm({ onClose }: Props) {
+export function SalesForm({ onClose, sale }: Props) {
     const saveSale = useSaveSale();
+    const updateSale = useUpdateSale();
     const [formValue, setFormValue] = useState<SaleRequest>({
         payment_method: "EFECTIVO",
         source: "CAJA",
@@ -129,10 +132,10 @@ export function SalesForm({ onClose }: Props) {
     }, [formValue.payment_method])
 
     useEffect(() => {
-        if (saveSale.isSuccess) {
+        if (saveSale.isSuccess || updateSale.isSuccess) {
             onClose();
         }
-    }, [saveSale.isSuccess])
+    }, [saveSale.isSuccess, updateSale.isSuccess])
 
     useEffect(() => {
         const primary = formValue.payment_methods?.[0]?.method;
@@ -153,6 +156,23 @@ export function SalesForm({ onClose }: Props) {
     useEffect(() => {
         console.log("Sales Form Values", formValue)
     }, [formValue])
+
+    useEffect(() => {
+        if (!sale) return;
+        const pm = Array.isArray((sale as any).paymentMethods) ? (sale as any).paymentMethods : [];
+        setFormValue({
+            payment_method: sale.payment_method,
+            source: sale.source,
+            product_ids: (sale.products || []).map(p => p.id),
+            tax: Number(sale.tax) || 0,
+            loadedManually: !!sale.loadedManually,
+            manualProducts: (sale.manualProducts || []) as any,
+            payment_methods: pm,
+        });
+        setSelectedProducts((sale.products || []) as any);
+        const mt = Array.isArray(sale.manualProducts) ? sale.manualProducts.map(mi => `${mi.quantity} ${mi.title} ${mi.price}`).join("\n") : "";
+        setManualText(mt);
+    }, [sale])
     return (
         <Box>
 
@@ -314,7 +334,18 @@ export function SalesForm({ onClose }: Props) {
                             </Card>
                         </Stack>
                     </Grid.Col>
-                    <Button disabled={saveSale.isPending} loading={saveSale.isPending} onClick={() => saveSale.mutate({ ...formValue, total: finalTotal })}>Guardar venta</Button>
+                    <Button
+                        disabled={saveSale.isPending || updateSale.isPending}
+                        loading={saveSale.isPending || updateSale.isPending}
+                        onClick={() => {
+                            const payload = { ...formValue, total: finalTotal };
+                            if (sale) {
+                                updateSale.mutate({ id: sale.id, request: payload });
+                            } else {
+                                saveSale.mutate(payload);
+                            }
+                        }}
+                    >{sale ? 'Guardar cambios' : 'Guardar venta'}</Button>
                 </Grid>
             </Paper>
         </Box>

@@ -1,12 +1,14 @@
-import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea, SegmentedControl, Checkbox, Textarea } from "@mantine/core"
+import { Box, Paper, Table, Text, Loader, Group, Button, Badge, Stack, ScrollArea, SegmentedControl, Checkbox, Textarea, ActionIcon } from "@mantine/core"
 import { DatePickerInput } from "@mantine/dates"
 import { useMediaQuery } from "@mantine/hooks"
 import { theme } from "@/theme"
 import type { Product } from "../Api/ProductsApi"
-import { useGetSales, useProcessSale, useGetSaleReceipt, useDeclineSale } from "../Api/SalesApi"
+import { useGetSales, useProcessSale, useGetSaleReceipt, useDeclineSale, useDeleteSale } from "../Api/SalesApi"
 import type { PaymentMethods, SaleSource, ManualProductItem } from "./SalesForm"
 import ModalWrapper from "@/components/Common/ModalWrapper"
 import React, { useMemo, useState, useEffect } from "react"
+import { SalesForm } from "./SalesForm"
+import { FiEdit, FiTrash } from "react-icons/fi"
 
 export type Sales = {
   id: string,
@@ -84,6 +86,7 @@ export default function SalesTable() {
   const processSaleMutation = useProcessSale()
   const getReceiptMutation = useGetSaleReceipt()
   const declineSaleMutation = useDeclineSale()
+  const deleteSaleMutation = useDeleteSale()
 
   const [receiptOpen, setReceiptOpen] = useState<boolean>(false)
   const [receiptUrl, setReceiptUrl] = useState<string>("")
@@ -119,6 +122,9 @@ export default function SalesTable() {
   const [selectedSale, setSelectedSale] = useState<Sales | null>(null)
   const [viewBuyerOpen, setViewBuyerOpen] = useState<boolean>(false)
   const [buyerSale, setBuyerSale] = useState<Sales | null>(null)
+  const [editOpen, setEditOpen] = useState<boolean>(false)
+  const [editSale, setEditSale] = useState<Sales | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => { setCurrentPage(1) }, [preset, range])
 
@@ -202,6 +208,16 @@ export default function SalesTable() {
           </React.Fragment>
         )}
         <Button size="xs" variant="light" onClick={() => openBuyer(sale)}>Ver comprador</Button>
+        {sale.source !== 'WEB' && (
+          <Button size="xs" variant="light" leftSection={<FiEdit />} onClick={() => { setEditSale(sale); setEditOpen(true); }}>Editar</Button>
+        )}
+        <ActionIcon color="red" variant="light" aria-label="Eliminar"
+          onClick={() => { setDeletingId(sale.id); deleteSaleMutation.mutate(sale.id, { onSettled: () => setDeletingId(null) }); }}
+          loading={deleteSaleMutation.isPending && deletingId === sale.id}
+          disabled={deleteSaleMutation.isPending && deletingId === sale.id}
+        >
+          <FiTrash />
+        </ActionIcon>
       </Group>
     )
   }
@@ -250,9 +266,10 @@ export default function SalesTable() {
             const taxAmount = finalTotal - subtotal
             const itemsCount = sale?.loadedManually ? (sale?.manualProducts?.length ?? 0) : (sale?.products?.length ?? 0)
             return (
-              <Paper key={sale.id} withBorder p="md" radius="md">
+              <Paper key={sale.id} withBorder p="md" radius="md" >
 
                 <Stack gap="xs">
+                  <Badge color={sale.declined ? "red" : sale.processed ? "green" : "orange"} variant="light">{sale.declined ? "Declinada" : sale.processed ? "Procesada" : "Pendiente"}</Badge>
                   <Group justify="space-between">
                     <Text fw={600}>Venta #{sale.id}</Text>
                     <Badge variant="light">{sale.source}</Badge>
@@ -497,6 +514,17 @@ export default function SalesTable() {
           <Box>
             <iframe src={receiptUrl} style={{ width: '100%', height: 520, border: 'none' }} />
           </Box>
+        </ModalWrapper>
+      )}
+      {editOpen && editSale && (
+        <ModalWrapper
+          opened={editOpen}
+          onClose={() => { setEditOpen(false); setEditSale(null); }}
+          title={<Text fw={600}>Editar venta #{editSale.id}</Text>}
+          size={'xl'}
+          fullScreen={isMobile}
+        >
+          <SalesForm onClose={() => { setEditOpen(false); setEditSale(null); }} sale={editSale} />
         </ModalWrapper>
       )}
       {declineModalOpen && (

@@ -146,4 +146,39 @@ export const getSaleReceipt = [requireAuth, requireRole([1]), async (req: Reques
     }
 }]
 
+export const updateSale = [requireAuth, requireRole([1]), async (req: Request, res: Response) => {
+    try {
+        const id = String((req.params as any)?.id || '');
+        const request = req.body as SaleRequest;
+        if (!id) return res.status(400).json({ success: false, message: 'missing_id' });
+        const sale = await prisma.sales.findUnique({ where: { id } });
+        if (!sale) return res.status(404).json({ success: false, message: 'sale_not_found' });
+        if (String(sale.source) === 'WEB') return res.status(400).json({ success: false, message: 'edit_not_allowed_for_web' });
+        const hasProducts = Array.isArray(request.product_ids) && request.product_ids.length > 0;
+        const hasManual = !!request.loadedManually && Array.isArray(request.manualProducts) && request.manualProducts.length > 0;
+        if (!request.payment_method || (!hasProducts && !hasManual)) {
+            return res.status(400).json({ success: false, message: 'invalid_request' });
+        }
+        const rs = await SalesServices.updateSale(id, request);
+        if ((rs as any)?.success) return res.status(200).json({ success: true, sale: (rs as any).sale });
+        return res.status(400).json({ success: false, err: (rs as any)?.message || 'update_failed' });
+    } catch (error: any) {
+        console.log(error.message);
+        res.status(500).json({ success: false, err: error.message, message: 'internal_error' });
+    }
+}]
+
+export const deleteSale = [requireAuth, requireRole([1]), async (req: Request, res: Response) => {
+    try {
+        const id = String((req.params as any)?.id || '');
+        if (!id) return res.status(400).json({ success: false, message: 'missing_id' });
+        const rs = await SalesServices.deleteSale(id);
+        if ((rs as any)?.success) return res.status(200).json({ success: true });
+        return res.status(400).json({ success: false, err: (rs as any)?.message || 'delete_failed' });
+    } catch (error: any) {
+        console.log(error.message);
+        res.status(500).json({ success: false, err: error.message, message: 'internal_error' });
+    }
+}]
+
 
