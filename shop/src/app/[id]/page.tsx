@@ -8,9 +8,10 @@ import AddToCartButton from "@/Components/Cart/AddToCartButton"
 import type { Metadata } from "next"
 import CartWrapper from "@/Components/Cart/CartWrapper"
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function Page({ params }: { params: { id: string } }) {
+  const { id } = params
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
   const res = await fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 60 } })
   if (!res.ok) {
     return notFound()
@@ -45,12 +46,27 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             description: product.description,
             image: Array.isArray(product.images) ? product.images : [],
             category: product.category?.title || undefined,
+            url: `${siteUrl}/${id}`,
             offers: typeof product.price === "number" ? {
               "@type": "Offer",
               price: product.price,
               priceCurrency: "ARS",
+              url: `${siteUrl}/${id}`,
               availability: typeof product.stock === "number" && product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
             } : undefined
+          })
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, item: { "@id": siteUrl, name: "Inicio" } },
+              { "@type": "ListItem", position: 2, item: { "@id": `${siteUrl}/${id}`, name: product.title } }
+            ]
           })
         }}
       />
@@ -98,8 +114,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   )
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const { id } = params
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
   try {
     const res = await fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 300 } })
@@ -119,6 +135,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return {
       title,
       description,
+      metadataBase: new URL(urlBase),
       alternates: { canonical },
       openGraph: {
         title,
@@ -133,7 +150,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         description,
         images
       },
-      robots: { index: true, follow: true }
+      keywords: [
+        "Cinnamon",
+        "maquillaje",
+        "cosmética",
+        "belleza",
+        product.title,
+        product.category?.title || ""
+      ].filter((v) => typeof v === "string" && v.length > 0),
+      robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } }
     }
   } catch {
     return { title: "Producto", description: "Detalle de producto" }

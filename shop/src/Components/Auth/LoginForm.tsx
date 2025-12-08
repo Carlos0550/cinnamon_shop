@@ -78,6 +78,7 @@ export default function LoginForm({ onClose }: Props) {
         try {
           setLoading(true);
           await auth.exchangeClerkToBackend();
+          
         } catch (err) {
           const e = err as Error;
           setError(e?.message || "No se pudo crear sesión propia");

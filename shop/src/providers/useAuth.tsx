@@ -108,17 +108,12 @@ export function useAuth() {
     }
     const data = await res.json();
     const token = data.token as string;
-    const user: AuthProps = {
-      email: data.user.email,
-      name: data.user.name,
-      profileImage: data.user.profileImage || profileImage || '',
-      is_clerk: !!data.user.is_clerk,
-    };
+    
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_exchange_done', '1');
     try { document.cookie = `auth_token=${token}; Max-Age=${60 * 60 * 24}; Path=/`; } catch {}
-    setState({ token, user, loading: false });
-    return { token, user };
+    window.location.reload()
+    return { token };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseUrl, isSignedIn, clerkUser]);
 
