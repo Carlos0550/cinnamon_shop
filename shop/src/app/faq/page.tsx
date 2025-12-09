@@ -1,17 +1,9 @@
 "use client";
-import type { Metadata } from 'next';
 import { useQuery } from '@tanstack/react-query';
 import { useAppContext } from '@/providers/AppContext';
 import { Accordion, Stack, Title, Text } from '@mantine/core';
 
 type FAQ = { id: string; question: string; answer: string };
-
-export const metadata: Metadata = {
-  title: 'Preguntas frecuentes | Cinnamon',
-  description: 'Resuelve dudas sobre compras, envíos y pagos en Cinnamon.',
-  robots: { index: true, follow: true },
-  alternates: { canonical: (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001') + '/faq' },
-};
 
 export default function FAQPage() {
   const { utils: { baseUrl } } = useAppContext();
