@@ -1,4 +1,5 @@
 "use client";
+import type { Metadata } from 'next';
 import { useGetProfile, useUpdateProfile, useUploadAvatar } from '@/Api/useProfile';
 import { useAppContext } from '@/providers/AppContext';
 import { Avatar, Button, Grid, Group, Stack, Text, TextInput, Title } from '@mantine/core';
@@ -6,6 +7,13 @@ import { PasswordInput } from '@mantine/core';
 import { useEffect, useState, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { showNotification } from '@mantine/notifications';
+
+export const metadata: Metadata = {
+  title: 'Mi cuenta | Cinnamon',
+  description: 'Gestiona tu perfil y datos de envío en Cinnamon.',
+  robots: { index: false, follow: false },
+  alternates: { canonical: (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001') + '/account' },
+};
 
 export default function AccountPage() {
   const { auth, utils } = useAppContext();

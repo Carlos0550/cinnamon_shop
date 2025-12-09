@@ -1,0 +1,44 @@
+import { ImageResponse } from 'next/og'
+
+export const size = { width: 1200, height: 630 }
+export const contentType = 'image/png'
+export const runtime = 'edge'
+export const alt = 'Cinnamon Shop'
+
+export default async function OG({ searchParams }: { searchParams?: { title?: string; categoryId?: string } }) {
+  const titleQ = searchParams?.title?.trim() || ''
+  const catQ = searchParams?.categoryId?.trim() || ''
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: size.width,
+          height: size.height,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          padding: 64,
+          background: 'linear-gradient(135deg, #ffffff 0%, #ffe6f1 60%, #ffc6de 100%)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
+          <div style={{ fontSize: 56, fontWeight: 800, color: '#111' }}>Cinnamon Shop</div>
+        </div>
+        <div style={{ marginTop: 24, fontSize: 32, color: '#333' }}>Explora categorías y productos</div>
+        {titleQ && (
+          <div style={{ marginTop: 12, fontSize: 28, color: '#555' }}>Buscar: {titleQ}</div>
+        )}
+        {catQ && (
+          <div style={{ marginTop: 8, fontSize: 24, color: '#777' }}>Categoría seleccionada</div>
+        )}
+        <div style={{ position: 'absolute', bottom: 32, right: 48, fontSize: 24, color: '#333' }}>{new URL(siteUrl).host}</div>
+      </div>
+    ),
+    size
+  )
+}
+

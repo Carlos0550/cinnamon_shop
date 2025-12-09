@@ -51,6 +51,7 @@ export const analyzeProductImages = async (imageUrls: string[]): Promise<{ title
 
       - Asegurate que la descripción tenga un tono natural, como si no hubiera sido generado por IA.
       - Si la imagen contiene una marca de producto, intenta incluir el nombre de la marca en la descripción, esto asegura que el producto se sienta legítimo y seguro.
+      - En lo posible, intenta usar palabras claves para el SEO del producto, especialmente en el titulo del producto.
       **Formato de salida**  
       Responde exclusivamente con un objeto JSON válido, sin texto adicional, sin markdown, sin explicaciones:
       {

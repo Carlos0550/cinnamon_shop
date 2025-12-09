@@ -1,4 +1,5 @@
 "use client";
+import type { Metadata } from 'next';
 import useOrders from '@/Api/useOrders';
 import { Table, Pagination, Badge, Button, Card, Group, Stack, Text, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
@@ -6,6 +7,13 @@ import { useAppContext } from '@/providers/AppContext';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import { showNotification } from '@mantine/notifications';
+
+export const metadata: Metadata = {
+  title: 'Mis órdenes | Cinnamon',
+  description: 'Consulta el historial y detalles de tus órdenes.',
+  robots: { index: false, follow: false },
+  alternates: { canonical: (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001') + '/orders' },
+};
 
 export default function OrdersPage() {
   const { auth } = useAppContext();

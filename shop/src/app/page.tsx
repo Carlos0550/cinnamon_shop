@@ -43,6 +43,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const sp = await searchParams
   const titleQ = sp?.title?.trim()
   const catQ = sp?.categoryId?.trim()
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
   const base = "Cinnamon Makeup"
   const parts = [base]
   if (titleQ) parts.push(`Buscar: ${titleQ}`)
@@ -51,6 +52,20 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   return {
     title: fullTitle,
     description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
-    robots: { index: true, follow: true }
+    robots: { index: true, follow: true },
+    alternates: { canonical: siteUrl },
+    openGraph: {
+      title: fullTitle,
+      description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
+      url: siteUrl,
+      type: "website",
+      images: [{ url: `${siteUrl}/opengraph-image` }]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
+      images: [`${siteUrl}/opengraph-image`]
+    }
   }
 }
