@@ -35,6 +35,19 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#ffffff" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Cinnamon Shop",
+              url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001",
+              logo: "/logo.png",
+              image: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png"
+            })
+          }}
+        />
       </head>
       <body>
         <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>

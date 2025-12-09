@@ -9,6 +9,7 @@ export default async function OG({ searchParams }: { searchParams?: { title?: st
   const titleQ = searchParams?.title?.trim() || ''
   const catQ = searchParams?.categoryId?.trim() || ''
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
+  const bizImage = process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || ''
 
   return new ImageResponse(
     (
@@ -22,8 +23,16 @@ export default async function OG({ searchParams }: { searchParams?: { title?: st
           alignItems: 'flex-start',
           padding: 64,
           background: 'linear-gradient(135deg, #ffffff 0%, #ffe6f1 60%, #ffc6de 100%)',
-        }}
+          }}
       >
+        {bizImage && (
+          <img
+            src={bizImage}
+            width={size.width}
+            height={size.height}
+            style={{ position: 'absolute', inset: 0, objectFit: 'cover', opacity: 0.25 }}
+          />
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
           <div style={{ fontSize: 56, fontWeight: 800, color: '#111' }}>Cinnamon Shop</div>
@@ -41,4 +50,3 @@ export default async function OG({ searchParams }: { searchParams?: { title?: st
     size
   )
 }
-
