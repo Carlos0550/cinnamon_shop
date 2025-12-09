@@ -34,6 +34,30 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "Cinnamon Shop",
+            url: siteUrl,
+            image: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/logo.png`,
+          })
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            name: "Productos",
+            url: siteUrl,
+            primaryImageOfPage: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/logo.png`,
+          })
+        }}
+      />
       <HomeComponent />
     </>
   )
@@ -59,13 +83,15 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
       description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
       url: siteUrl,
       type: "website",
-      images: [{ url: `${siteUrl}/opengraph-image` }]
+      images: [
+        { url: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/opengraph-image` },
+      ]
     },
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
       description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
-      images: [`${siteUrl}/opengraph-image`]
+      images: [process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/opengraph-image`]
     }
   }
 }

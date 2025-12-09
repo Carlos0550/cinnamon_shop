@@ -14,13 +14,13 @@ export const metadata: Metadata = {
     description: "Tienda online de Maquillaje y cosméticos, situados en Candelaria Misiones Argentina",
     url: "/",
     type: "website",
-    images: [{ url: "/logo.png" }],
+    images: [{ url: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Cinnamon Shop",
     description: "Tienda online de Maquillaje y cosméticos, situados en Candelaria Misiones Argentina",
-    images: ["/logo.png"],
+    images: [process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png"],
   },
   robots: { index: true, follow: true },
 };
