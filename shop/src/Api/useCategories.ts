@@ -13,7 +13,7 @@ export interface Categories {
     
 }
 
-export const useCategories = () => {
+export const useCategories = (initialData?: CategoriesResponse) => {
     ///public/categories
     const {
         utils: {
@@ -22,6 +22,7 @@ export const useCategories = () => {
     } = useAppContext()
     return useQuery<CategoriesResponse>({
         queryKey: ['categories'],
+        initialData,
         queryFn: async (): Promise<CategoriesResponse> => {
             const res = await fetch(`${baseUrl}/products/public/categories`)
             const data = await res.json();

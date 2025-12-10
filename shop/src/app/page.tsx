@@ -1,29 +1,43 @@
 import type { Metadata } from "next"
 import HomeComponent from "@/Components/Home/Home"
-
+import { ProductsResponse, Products } from "@/Api/useProducts"
+import { CategoriesResponse } from "@/Api/useCategories"
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
+  
+  // Prepare Query Params for Products
   const qp = new URLSearchParams()
+  qp.append("limit", "30") // Default limit in Home.tsx
   if (sp?.title && sp.title.trim()) qp.append("title", sp.title.trim())
   if (sp?.categoryId && sp.categoryId.trim()) qp.append("categoryId", sp.categoryId.trim())
-  type PublicProduct = {
-    id: string
-    title: string
-    images?: string[]
-  }
-  let products: PublicProduct[] = []
+  
+  // Fetch Products
+  let productsData: ProductsResponse | undefined = undefined
+  let products: Products[] = []
   try {
     const res = await fetch(`${baseUrl}/products/public?${qp.toString()}`, { next: { revalidate: 180 } })
-    const json = await res.json().catch(() => null)
-    products = (json?.data?.products || []) as PublicProduct[]
+    if (res.ok) {
+        productsData = await res.json()
+        products = productsData?.data?.products || []
+    }
   } catch {}
+
+  // Fetch Categories
+  let categoriesData: CategoriesResponse | undefined = undefined
+  try {
+    const resCat = await fetch(`${baseUrl}/products/public/categories`, { next: { revalidate: 3600 } })
+    if (resCat.ok) {
+        categoriesData = await resCat.json()
+    }
+  } catch {}
+
   const itemList = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: Array.isArray(products) ? products.map((p: PublicProduct, idx: number) => ({
+    itemListElement: Array.isArray(products) ? products.map((p, idx) => ({
       "@type": "ListItem",
       position: idx + 1,
       url: `${siteUrl}/${p.id}`,
@@ -31,6 +45,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       image: Array.isArray(p.images) ? p.images[0] : undefined
     })) : []
   }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
@@ -58,7 +73,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           })
         }}
       />
-      <HomeComponent />
+      <HomeComponent initialProducts={productsData} initialCategories={categoriesData} />
     </>
   )
 }

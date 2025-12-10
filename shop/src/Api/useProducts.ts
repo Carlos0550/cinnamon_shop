@@ -68,7 +68,7 @@ export default function useProducts(params: FetchProductsParams){
     })
 }
 
-export function useInfiniteProducts(params: Omit<FetchProductsParams, 'page'>) {
+export function useInfiniteProducts(params: Omit<FetchProductsParams, 'page'> & { initialData?: ProductsResponse }) {
   const {
     utils: { baseUrl }
   } = useAppContext();
@@ -76,6 +76,10 @@ export function useInfiniteProducts(params: Omit<FetchProductsParams, 'page'>) {
   return useInfiniteQuery<ProductsResponse>({
     queryKey: ['products-infinite', params],
     initialPageParam: 1,
+    initialData: params.initialData ? {
+      pages: [params.initialData],
+      pageParams: [1]
+    } : undefined,
     queryFn: async ({ pageParam }) => {
       const qp = new URLSearchParams({
         page: String(pageParam ?? 1),

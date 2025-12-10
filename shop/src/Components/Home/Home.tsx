@@ -3,19 +3,22 @@
 "use client";
 import { Box, Flex, Title, Text, Container, Input, ActionIcon, NativeSelect, Loader, Stack, Center } from "@mantine/core";
 
-import { useInfiniteProducts, Products } from "@/Api/useProducts";
+import { useInfiniteProducts, Products, ProductsResponse } from "@/Api/useProducts";
 import ProductsCards from "./sub-components/ProductsCards";
-import { Categories, useCategories } from "@/Api/useCategories";
+import { Categories, CategoriesResponse, useCategories } from "@/Api/useCategories";
 import CategoriesCards from "./sub-components/CategoriesCards";
 import { useAppContext } from "@/providers/AppContext";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useDebouncedValue } from "@mantine/hooks";
-import { FaShoppingCart } from "react-icons/fa";
-import CinnamonLoader from "@/Components/CinnamonLoader/CinnamonLoader";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Cart from "../Cart/Cart";
 import CartWrapper from "../Cart/CartWrapper";
-export default function Home() {
+
+type Props = {
+  initialProducts?: ProductsResponse
+  initialCategories?: CategoriesResponse
+}
+
+export default function Home({ initialProducts, initialCategories }: Props) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -28,9 +31,10 @@ export default function Home() {
     const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteProducts({
         limit,
         title: debouncedSearch,
-        categoryId: selectedCategories[0]
+        categoryId: selectedCategories[0],
+        initialData: initialProducts
     })
-    const { data: categoriesData } = useCategories()
+    const { data: categoriesData } = useCategories(initialCategories)
     const categories: Categories[] = categoriesData?.data ?? []
     const products: Products[] = Array.isArray(data?.pages)
       ? data.pages.flatMap((p) => p?.data?.products ?? [])
@@ -134,8 +138,8 @@ export default function Home() {
                 </Box>
                 <Flex id="productos" wrap="wrap" justify="space-evenly" align="flex-start" mih={Array.isArray(products) && products.length > 0 ? "100vh" : "10vh"} flex={1} gap={20}>
                   {Array.isArray(products) && products.length > 0 ? (
-                      products.map((product) => (
-                          <ProductsCards key={product.id} product={product} />
+                      products.map((product, index) => (
+                          <ProductsCards key={product.id} product={product} priority={index < 4} />
                       ))
                   ) : (
                         <Stack align="center">

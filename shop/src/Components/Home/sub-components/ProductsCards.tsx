@@ -9,9 +9,10 @@ import { useState } from 'react'
 import Image from 'next/image';
 type Props = {
     product: Products
+    priority?: boolean
 }
 
-function ProductsCards({ product }: Props) {
+function ProductsCards({ product, priority = false }: Props) {
     const router = useRouter()
     const {
         utils: {
@@ -38,7 +39,8 @@ function ProductsCards({ product }: Props) {
                     fill
                     sizes="(max-width: 768px) 50vw, 350px"
                     style={{ objectFit: 'cover' }}
-                    onLoad={() => setTimeout(() => setImageLoading(false), 500)}
+                    onLoad={() => setImageLoading(false)}
+                    priority={priority}
                     alt={product.title}
                     onLoadingComplete={() => setNavigating(false)}
                 />

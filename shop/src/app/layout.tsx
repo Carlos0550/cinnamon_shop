@@ -3,6 +3,9 @@ import AppProvider from "../providers/AppProvider";
 import SiteLayout from "../Components/Layout/SiteLayout";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-stack" });
 
 export const metadata: Metadata = {
   title: "Cinnamon Shop",
@@ -31,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={inter.variable}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#ffffff" />
