@@ -50,10 +50,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ClerkProvider
-          publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-          clerkJSUrl={"https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"}
-        >
+        <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
           <AppProvider>
               <SiteLayout>{children}</SiteLayout>
           </AppProvider>
