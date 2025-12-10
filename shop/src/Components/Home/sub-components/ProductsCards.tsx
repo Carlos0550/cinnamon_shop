@@ -25,18 +25,18 @@ function ProductsCards({ product }: Props) {
     const mobileCardWidth = "calc(50% - 10px)"; 
 
     const renderLoader = () => (
-        <Flex align="center" justify="center" style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.8)' }}>
+        <Flex align="center" justify="center" style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.9)', zIndex: 1 }}>
             <Loader type="bars" />
         </Flex>
     )
     return (
         <Card shadow="sm" radius="md" withBorder w={isMobile ? mobileCardWidth : 350}>
-            <Card.Section style={{ position: 'relative', height: 300 }}>
+            <Card.Section style={{ position: 'relative', paddingBottom: '75%', height: 0 }}>
                 {imageLoading && renderLoader()}
                 <Image
                     src={product.images[0]}
-                    height={300}
-                    width={350}
+                    fill
+                    sizes="(max-width: 768px) 50vw, 350px"
                     style={{ objectFit: 'cover' }}
                     onLoad={() => setTimeout(() => setImageLoading(false), 500)}
                     alt={product.title}
