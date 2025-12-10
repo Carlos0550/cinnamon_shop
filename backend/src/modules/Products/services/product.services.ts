@@ -2,10 +2,32 @@ import { Request, Response } from "express";
 import { uploadImage, deleteImage } from "@/config/supabase";
 import fs from "fs";
 import { prisma } from "@/config/prisma";
+import { redis } from "@/config/redis";
 import { CategoryStatus, ProductState } from "@prisma/client";
 import { UpdateCategoryStatusSchema, UpdateProductRequest, UpdateProductStatusSchema } from "./product.zod";
 import { analyzeProductImages } from "@/config/openai";
 class ProductServices {
+    async refreshAllProductsCache() {
+        const products = await prisma.products.findMany({ include: { category: true } });
+        await redis.set("products:all", JSON.stringify(products));
+        for (const p of products) {
+            await redis.set(`product:${p.id}`, JSON.stringify(p));
+        }
+    }
+
+    async refreshProductCache(productId: string) {
+        const product = await prisma.products.findUnique({ where: { id: productId }, include: { category: true } });
+        if (product) {
+            await redis.set(`product:${productId}`, JSON.stringify(product));
+            const cached = await redis.get("products:all");
+            if (cached) {
+                const arr = JSON.parse(cached) as any[];
+                const idx = arr.findIndex((x) => x.id === productId);
+                if (idx >= 0) arr[idx] = product; else arr.unshift(product);
+                await redis.set("products:all", JSON.stringify(arr));
+            }
+        }
+    }
     async saveProduct(req: Request, res: Response) {
         const {
             title,
@@ -84,6 +106,8 @@ class ProductServices {
                 stock: finalStock,
             }
         });
+
+        await this.refreshProductCache(product.id);
 
         return res.status(201).json({
             ok: true,
@@ -304,12 +328,14 @@ class ProductServices {
                 });
             }
 
-            await prisma.products.update({
-                where: { id: product_id },
-                data: {
-                    state: ProductState.deleted,
-                }
-            });
+        await prisma.products.update({
+            where: { id: product_id },
+            data: {
+                state: ProductState.deleted,
+            }
+        });
+
+            await this.refreshProductCache(product_id);
 
             return res.status(200).json({
                 ok: true,
@@ -481,6 +507,7 @@ class ProductServices {
             }
             const nextState: ProductState = q > 0 ? ProductState.active : ProductState.out_stock;
             await prisma.products.update({ where: { id: product_id }, data: { stock: q, state: nextState } });
+            await this.refreshProductCache(product_id);
             return res.status(200).json({ ok: true, message: 'Stock actualizado', stock: q, state: nextState });
         } catch (error) {
             console.error('Error al actualizar stock:', error);
@@ -646,52 +673,42 @@ class ProductServices {
         try {
             const page = Number(req.query.page) || 1;
             const limit = Number(req.query.limit) || 12;
-            const skip = (page - 1) * limit;
-
             const title = (req.query.title as string) || undefined;
             const categoryId = (req.query.categoryId as string) || undefined;
             const sortBy = (req.query.sortBy as string) || undefined;
             const sortOrder = (req.query.sortOrder as "asc" | "desc") || "asc";
 
-            const where: any = {
-                is_active: true,
-                state: "active",
-            };
-
-            if (title) {
-                where.title = { contains: title, mode: "insensitive" };
+            const cached = await redis.get("products:all");
+            let products: any[] = [];
+            if (cached) {
+                products = (JSON.parse(cached) as any[]).filter((p) => p.is_active === true && p.state === "active");
+                if (title) products = products.filter((p) => typeof p.title === "string" && p.title.toLowerCase().includes(title.toLowerCase()));
+                if (categoryId) products = products.filter((p) => p.categoryId === categoryId);
+                if (sortBy) {
+                    products.sort((a, b) => {
+                        const av = a[sortBy]; const bv = b[sortBy];
+                        if (av === bv) return 0;
+                        return sortOrder === "asc" ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+                    });
+                } else {
+                    products.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                }
+                const totalProducts = products.length;
+                const totalPages = Math.ceil(totalProducts / limit) || 1;
+                const slice = products.slice((page - 1) * limit, (page - 1) * limit + limit);
+                return res.status(200).json({ ok: true, data: { products: slice, pagination: { total: totalProducts, page, limit, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 } } });
             }
-            if (categoryId) {
-                where.categoryId = categoryId;
-            }
 
-            const [totalProducts, products] = await Promise.all([
+            const skip = (page - 1) * limit;
+            const where: any = { is_active: true, state: "active" };
+            if (title) where.title = { contains: title, mode: "insensitive" };
+            if (categoryId) where.categoryId = categoryId;
+            const [totalProducts, dbProducts] = await Promise.all([
                 prisma.products.count({ where }),
-                prisma.products.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    include: { category: true },
-                    orderBy: sortBy ? [{ [sortBy]: sortOrder }] : [{ created_at: "desc" }],
-                }),
+                prisma.products.findMany({ where, skip, take: limit, include: { category: true }, orderBy: sortBy ? [{ [sortBy]: sortOrder }] : [{ created_at: "desc" }] })
             ]);
-
             const totalPages = Math.ceil(totalProducts / limit) || 1;
-
-            return res.status(200).json({
-                ok: true,
-                data: {
-                    products,
-                    pagination: {
-                        total: totalProducts,
-                        page,
-                        limit,
-                        totalPages,
-                        hasNextPage: page < totalPages,
-                        hasPrevPage: page > 1,
-                    },
-                },
-            });
+            return res.status(200).json({ ok: true, data: { products: dbProducts, pagination: { total: totalProducts, page, limit, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 } } });
         } catch (error) {
             console.error("Error al obtener productos públicos:", error);
             return res.status(500).json({

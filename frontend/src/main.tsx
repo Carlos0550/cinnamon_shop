@@ -5,13 +5,13 @@ import './index.css'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
 import "@mantine/dates/styles.css"
-import { MantineProvider, ColorSchemeScript, useMantineColorScheme } from '@mantine/core'
+import { MantineProvider, ColorSchemeScript } from '@mantine/core'
 import { ModalsProvider } from '@mantine/modals'
 import { Notifications } from '@mantine/notifications'
 import App from '@/App'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppContextProvider } from '@/Context/AppContext'
-import { theme } from '@/theme'
+import ActivePaletteProvider from '@/providers/ActivePaletteProvider'
 import { BrowserRouter } from 'react-router-dom'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -26,18 +26,17 @@ dayjs.tz.setDefault('America/Argentina/Buenos_Aires')
 dayjs.locale('es')
 
 function PrimaryColorProvider({ children }: { children: React.ReactNode }) {
-  const { colorScheme } = useMantineColorScheme();
   return (
-    <MantineProvider theme={{ ...theme, primaryColor: colorScheme === 'dark' ? 'rose' : 'rose' }}>
+    <ActivePaletteProvider>
       {children}
-    </MantineProvider>
+    </ActivePaletteProvider>
   );
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ColorSchemeScript defaultColorScheme="auto" />
-    <MantineProvider theme={theme} defaultColorScheme="auto">
+    <MantineProvider defaultColorScheme="auto">
       <PrimaryColorProvider>
         <ModalsProvider>
           <Notifications position="top-right" />

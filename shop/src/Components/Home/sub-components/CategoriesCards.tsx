@@ -41,9 +41,9 @@ export default function CategoriesCards({ categories }: { categories: Categories
             </CardSection>
           ) : (
             <CardSection>
-              <Center style={{ height: 140, background: "var(--mantine-color-rose-1)" }}>
+              <Center style={{ height: 140, background: "var(--mantine-color-primary-1)" }}>
                 <Group gap="xs">
-                  <ThemeIcon color="rose" variant="light" radius="xl" size={36}>
+                  <ThemeIcon color="primary" variant="light" radius="xl" size={36}>
                     <span style={{ fontSize: 18 }}>🗂️</span>
                   </ThemeIcon>
                   <Text fw={600} size="lg">
@@ -62,7 +62,7 @@ export default function CategoriesCards({ categories }: { categories: Categories
             Explorá productos de esta categoría
           </Text>
           <Group mt="md">
-            <Button variant="light" color="rose" onClick={() => goToCategory(category.id)}>
+            <Button variant="light" onClick={() => goToCategory(category.id)}>
               Ver más
             </Button>
           </Group>

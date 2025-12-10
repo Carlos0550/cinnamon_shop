@@ -1,6 +1,6 @@
 
 import { useAppContext } from "@/providers/AppContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 
 export type FetchProductsParams = {
     page: number;
@@ -33,6 +33,9 @@ export type ProductsResponse = {
             page: number;
             limit: number;
             total: number;
+            totalPages?: number;
+            hasNextPage?: boolean;
+            hasPrevPage?: boolean;
         };
     };
 };
@@ -63,4 +66,37 @@ export default function useProducts(params: FetchProductsParams){
         },
         placeholderData: (previousData) => previousData
     })
+}
+
+export function useInfiniteProducts(params: Omit<FetchProductsParams, 'page'>) {
+  const {
+    utils: { baseUrl }
+  } = useAppContext();
+
+  return useInfiniteQuery<ProductsResponse>({
+    queryKey: ['products-infinite', params],
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const qp = new URLSearchParams({
+        page: String(pageParam ?? 1),
+        limit: String(params.limit),
+      });
+      if (params.title && params.title.trim().length > 0) qp.append('title', params.title.trim());
+      if (params.categoryId) qp.append('categoryId', params.categoryId);
+      const res = await fetch(`${baseUrl}/products/public?${qp}`);
+      const data = await res.json();
+      return data as ProductsResponse;
+    },
+    getNextPageParam: (lastPage) => {
+      const pag = lastPage?.data?.pagination;
+      if (!pag) return undefined;
+      if (typeof pag.hasNextPage === "boolean") {
+        return pag.hasNextPage ? (pag.page || 1) + 1 : undefined;
+      }
+      const totalPages = typeof pag.totalPages === "number"
+        ? pag.totalPages
+        : Math.ceil((pag.total || 0) / (pag.limit || 1));
+      return pag.page < totalPages ? (pag.page || 1) + 1 : undefined;
+    },
+  });
 }

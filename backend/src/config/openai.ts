@@ -107,3 +107,41 @@ export const analyzeProductImages = async (imageUrls: string[]): Promise<{ title
 };
 
 export { openai };
+
+export const generatePaletteFromPrompt = async (prompt: string): Promise<{ name: string; colors: string[] }> => {
+  const systemPrompt = `
+Eres un diseñador experto de UI. Genera una paleta de 10 colores HEX compatible con Mantine (shades del 0 al 9) para un tema principal.
+
+Requisitos:
+- Responder SOLO JSON válido con las claves: name (string corto) y colors (array de 10 strings HEX, p.ej. "#AABBCC").
+- colors MUST tener 10 entradas ordenadas de claro (índice 0) a oscuro (índice 9).
+- Usa combinaciones armónicas y legibles para UI.
+- No incluyas texto adicional ni markdown.
+Formato de salida:
+{"name":"...","colors":["#...", "#...", "#...", "#...", "#...", "#...", "#...", "#...", "#...", "#..."]}
+`;
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: [{ type: "text", text: `Genera una paleta según: ${prompt}` }] as any },
+    ],
+    temperature: 0.7,
+    max_tokens: 400,
+  });
+  const content = response.choices[0]?.message?.content?.trim();
+  if (!content) throw new Error("No se recibió respuesta de OpenAI");
+  let jsonContent = content;
+  if (jsonContent.startsWith('```json')) {
+    jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonContent.startsWith('```')) {
+    jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  const parsed = JSON.parse(jsonContent);
+  const name = typeof parsed.name === 'string' && parsed.name.length ? parsed.name.slice(0, 30) : 'generated';
+  const colors = Array.isArray(parsed.colors) ? parsed.colors : [];
+  if (colors.length !== 10 || !colors.every((c: any) => typeof c === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c))) {
+    throw new Error('La paleta generada no es válida');
+  }
+  return { name, colors };
+};

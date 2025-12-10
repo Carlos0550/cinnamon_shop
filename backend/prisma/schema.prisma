@@ -241,3 +241,37 @@ model FAQ {
   @@index([deleted_at])
   @@index([created_at])
 }
+
+model BusinessData {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  address   String
+  city      String
+  state     String
+  bankData  BusinessBankData[]
+}
+model BusinessBankData{
+  id        String   @id @default(cuid())
+  bank_name String
+  account_number String
+  account_holder String
+  businessId      String
+  business       BusinessData @relation(fields: [businessId], references: [id])
+}
+
+model ColorPalette {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  colors          String[]
+  is_active       Boolean  @default(true)
+  use_for_admin   Boolean  @default(false)
+  use_for_shop    Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamptz(3)
+  updated_at      DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([is_active])
+  @@index([use_for_admin])
+  @@index([use_for_shop])
+}

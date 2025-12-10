@@ -9,6 +9,8 @@ import Login from './pages/Login'
 import { Promos } from './pages/Promos'
 import FAQ from './pages/FAQ'
 import { Sales } from './pages/Sales'
+import Business from './pages/Business'
+import Colors from './pages/Colors'
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
           <Route path="sales" element={<Sales />} />
           <Route path="promos" element={<Promos />} />
           <Route path="faq" element={<FAQ />} />
+          <Route path="business" element={<Business />} />
+          <Route path="colors" element={<Colors />} />
           
         </Route>
       </Routes>

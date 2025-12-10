@@ -1,6 +1,6 @@
 "use client";
 import { useAppContext } from "@/providers/AppContext";
-import { AppShell, Burger, Group, Anchor, Stack, Flex, Text, Avatar, Button } from "@mantine/core";
+import { AppShell, Burger, Group, Anchor, Stack, Flex, Text, Avatar, Button, useMantineColorScheme, ActionIcon } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import Link from "next/link";
 import LoginForm from "../Auth/LoginForm";
@@ -29,6 +29,7 @@ export default function SiteLayout({ children }: Props) {
     >
       <AppShell.Header style={{ background: "var(--mantine-color-body)" }}>
         <Group justify="space-between" px="md" h="100%">
+            <ColorSchemeToggle />
           <Group>
             <Burger opened={opened} onClick={toggle} aria-label="Toggle navigation" hiddenFrom="lg" />
             {!isMobile ? (
@@ -74,7 +75,7 @@ export default function SiteLayout({ children }: Props) {
         </Stack>
       </AppShell.Navbar>
 
-      <AppShell.Main style={{ background: "var(--mantine-color-body)" }}>
+      <AppShell.Main bg="var(--mantine-color-body)">
         {children}
       </AppShell.Main>
       <AuthModal opened={authOpened} onClose={closeAuth}>
@@ -84,17 +85,17 @@ export default function SiteLayout({ children }: Props) {
   );
 }
 
-// function ColorSchemeToggle() {
-//   const { colorScheme, setColorScheme } = useMantineColorScheme();
-//   const isDark = colorScheme === "dark";
-//   return (
-//     <ActionIcon
-//       variant="light"
-//       aria-label="Toggle color scheme"
-//       onClick={() => setColorScheme(isDark ? "light" : "dark")}
-//       title={isDark ? "Cambiar a claro" : "Cambiar a oscuro"}
-//     >
-//       <span style={{ fontSize: 18 }}>{isDark ? "☀️" : "🌙"}</span>
-//     </ActionIcon>
-//   );
-// }
+function ColorSchemeToggle() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const isDark = colorScheme === "dark";
+  return (
+    <ActionIcon
+      variant="light"
+      aria-label="Toggle color scheme"
+      onClick={() => setColorScheme(isDark ? "light" : "dark")}
+      title={isDark ? "Cambiar a claro" : "Cambiar a oscuro"}
+    >
+      <span style={{ fontSize: 18 }}>{isDark ? "☀️" : "🌙"}</span>
+    </ActionIcon>
+  );
+}

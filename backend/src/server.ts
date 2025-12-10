@@ -13,11 +13,14 @@ import SalesRouter from '@/modules/Sales/routes';
 import CartRouter from '@/modules/Cart/routes';
 import OrdersRouter from '@/modules/Orders/routes';
 import ProfileRouter from '@/modules/Profile/routes';
+import BusinessRouter from '@/modules/Business/router';
 import FaqRouter from '@/modules/FAQ/routes';
+import PaletteRouter from '@/modules/Palettes/routes';
 import { initUploadsCleanupJob } from './jobs/cleanupUploads';
 import swaggerUi from 'swagger-ui-express';
 import spec from './docs/openapi';
 import morgan from 'morgan';
+import { initProductsCacheSyncJob } from './jobs/productsCacheSync';
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -53,10 +56,13 @@ app.use("/api/promos", PromoRouter)
 app.use("/api/sales", SalesRouter)
 app.use("/api/cart", CartRouter)
 app.use("/api/orders", OrdersRouter)
+app.use("/api/business", BusinessRouter)
+app.use("/api", PaletteRouter)
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
 app.get('/docs.json', (_req, res) => res.json(spec));
 
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);
   initUploadsCleanupJob();
+  initProductsCacheSyncJob();
 });

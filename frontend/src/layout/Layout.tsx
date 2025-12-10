@@ -59,6 +59,8 @@ export default function Layout() {
           <Anchor component={Link} to="/users">Usuarios</Anchor>
           <Anchor component={Link} to="/promos">Promociones</Anchor>
           <Anchor component={Link} to="/faq">FAQ</Anchor>
+          <Anchor component={Link} to="/business">Negocio</Anchor>
+          <Anchor component={Link} to="/colors">Colores</Anchor>
           
         </Stack>
       </AppShell.Navbar>

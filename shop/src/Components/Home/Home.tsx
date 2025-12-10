@@ -1,14 +1,14 @@
 
 
 "use client";
-import { Box, Flex, Title, Text, Container, Input, ActionIcon, NativeSelect, Loader, Stack } from "@mantine/core";
+import { Box, Flex, Title, Text, Container, Input, ActionIcon, NativeSelect, Loader, Stack, Center } from "@mantine/core";
 
-import useProducts, { Products } from "@/Api/useProducts";
+import { useInfiniteProducts, Products } from "@/Api/useProducts";
 import ProductsCards from "./sub-components/ProductsCards";
 import { Categories, useCategories } from "@/Api/useCategories";
 import CategoriesCards from "./sub-components/CategoriesCards";
 import { useAppContext } from "@/providers/AppContext";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useDebouncedValue } from "@mantine/hooks";
 import { FaShoppingCart } from "react-icons/fa";
 import CinnamonLoader from "@/Components/CinnamonLoader/CinnamonLoader";
@@ -21,23 +21,20 @@ export default function Home() {
     const searchParams = useSearchParams()
     const initialTitle = useMemo(() => searchParams.get("title") || "", [searchParams])
     const initialCategoryId = useMemo(() => searchParams.get("categoryId") || "", [searchParams])
-    const [pagination] = useState({
-        page: 1,
-        limit: 30,
-        total: 0,
-    })
+    const [limit] = useState(30)
     const [search, setSearch] = useState(initialTitle)
     const [debouncedSearch] = useDebouncedValue(search, 400)
     const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategoryId ? [initialCategoryId] : [])
-    const { data, isLoading, isFetching } = useProducts({
-        page: pagination.page,
-        limit: pagination.limit,
+    const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteProducts({
+        limit,
         title: debouncedSearch,
         categoryId: selectedCategories[0]
     })
     const { data: categoriesData } = useCategories()
     const categories: Categories[] = categoriesData?.data ?? []
-    const products: Products[] = data?.data?.products ?? []
+    const products: Products[] = Array.isArray(data?.pages)
+      ? data.pages.flatMap((p) => p?.data?.products ?? [])
+      : []
     const {
         utils: {
             capitalizeTexts,
@@ -75,15 +72,21 @@ export default function Home() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams])
 
-    if (isLoading) { 
-        return (
-            <Flex h={"100vh"} justify="center" align="center">
-                <CinnamonLoader />
-            </Flex>
-        )
-    }
+    const sentinelRef = useRef<HTMLDivElement | null>(null)
 
-    
+    useEffect(() => {
+      const el = sentinelRef.current
+      if (!el) return
+      const obs = new IntersectionObserver((entries) => {
+        const first = entries[0]
+        if (first.isIntersecting && hasNextPage) {
+          fetchNextPage()
+        }
+      })
+      obs.observe(el)
+      return () => { obs.disconnect() }
+    }, [sentinelRef, hasNextPage, fetchNextPage])
+
     return (
         <Box >
             <Flex direction="column" justify={"center"}>
@@ -91,7 +94,11 @@ export default function Home() {
                     <Container size="xl">
                         <Title order={2} mb="xs">Categorías</Title>
                         <Text c="dimmed" mb="md">Explorá por categoría y encontrá lo que buscás.</Text>
-                        <CategoriesCards categories={categories} />
+                        {isLoading ? (
+                          <Center my={20}><Loader size="sm"/></Center>
+                        ) : (
+                          <CategoriesCards categories={categories} />
+                        )}
                     </Container>
                 </Box>
 
@@ -109,7 +116,7 @@ export default function Home() {
                             w={isMobile ? "100%" : 300}
                             value={search}
                             onChange={(e) => setSearch(e.currentTarget.value)}
-                            rightSection={isFetching ? <Loader size="xs" /> : null}
+                            rightSection={isFetchingNextPage ? <Loader size="xs" /> : null}
                         />
                         <NativeSelect
                             mb={10}
@@ -132,13 +139,12 @@ export default function Home() {
                       ))
                   ) : (
                         <Stack align="center">
-                            {isLoading ? (
-                                <Loader size="xs" />
-                            ) : (
-                                <Text c="dimmed">No hay productos disponibles</Text>
-                            )}
+                            {isLoading ? <Loader size="xs" /> : <Text c="dimmed">No hay productos disponibles</Text>}
                         </Stack>
                     )}
+                  <Box ref={(el) => { sentinelRef.current = el }} w="100%" my={20}>
+                    {isFetchingNextPage ? <Loader size="sm" /> : (hasNextPage ? <Text c="dimmed">Cargando más...</Text> : null)}
+                  </Box>
                 </Flex>
             </Flex>
             <CartWrapper/>
