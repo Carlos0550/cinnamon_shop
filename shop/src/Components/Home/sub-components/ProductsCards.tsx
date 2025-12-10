@@ -2,11 +2,11 @@
 import { Products } from '@/Api/useProducts'
 import AddToCartButton from '@/Components/Cart/AddToCartButton';
 import { useAppContext } from '@/providers/AppContext'
-import { Badge, Button, Card, Flex, Group, Image, Text, Loader } from '@mantine/core'
+import { Badge, Button, Card, Flex, Group, Text, Loader } from '@mantine/core'
 import { useRouter } from 'next/navigation'
 import { FaCartPlus, FaInfoCircle } from 'react-icons/fa'
 import { useState } from 'react'
-
+import Image from 'next/image';
 type Props = {
     product: Products
 }
@@ -20,16 +20,27 @@ function ProductsCards({ product }: Props) {
 
     } = useAppContext()
     const [navigating, setNavigating] = useState(false)
+    const [imageLoading, setImageLoading] = useState(true)
  
     const mobileCardWidth = "calc(50% - 10px)"; 
+
+    const renderLoader = () => (
+        <Flex align="center" justify="center" style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.8)' }}>
+            <Loader type="bars" />
+        </Flex>
+    )
     return (
         <Card shadow="sm" radius="md" withBorder w={isMobile ? mobileCardWidth : 350}>
-            <Card.Section>
+            <Card.Section style={{ position: 'relative', height: 300 }}>
+                {imageLoading && renderLoader()}
                 <Image
                     src={product.images[0]}
-                    height={200}
+                    height={300}
+                    width={350}
+                    style={{ objectFit: 'cover' }}
+                    onLoad={() => setTimeout(() => setImageLoading(false), 500)}
                     alt={product.title}
-                    fit="cover"
+                    onLoadingComplete={() => setNavigating(false)}
                 />
             </Card.Section>
 
