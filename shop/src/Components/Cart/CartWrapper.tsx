@@ -16,7 +16,7 @@ function CartWrapper() {
         <>
             <ActionIcon
                 variant="filled"
-                color="rose"
+               
                 radius="xl"
                 size={isMobile ? "xl" : "xl"}
                 style={{ position: "fixed", right: isMobile ? 16 : 24, bottom: isMobile ? 16 : 24, zIndex: 1000 }}
