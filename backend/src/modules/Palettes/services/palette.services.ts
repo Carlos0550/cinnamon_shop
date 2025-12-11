@@ -23,9 +23,16 @@ export class PaletteServices {
 
   async list() {
     const cached = await redis.get("palettes:all");
-    if (cached) return JSON.parse(cached);
+    if (cached){
+      const sorted_palettes = JSON.parse(cached).sort(
+        (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      console.log("Paletas:", sorted_palettes);
+      return sorted_palettes;
+    }
     try {
       const data = await prisma.colorPalette.findMany({ orderBy: { created_at: "desc" } });
+      console.log("Paletas:", data);
       await redis.set("palettes:all", JSON.stringify(data));
       return data;
     } catch {

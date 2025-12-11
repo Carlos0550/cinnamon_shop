@@ -1,5 +1,6 @@
+'use client'
 import { useDisclosure } from '@mantine/hooks';
-import { AppShell, Burger, Group, Anchor, Stack, ActionIcon, Button, PasswordInput, Text } from '@mantine/core';
+import { AppShell, Burger, Group, Anchor, Stack, ActionIcon, Button, PasswordInput, Text, Loader } from '@mantine/core';
 import { Link, Outlet } from 'react-router-dom';
 import { FiMenu } from 'react-icons/fi';
 import { useMantineColorScheme } from '@mantine/core';
@@ -7,10 +8,12 @@ import { FiMoon, FiSun } from 'react-icons/fi';
 import { useAppContext } from '@/Context/AppContext';
 import ModalWrapper from '@/components/Common/ModalWrapper';
 import { useState } from 'react';
+import { useGetBusiness } from '@/components/Api/BusinessApi';
 
 export default function Layout() {
   const [opened, { toggle, close }] = useDisclosure(false);
-  const { auth } = useAppContext();
+  const { auth, utils } = useAppContext();
+  const {data, isPending} = useGetBusiness()
   const [changeOpened, setChangeOpened] = useState(false);
   const [oldPass, setOldPass] = useState('');
   const [newPass, setNewPass] = useState('');
@@ -22,7 +25,7 @@ export default function Layout() {
     if (environment === 'development') {
       window.open('http://localhost:3001', '_blank');
     } else {
-      window.open('https://cinnamon-makeup.com/', '_blank');
+      window.open(import.meta.env.VITE_PRODUCTION_API_URL, '_blank');
     }
   }
   return (
@@ -36,21 +39,34 @@ export default function Layout() {
           <Group>
             <Burger opened={opened} onClick={toggle} aria-label="Toggle navigation" hiddenFrom="lg" />
             <FiMenu size={20} style={{ display: 'none' }} />
-            <Anchor component={Link} to="/" fw={700}>
-              Cinnamon Admin
-            </Anchor>
+            {isPending ? (
+              <Loader type="bars"/>
+            ) : (
+              <Anchor component={Link} to="/" fw={700}>
+                {data?.name || 'Gestión de mi tienda'}
+              </Anchor>
+            )}
           </Group>
-          <Group>
+          {!utils.isMobile && (
+            <Group>
             <ColorSchemeToggle />
             <Button variant="light" size="xs" onClick={() => setChangeOpened(true)}>Cambiar contraseña</Button>
             <Button variant="light" size="xs" onClick={() => auth.logout(false)}>Cerrar sesión</Button>
           </Group>
+          )}
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar p="md" style={{ background: 'var(--mantine-color-body)' }}>
         <Stack gap="sm" onClick={close}>
           {/* <ColorSchemeToggle /> */}
+          {utils.isMobile && (
+            <Group>
+            <ColorSchemeToggle />
+            <Button variant="light" size="xs" onClick={() => setChangeOpened(true)}>Cambiar contraseña</Button>
+            <Button variant="light" size="xs" onClick={() => auth.logout(false)}>Cerrar sesión</Button>
+          </Group>
+          )}
           <Anchor component={Link} to="/" onClick={goToShop}>Ir a mi tienda</Anchor>
           <Anchor component={Link} to="/">Inicio</Anchor>
           <Anchor component={Link} to="/products">Productos</Anchor>
@@ -61,7 +77,6 @@ export default function Layout() {
           <Anchor component={Link} to="/faq">FAQ</Anchor>
           <Anchor component={Link} to="/business">Negocio</Anchor>
           <Anchor component={Link} to="/colors">Colores</Anchor>
-          
         </Stack>
       </AppShell.Navbar>
 

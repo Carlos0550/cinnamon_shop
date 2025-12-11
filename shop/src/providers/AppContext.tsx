@@ -15,7 +15,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
   const utils = useUtils()
   const auth = useAuth()
-  const cart = useCart()
+  const cart = useCart(utils.baseUrl, auth.state.token)
   const value = useMemo(
     () => ({ 
       utils,

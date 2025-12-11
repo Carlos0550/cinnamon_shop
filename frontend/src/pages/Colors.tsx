@@ -1,7 +1,8 @@
-import { useListPalettes, useCreatePalette, useActivatePalette, useSetUsage, useGeneratePalette, useRandomPalette } from "@/components/Api/PalettesApi";
-import { Button, Container, Group, Stack, Table, TextInput, Title, Switch, ColorInput } from "@mantine/core";
+import { useListPalettes, useCreatePalette, useActivatePalette, useSetUsage, useGeneratePalette, useRandomPalette, useDeletePalette } from "@/components/Api/PalettesApi";
+import { Button, Container, Group, Stack, Table, TextInput, Title, Switch, ColorInput, ActionIcon } from "@mantine/core";
 import ModalWrapper from "@/components/Common/ModalWrapper";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FiTrash } from "react-icons/fi";
 
 export default function Colors() {
   const { data: palettes } = useListPalettes();
@@ -9,12 +10,16 @@ export default function Colors() {
   const activateMutation = useActivatePalette();
   const setUsageMutation = useSetUsage();
   const generateMutation = useGeneratePalette();
+  const deleteMutation = useDeletePalette()
   const randomMutation = useRandomPalette();
   const [name, setName] = useState("");
   const [colors, setColors] = useState<string[]>(Array.from({ length: 10 }, () => ""));
   const [prompt, setPrompt] = useState("");
   const [promptModal, setPromptModal] = useState(false);
-
+  
+  useEffect(()=>{
+    console.log("Paletas:", palettes);
+  },[palettes])
   return (
     <Container>
       <Stack>
@@ -26,7 +31,7 @@ export default function Colors() {
               <Table.Th>Activa</Table.Th>
               <Table.Th>Admin</Table.Th>
               <Table.Th>Shop</Table.Th>
-              <Table.Th>Acciones</Table.Th>
+              <Table.Th></Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -34,18 +39,36 @@ export default function Colors() {
               <Table.Tr key={p.id}>
                 <Table.Td>{p.name}</Table.Td>
                 <Table.Td>
-                  <Switch checked={p.is_active} onChange={() => activateMutation.mutate({ id: p.id, active: !p.is_active })} size="sm"/>
+                  <Switch
+                    checked={p.is_active}
+                    disabled={activateMutation.isPending || p.is_active}
+                    
+                    onChange={() => activateMutation.mutate({ id: p.id, active: !p.is_active })}
+                    size="sm" />
                 </Table.Td>
                 <Table.Td>
-                  <Switch checked={p.use_for_admin} onChange={() => setUsageMutation.mutate({ paletteId: p.id, target: "admin" })} size="sm"/>
+                  <Switch
+                    checked={p.use_for_admin}
+                    disabled={setUsageMutation.isPending || p.use_for_admin}
+                    onChange={() => setUsageMutation.mutate({ paletteId: p.id, target: "admin" })}
+                    size="sm" />
                 </Table.Td>
                 <Table.Td>
-                  <Switch checked={p.use_for_shop} onChange={() => setUsageMutation.mutate({ paletteId: p.id, target: "shop" })} size="sm"/>
+                  <Switch
+                    checked={p.use_for_shop}
+                    disabled={setUsageMutation.isPending || p.use_for_shop}
+                    onChange={() => setUsageMutation.mutate({ paletteId: p.id, target: "shop" })}
+                    size="sm" />
                 </Table.Td>
+
                 <Table.Td>
-                  <Group gap="xs">
-                    <TextInput readOnly value={`ID: ${p.id}`} w={220} />
-                  </Group>
+                  <Button 
+                      variant="light"  
+                      disabled={deleteMutation.isPending}
+                      onClick={() => deleteMutation.mutate(p.id)}
+                      leftSection={<FiTrash/>}>
+                        Eliminar
+                    </Button>
                 </Table.Td>
               </Table.Tr>
             ))}

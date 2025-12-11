@@ -7,6 +7,8 @@ import { sendEmail } from "@/config/resend";
 import { welcomeKuromiHTML } from "@/templates/welcome_kuromi";
 import { new_user_html } from "@/templates/new_user";
 import { verifyToken as verifyClerkToken } from "@clerk/backend";
+import BusinessServices from "@/modules/Business/business.services";
+import PaletteServices from "@/modules/Palettes/services/palette.services";
 
 class AuthServices {
     async loginAdmin(req: Request, res: Response) {
@@ -255,7 +257,9 @@ class AuthServices {
 
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
         try {
-            const html = welcomeKuromiHTML(capitalized_name);
+            const business = await BusinessServices.getBusiness();
+            const palette = await PaletteServices.getActiveFor("shop");
+            const html = welcomeKuromiHTML(capitalized_name, business as any, palette as any);
             const rs = await sendEmail({
                 to: user.email,
                 subject: 'Bienvenido/a a Cinnamon',
@@ -305,13 +309,13 @@ class AuthServices {
         let text_message = ''
         if (role_id == 2) {
             text_message = `
-                <p style="margin:0 0 18px; font-size:15px; line-height:1.6; color:#F8F8F8;">
+                <p style="margin:0 0 18px; font-size:15px; line-height:1.6; color:{{color_text_main}};">
                 Desde hoy, estás listo/a para explorar todo nuestro catálogo de productos, 
                 desde maquillaje hasta accesorios, y descubrir tu estilo único.
               </p>
               <div style="text-align:center; margin:22px 0;">
                 <a href="https://cinnamon-makeup.com/" target="_blank" 
-                   style="display:inline-block; background:#000000; color:#FF6DAA; text-decoration:none; 
+                   style="display:inline-block; background:{{color_button_bg}}; color:{{color_button_text}}; text-decoration:none; 
                           padding:12px 20px; border-radius:999px; font-weight:600; font-size:14px;">
                   Explorar catálogo
                 </a>
@@ -319,13 +323,13 @@ class AuthServices {
             `
         } else {
             text_message = `
-          <p style="margin:0 0 18px; font-size:15px; line-height:1.6; color:#F8F8F8;">
+          <p style="margin:0 0 18px; font-size:15px; line-height:1.6; color:{{color_text_main}};">
                 Fuiste invitado para administrar y gestionar todo nuestro catálogo de productos, ofertas, promociones, etc.
                 Tu contraseña temporal es: ${secure_password}
               </p>
               <div style="text-align:center; margin:22px 0;">
                 <a href="https://cinnamon-makeup.com/" target="_blank" 
-                   style="display:inline-block; background:#000000; color:#FF6DAA; text-decoration:none; 
+                   style="display:inline-block; background:{{color_button_bg}}; color:{{color_button_text}}; text-decoration:none; 
                           padding:12px 20px; border-radius:999px; font-weight:600; font-size:14px;">
                   Iniciar sesión
                 </a>
@@ -334,7 +338,9 @@ class AuthServices {
         }
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
         try {
-            const html = new_user_html(capitalized_name, text_message);
+            const business = await BusinessServices.getBusiness();
+            const palette = await PaletteServices.getActiveFor("shop");
+            const html = new_user_html(capitalized_name, text_message, business as any, palette as any);
             const rs = await sendEmail({
                 to: user.email,
                 subject: 'Bienvenido/a a Cinnamon',

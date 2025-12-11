@@ -2,6 +2,8 @@ import { prisma } from "@/config/prisma"
 import { sendEmail } from "@/config/resend"
 import { purchase_email_html } from "@/templates/purchase_email"
 import salesServices from "@/modules/Sales/services/sales.services"
+import BusinessServices from "@/modules/Business/business.services"
+import PaletteServices from "@/modules/Palettes/services/palette.services"
 import { PaymentMethod } from "@prisma/client"
 import fs from 'fs'
 import { uploadToBucket } from '@/config/supabase'
@@ -119,6 +121,8 @@ export default class OrdersServices {
   private async notify(orderId: string, items: { title: string; price: number; quantity: number }[], total: number, paymentMethod: string, customer: CustomerInput) {
     const productRows = items.map(it => ({ title: `${it.title} x${it.quantity}`, price: Number(it.price) * Number(it.quantity) }))
     if (customer.email && customer.email.trim()) {
+      const business = await BusinessServices.getBusiness();
+      const palette = await PaletteServices.getActiveFor("shop");
       const buyerHtml = purchase_email_html({
         payment_method: paymentMethod,
         products: productRows,
@@ -128,6 +132,8 @@ export default class OrdersServices {
         saleDate: new Date(),
         buyerName: customer.name,
         buyerEmail: customer.email,
+        business: business as any,
+        palette: palette as any,
       })
       await sendEmail({ to: customer.email, subject: `Confirmación de compra #${orderId}`, html: buyerHtml })
     }

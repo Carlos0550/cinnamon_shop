@@ -3,6 +3,9 @@ import { useState, useTransition } from "react"
 import { Button, Loader } from "@mantine/core"
 import { useCartActions } from "@/Components/Cart/Hooks/useCart"
 import { useAppContext } from "@/providers/AppContext"
+import { TbShoppingCartDiscount } from "react-icons/tb"
+import { BiCart, BiCartAdd } from "react-icons/bi"
+import { FaCartPlus } from "react-icons/fa"
 
 export default function AddToCartButton({ productId }: { productId: string }) {
   const {
@@ -28,8 +31,8 @@ export default function AddToCartButton({ productId }: { productId: string }) {
 
   return (
     isMobile ? (
-      <Button variant="light" fullWidth onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : null}>
-      Agregar al carrito
+      <Button variant="light" fullWidth onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : <FaCartPlus />}>
+      Añadir
     </Button>
     ) : (
       <Button variant="light" onClick={handleClick} disabled={busy} rightSection={busy ? <Loader size="xs" /> : null}>

@@ -23,7 +23,7 @@ router.patch("/items/:product_id", requireAuth, ensureProductId, ensureQuantity,
   const user = (req as any).user
   const rs = await service.updateQuantity(Number(user.sub || user.id), (req as any).product_id, (req as any).quantity)
   if (!rs.ok) return res.status(rs.status || 400).json(rs)
-  res.json({ ok: true, item: rs.item, total: rs.total })
+  res.json({ ok: true, total: rs.total })
 })
 
 router.delete("/items/:product_id", requireAuth, ensureProductId, async (req, res) => {

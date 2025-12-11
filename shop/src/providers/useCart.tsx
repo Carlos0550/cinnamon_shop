@@ -34,7 +34,7 @@ export type CheckoutFormValues = {
     checkoutOpen: boolean,
 }
 
-function useCart() {
+function useCart(baseUrl: string, token: string | null) {
     const [cart, setCart] = useState<Cart>(() => {
         if (typeof window === 'undefined') return { items: [], total: 0, promo_code: "" }
         try {
@@ -63,40 +63,149 @@ function useCart() {
         checkoutOpen: false,
     })
 
-    const addProductIntoCart = useCallback((product: CartItem) => {
+    const log = (action: string, data?: any) => {
+        console.log(`[Cart] ${action}`, data ? data : '')
+    }
+
+    const addProductIntoCart = useCallback(async (product: CartItem) => {
+        log('Adding product', product)
+        let newCart: Cart
+        const existingItem = cart.items.find(item => item.product_id === product.product_id)
+        const qtyToAdd = product.quantity > 0 ? product.quantity : 1
+        
+        if (existingItem) {
+            // If product already exists, increment quantity
+            const updatedItems = cart.items.map(item => 
+                item.product_id === product.product_id 
+                    ? { ...item, quantity: item.quantity + qtyToAdd }
+                    : item
+            )
+            const newTotal = updatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            newCart = {
+                ...cart,
+                items: updatedItems,
+                total: newTotal
+            }
+        } else {
+            // If product doesn't exist, add new item
+            const newItems = [...cart.items, { ...product, quantity: qtyToAdd }]
+            const newTotal = newItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            newCart = {
+                ...cart,
+                items: newItems,
+                total: newTotal
+            }
+        }
+        setCart(newCart)
+
+        if (token) {
+            try {
+                log('Syncing add to server')
+                await fetch(`${baseUrl}/cart/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ product_id: product.product_id, quantity: qtyToAdd })
+                })
+            } catch (e) {
+                log('Error syncing add', e)
+            }
+        }
+    }, [cart, token, baseUrl])
+
+    const removeProductFromCart = useCallback(async (product_id: string) => {
+        log('Removing product', product_id)
+        const newItems = cart.items.filter(item => item.product_id !== product_id)
+        const newTotal = newItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+        
         setCart({
             ...cart,
-            items: [...cart.items, product],
-            total: cart.total + product.price
+            items: newItems,
+            total: newTotal
         })
-    }, [cart])
 
-    const removeProductFromCart = useCallback((product_id: string) => {
-        setCart({
-            ...cart,
-            items: cart.items.filter(item => item.product_id !== product_id),
-            total: cart.total - (cart.items.find(item => item.product_id === product_id)?.price ?? 0)
-        })
-    }, [cart])
+        if (token) {
+            try {
+                log('Syncing remove to server')
+                await fetch(`${baseUrl}/cart/items/${product_id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            } catch (e) {
+                log('Error syncing remove', e)
+            }
+        }
+    }, [cart, token, baseUrl])
 
-    const clearCart = useCallback(() => {
+    const clearCart = useCallback(async () => {
+        log('Clearing cart')
         setCart({
             ...cart,
             items: [],
             total: 0,
             promo_code: ""
         })
-    }, [cart])
 
-    const updateQuantity = useCallback((product_id: string, quantity: number) => {
-        const items = cart.items.map(item => item.product_id === product_id ? { ...item, quantity } : item)
-        const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
-        setCart({
-            ...cart,
-            items,
-            total,
-        })
-    }, [cart])
+        if (token) {
+            try {
+                log('Syncing clear to server')
+                await fetch(`${baseUrl}/cart`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            } catch (e) {
+                log('Error syncing clear', e)
+            }
+        }
+    }, [cart, token, baseUrl])
+
+    const updateQuantity = useCallback(async (product_id: string, quantity: number) => {
+        log('Updating quantity', { product_id, quantity })
+        if (quantity <= 0) {
+            // Remove item if quantity is 0 or less
+            const itemToRemove = cart.items.find(item => item.product_id === product_id)
+            const items = cart.items.filter(item => item.product_id !== product_id)
+            const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            setCart({
+                ...cart,
+                items,
+                total,
+            })
+
+            if (token) {
+                try {
+                    log('Syncing remove (qty <= 0) to server')
+                    await fetch(`${baseUrl}/cart/items/${product_id}`, {
+                        method: 'DELETE',
+                        headers: { Authorization: `Bearer ${token}` }
+                    })
+                } catch (e) {
+                    log('Error syncing remove', e)
+                }
+            }
+        } else {
+            // Update quantity if greater than 0
+            const items = cart.items.map(item => item.product_id === product_id ? { ...item, quantity } : item)
+            const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            setCart({
+                ...cart,
+                items,
+                total,
+            })
+
+            if (token) {
+                try {
+                    log('Syncing update to server')
+                    await fetch(`${baseUrl}/cart/items/${product_id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ quantity })
+                    })
+                } catch (e) {
+                    log('Error syncing update', e)
+                }
+            }
+        }
+    }, [cart, token, baseUrl])
 
     useEffect(() => {
         try {

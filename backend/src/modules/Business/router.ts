@@ -9,5 +9,7 @@ router.put("/:id", requireAuth, requireRole([1]), (req:Request, res: Response) =
 
 router.get("/", requireAuth, requireRole([1]), (req:Request, res: Response) => businessController.getBusiness(req, res))
 
+router.get("/public", (req:Request, res: Response) => businessController.getBusiness(req, res))
+
 
 export default router

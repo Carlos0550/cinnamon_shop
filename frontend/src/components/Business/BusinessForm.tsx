@@ -1,75 +1,162 @@
-import { useEffect, useState } from "react";
-import { Button, Group, Stack, TextInput, Title } from "@mantine/core";
-import { useCreateBusiness, useGetBusiness, useUpdateBusiness, type BusinessData } from "@/components/Api/BusinessApi";
+import { Button, Flex, Group, Stack, TextInput, Title, ActionIcon, Text, Divider, Paper } from "@mantine/core";
+import Loading from "../Loader/Loading";
+import { useBusinessForm } from "./useBusinessForm";
+import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCity, FaBuilding, FaUniversity, FaCreditCard, FaTrash, FaPlus, FaSave } from "react-icons/fa";
 
 export default function BusinessForm() {
-  const { data } = useGetBusiness();
-  const createMutation = useCreateBusiness();
-  const updateMutation = useUpdateBusiness();
+  const { 
+    form, 
+    errors, 
+    isLoading, 
+    isSubmitting, 
+    handleChange, 
+    handleBankChange, 
+    addBankAccount, 
+    removeBankAccount,
+    handleSubmit 
+  } = useBusinessForm();
 
-  const [form, setForm] = useState<BusinessData>({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    bankData: [{ bank_name: "", account_number: "", account_holder: "" }]
-  });
-
-  useEffect(() => {
-    if (data) {
-      setForm({
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        bankData: Array.isArray(data.bankData) && data.bankData.length ? data.bankData : [{ bank_name: "", account_number: "", account_holder: "" }]
-      });
-    }
-  }, [data]);
-
-  const setField = (key: keyof BusinessData, value: any) => setForm(prev => ({ ...prev, [key]: value }));
-
-  const setBankField = (idx: number, key: keyof BusinessData["bankData"][number], value: string) => {
-    setForm(prev => ({
-      ...prev,
-      bankData: prev.bankData.map((b, i) => i === idx ? { ...b, [key]: value } : b)
-    }));
-  };
+  if (isLoading) {
+    return (
+      <Flex justify="center" align="center" h={200}>
+        <Loading />
+      </Flex>
+    );
+  }
 
   return (
-    <Stack>
-      <Title order={3}>Información del negocio</Title>
-      <TextInput label="Nombre" value={form.name} onChange={(e) => setField("name", e.currentTarget.value)} />
-      <TextInput label="Email" value={form.email} onChange={(e) => setField("email", e.currentTarget.value)} />
-      <TextInput label="Teléfono" value={form.phone} onChange={(e) => setField("phone", e.currentTarget.value)} />
-      <TextInput label="Dirección" value={form.address} onChange={(e) => setField("address", e.currentTarget.value)} />
-      <TextInput label="Ciudad" value={form.city} onChange={(e) => setField("city", e.currentTarget.value)} />
-      <TextInput label="Provincia/Estado" value={form.state} onChange={(e) => setField("state", e.currentTarget.value)} />
+    <Paper shadow="xs" p="md" radius="md" withBorder>
+      <form onSubmit={handleSubmit}>
+        <Stack gap="md">
+          <Title order={3}>Información del negocio</Title>
+          
+          <Group grow align="flex-start">
+            <TextInput 
+              label="Nombre" 
+              placeholder="Nombre del negocio"
+              value={form.name} 
+              onChange={(e) => handleChange("name", e.currentTarget.value)} 
+              error={errors.name}
+              leftSection={<FaUser size={14} />}
+              withAsterisk
+            />
+            <TextInput 
+              label="Email" 
+              placeholder="correo@ejemplo.com"
+              value={form.email} 
+              onChange={(e) => handleChange("email", e.currentTarget.value)} 
+              error={errors.email}
+              leftSection={<FaEnvelope size={14} />}
+              withAsterisk
+            />
+          </Group>
 
-      {form.bankData.map((b, idx) => (
-        <Group key={idx} grow>
-          <TextInput label="Banco" value={b.bank_name} onChange={(e) => setBankField(idx, "bank_name", e.currentTarget.value)} />
-          <TextInput label="Número de cuenta" value={b.account_number} onChange={(e) => setBankField(idx, "account_number", e.currentTarget.value)} />
-          <TextInput label="Titular" value={b.account_holder} onChange={(e) => setBankField(idx, "account_holder", e.currentTarget.value)} />
-        </Group>
-      ))}
-      <Group>
-        <Button variant="light" onClick={() => setForm(prev => ({ ...prev, bankData: [...prev.bankData, { bank_name: "", account_number: "", account_holder: "" }] }))}>Agregar cuenta</Button>
-      </Group>
+          <Group grow align="flex-start">
+            <TextInput 
+              label="Teléfono" 
+              placeholder="+1234567890"
+              value={form.phone} 
+              onChange={(e) => handleChange("phone", e.currentTarget.value)} 
+              error={errors.phone}
+              leftSection={<FaPhone size={14} />}
+              withAsterisk
+            />
+            <TextInput 
+              label="Dirección" 
+              placeholder="Calle Principal 123"
+              value={form.address} 
+              onChange={(e) => handleChange("address", e.currentTarget.value)} 
+              error={errors.address}
+              leftSection={<FaMapMarkerAlt size={14} />}
+            />
+          </Group>
 
-      <Group justify="flex-end">
-        {form.id ? (
-          <Button loading={updateMutation.isPending} onClick={() => updateMutation.mutate({ id: form.id!, payload: form })}>Actualizar</Button>
-        ) : (
-          <Button loading={createMutation.isPending} onClick={() => createMutation.mutate(form)}>Crear</Button>
-        )}
-      </Group>
-    </Stack>
+          <Group grow align="flex-start">
+            <TextInput 
+              label="Ciudad" 
+              placeholder="Ciudad"
+              value={form.city} 
+              onChange={(e) => handleChange("city", e.currentTarget.value)} 
+              error={errors.city}
+              leftSection={<FaCity size={14} />}
+            />
+            <TextInput 
+              label="Provincia/Estado" 
+              placeholder="Estado"
+              value={form.state} 
+              onChange={(e) => handleChange("state", e.currentTarget.value)} 
+              error={errors.state}
+              leftSection={<FaBuilding size={14} />}
+            />
+          </Group>
+
+          <Divider my="sm" label="Datos Bancarios" labelPosition="center" />
+
+          {form.bankData.map((b, idx) => {
+            const bankErrors = errors.bankData?.[idx];
+            return (
+              <Paper key={idx} withBorder p="sm" radius="sm">
+                <Group align="flex-start" mb={5}>
+                    <Text size="sm" fw={500} c="dimmed">Cuenta #{idx + 1}</Text>
+                    {form.bankData.length > 1 && (
+                        <ActionIcon color="red" variant="subtle" onClick={() => removeBankAccount(idx)} aria-label="Eliminar cuenta">
+                            <FaTrash size={14} />
+                        </ActionIcon>
+                    )}
+                </Group>
+                <Group grow align="flex-start">
+                  <TextInput 
+                    label="Banco" 
+                    placeholder="Nombre del banco"
+                    value={b.bank_name} 
+                    onChange={(e) => handleBankChange(idx, "bank_name", e.currentTarget.value)} 
+                    error={bankErrors?.bank_name}
+                    leftSection={<FaUniversity size={14} />}
+                  />
+                  <TextInput 
+                    label="Número de cuenta" 
+                    placeholder="0000-0000-0000"
+                    value={b.account_number} 
+                    onChange={(e) => handleBankChange(idx, "account_number", e.currentTarget.value)} 
+                    error={bankErrors?.account_number}
+                    leftSection={<FaCreditCard size={14} />}
+                  />
+                  <TextInput 
+                    label="Titular" 
+                    placeholder="Nombre del titular"
+                    value={b.account_holder} 
+                    onChange={(e) => handleBankChange(idx, "account_holder", e.currentTarget.value)} 
+                    error={bankErrors?.account_holder}
+                    leftSection={<FaUser size={14} />}
+                  />
+                </Group>
+              </Paper>
+            );
+          })}
+
+          <Group>
+            <Button 
+                variant="light" 
+                leftSection={<FaPlus size={14} />} 
+                onClick={addBankAccount}
+            >
+                Agregar cuenta
+            </Button>
+          </Group>
+
+          <Group justify="flex-end" mt="md">
+            <Button 
+                type="submit" 
+                loading={isSubmitting} 
+                leftSection={<FaSave size={14} />}
+                disabled={isSubmitting}
+            >
+              {form.id ? "Actualizar Información" : "Crear Negocio"}
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </Paper>
   );
 }
 

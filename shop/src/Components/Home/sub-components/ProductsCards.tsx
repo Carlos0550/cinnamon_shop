@@ -32,12 +32,12 @@ function ProductsCards({ product, priority = false }: Props) {
     )
     return (
         <Card shadow="sm" radius="md" withBorder w={isMobile ? mobileCardWidth : 350}>
-            <Card.Section style={{ position: 'relative', paddingBottom: '75%', height: 0 }}>
+            <Card.Section style={{ position: 'relative', paddingBottom: '75%', height: '250px' }}>
                 {imageLoading && renderLoader()}
                 <Image
                     src={product.images[0]}
                     fill
-                    sizes="(max-width: 768px) 50vw, 350px"
+                    //sizes="(max-width: 768px) 50vw, 350px"
                     style={{ objectFit: 'cover' }}
                     onLoad={() => setImageLoading(false)}
                     priority={priority}
@@ -65,7 +65,7 @@ function ProductsCards({ product, priority = false }: Props) {
 
             {isMobile ? (
                 <Flex justify="space-evenly" mt={10} gap={10} wrap='wrap'>
-                    <Button onClick={() => { setNavigating(true); router.push(`/${product.id}`) }} leftSection={<FaInfoCircle />} fullWidth disabled={navigating} rightSection={navigating ? <Loader size="xs" /> : null}>Más información</Button>
+                    <Button onClick={() => { setNavigating(true); router.push(`/${product.id}`) }} leftSection={<FaInfoCircle />} fullWidth disabled={navigating} rightSection={navigating ? <Loader size="xs" /> : null}>Ver más</Button>
                     <AddToCartButton productId={product.id} />
                 </Flex>
             ) : (

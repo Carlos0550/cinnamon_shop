@@ -16,6 +16,7 @@ export const useListPalettes = () => {
   const { auth: { token } } = useAppContext();
   return useQuery<ColorPalette[], Error>({
     queryKey: ["palettes"],
+    gcTime: 1000 * 60 * 1,
     enabled: !!token,
     queryFn: async () => {
       const res = await fetch(`${baseUrl}/palettes`, { headers: { Authorization: `Bearer ${token}` } });
@@ -101,7 +102,14 @@ export const useSetUsage = () => {
       if (!res.ok) throw new Error(json?.error || "Error configurando uso");
       return json;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["palettes"] }); notifications.show({ message: "Uso actualizado", color: "green" }); },
+    onSuccess: (_, { paletteId, target }) => {
+      qc.invalidateQueries({ queryKey: ["palettes"] });
+      if (target === "admin") {
+        window.location.reload();
+      } else {
+        notifications.show({ message: "Uso actualizado", color: "green" });
+      }
+    },
     onError: (e: Error) => notifications.show({ message: e.message, color: "red" })
   });
 };
@@ -149,6 +157,24 @@ export const useRandomPalette = () => {
       return json as ColorPalette;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["palettes"] }); notifications.show({ message: "Paleta aleatoria creada", color: "green" }); },
+    onError: (e: Error) => notifications.show({ message: e.message, color: "red" })
+  });
+};
+
+export const useDeletePalette = () => {
+  const qc = useQueryClient();
+  const { auth: { token } } = useAppContext();
+  return useMutation({
+    mutationKey: ["deletePalette"],
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${baseUrl}/palettes/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(res.statusText || "Error eliminando paleta");
+      return res;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["palettes"] }); notifications.show({ message: "Paleta eliminada", color: "green" }); },
     onError: (e: Error) => notifications.show({ message: e.message, color: "red" })
   });
 };

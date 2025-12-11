@@ -1,6 +1,6 @@
 "use client";
 import { useAppContext } from "@/providers/AppContext";
-import { AppShell, Burger, Group, Anchor, Stack, Flex, Text, Avatar, Button, useMantineColorScheme, ActionIcon } from "@mantine/core";
+import { AppShell, Burger, Group, Anchor, Stack, Flex, Text, Avatar, Button, useMantineColorScheme, ActionIcon, Box } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import Link from "next/link";
 import LoginForm from "../Auth/LoginForm";
@@ -29,7 +29,7 @@ export default function SiteLayout({ children }: Props) {
     >
       <AppShell.Header style={{ background: "var(--mantine-color-body)" }}>
         <Group justify="space-between" px="md" h="100%">
-            <ColorSchemeToggle />
+            
           <Group>
             <Burger opened={opened} onClick={toggle} aria-label="Toggle navigation" hiddenFrom="lg" />
             {!isMobile ? (
@@ -66,6 +66,9 @@ export default function SiteLayout({ children }: Props) {
       </AppShell.Header>
 
       <AppShell.Navbar p="md" style={{ background: "var(--mantine-color-body)" }}>
+        <Box mb="md">
+          <ColorSchemeToggle />
+        </Box>
         <Stack gap="sm" onClick={close}>
           <Anchor component={Link} href={"/"}>Inicio</Anchor>
           <Anchor component={Link} href={"/account"}>Mi cuenta</Anchor>

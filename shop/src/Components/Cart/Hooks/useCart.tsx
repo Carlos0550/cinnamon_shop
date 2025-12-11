@@ -56,18 +56,9 @@ export function useCartActions() {
 
   const addToCart = async (product_id: string) => {
     const productInfo = await validateProductStock(product_id)
-    const productInCart = cart.items.find((item) => item.product_id === product_id)
     
     if (!productInfo) return
-    if (productInCart) {
-      showNotification({
-        title: "Producto ya en carrito",
-        message: "El producto ya se encuentra en el carrito.",
-        autoClose: 3000,
-        color: "yellow",
-      })
-      return
-    }
+    
     addProductIntoCart({
       product_id: productInfo.id,
       product_name: productInfo.title,

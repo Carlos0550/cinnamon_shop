@@ -5,6 +5,8 @@ import { sale_email_html } from "@/templates/sale_email";
 import { order_ready_email_html } from "@/templates/order_ready_email";
 import { order_declined_email_html } from "@/templates/order_declined_email";
 import dayjs, { DEFAULT_TZ, nowTz } from "@/config/dayjs";
+import BusinessServices from "@/modules/Business/business.services";
+import PaletteServices from "@/modules/Palettes/services/palette.services";
 
 
 class SalesServices {
@@ -70,6 +72,8 @@ class SalesServices {
                 try {
                     const user = parsedUserId ? await prisma.user.findUnique({ where: { id: parsedUserId } }) : null;
                     console.log(user)
+                    const business = await BusinessServices.getBusiness();
+                    const palette = await PaletteServices.getActiveFor("shop");
                     const html = sale_email_html({
                         source,
                         payment_method: primaryPaymentMethod,
@@ -81,6 +85,8 @@ class SalesServices {
                         saleDate: (createdAtOverride as Date) || ((sale as any)?.created_at as Date) || new Date(),
                         buyerName: user?.name ?? undefined,
                         buyerEmail: user?.email ?? undefined,
+                        business: business as any,
+                        palette: palette as any,
                     });
                     const admins: any[] = await prisma.admin.findMany({ where: { is_active: true } })
                     //const admins: any[] = ["carlospelinski03@gmail.com"] //testing
@@ -248,7 +254,10 @@ class SalesServices {
                 }),
 
                 await prisma.sales.aggregate({
-                    where,
+                    where:{
+                        ...where,
+                        declined: false
+                    },
                     _sum: {
                         total: true
                     }
@@ -414,7 +423,9 @@ class SalesServices {
             const buyerName = sale.orders[0].buyer_name || sale.user?.name || undefined;
             console.log("buyer_email", buyer_email);
             if (buyer_email) {
-                const html = order_ready_email_html({ saleId: sale.id, buyerName, payment_method: String(sale.payment_method) });
+                const business = await BusinessServices.getBusiness();
+                const palette = await PaletteServices.getActiveFor("shop");
+                const html = order_ready_email_html({ saleId: sale.id, buyerName, payment_method: String(sale.payment_method), business: business as any, palette: palette as any });
                 await sendEmail({ to: buyer_email, subject: `Tu orden #${sale.id} está lista`, html });
                 return { success: true };
             }
@@ -434,7 +445,9 @@ class SalesServices {
             const buyer_email = sale.orders[0].buyer_email || sale.user?.email;
             const buyerName = sale.orders[0].buyer_name || sale.user?.name || undefined;
             if (buyer_email) {
-                const html = order_declined_email_html({ saleId: sale.id, buyerName, reason });
+                const business = await BusinessServices.getBusiness();
+                const palette = await PaletteServices.getActiveFor("shop");
+                const html = order_declined_email_html({ saleId: sale.id, buyerName, reason, business: business as any, palette: palette as any });
                 await sendEmail({ to: buyer_email, subject: `Tu orden #${sale.id} fue declinada`, html });
             }
             return { success: true };

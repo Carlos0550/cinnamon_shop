@@ -39,9 +39,17 @@ export default class CartServices {
     const cart = await this.getOrCreateUserCart(userId)
     const existing = await prisma.orderItems.findFirst({ where: { cartId: cart.id, productId } })
     if (!existing) return { ok: false, status: 404, error: "item_not_found" }
-    const updated = await prisma.orderItems.update({ where: { id: existing.id }, data: { quantity: Math.max(1, quantity) } })
+    
+    if (quantity <= 0) {
+      // Remove item if quantity is 0 or less
+      await prisma.orderItems.delete({ where: { id: existing.id } })
+    } else {
+      // Update quantity if greater than 0
+      await prisma.orderItems.update({ where: { id: existing.id }, data: { quantity } })
+    }
+    
     const total = await this.recomputeTotal(cart.id)
-    return { ok: true, item: updated, total }
+    return { ok: true, total }
   }
 
   async removeItem(userId: number, productId: string) {
@@ -68,9 +76,16 @@ export default class CartServices {
       const existing = await prisma.orderItems.findFirst({ where: { cartId: cart.id, productId: incoming.product_id } })
       const priceChanged = typeof incoming.price === "number" && Number(incoming.price) !== Number(product.price)
       if (existing) {
-        await prisma.orderItems.update({ where: { id: existing.id }, data: { quantity: Math.max(1, Number(incoming.quantity) || 1), price_has_changed: priceChanged || existing.price_has_changed } })
-      } else {
-        await prisma.orderItems.create({ data: { cart: { connect: { id: cart.id } }, product: { connect: { id: incoming.product_id } }, quantity: Math.max(1, Number(incoming.quantity) || 1), price_has_changed: priceChanged } })
+        if (Number(incoming.quantity) <= 0) {
+          // Remove item if quantity is 0 or less
+          await prisma.orderItems.delete({ where: { id: existing.id } })
+        } else {
+          // Update quantity if greater than 0
+          await prisma.orderItems.update({ where: { id: existing.id }, data: { quantity: Number(incoming.quantity) || 1, price_has_changed: priceChanged || existing.price_has_changed } })
+        }
+      } else if (Number(incoming.quantity) > 0) {
+        // Only create new item if quantity is greater than 0
+        await prisma.orderItems.create({ data: { cart: { connect: { id: cart.id } }, product: { connect: { id: incoming.product_id } }, quantity: Number(incoming.quantity) || 1, price_has_changed: priceChanged } })
       }
     }
     const total = await this.recomputeTotal(cart.id)
