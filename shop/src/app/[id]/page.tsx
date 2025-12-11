@@ -128,7 +128,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
     const title = `${product.title} | Cinnamon`
     const description = product.description || `Compra ${product.title} en Cinnamon`
-    const images = Array.isArray(product.images) ? product.images : []
     const urlBase = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
     const canonical = `${urlBase}/${id}`
     return {

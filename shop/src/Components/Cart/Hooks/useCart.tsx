@@ -6,7 +6,7 @@ import { showNotification } from "@mantine/notifications"
 
 export function useCartActions() {
   const {
-    cart: { addProductIntoCart, cart },
+    cart: { addProductIntoCart },
     utils: { baseUrl },
   } = useAppContext()
 

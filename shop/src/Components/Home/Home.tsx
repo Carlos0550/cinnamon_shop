@@ -1,7 +1,7 @@
 
 
 "use client";
-import { Box, Flex, Title, Text, Container, Input, ActionIcon, NativeSelect, Loader, Stack, Center } from "@mantine/core";
+import { Box, Flex, Title, Text, Container, Input, NativeSelect, Loader, Stack, Center } from "@mantine/core";
 
 import { useInfiniteProducts, Products, ProductsResponse } from "@/Api/useProducts";
 import ProductsCards from "./sub-components/ProductsCards";

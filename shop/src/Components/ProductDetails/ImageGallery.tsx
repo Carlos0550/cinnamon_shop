@@ -70,6 +70,7 @@ export default function ImageGallery({ images = [], title }: Props) {
             setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
           }}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={main}
             alt={title}

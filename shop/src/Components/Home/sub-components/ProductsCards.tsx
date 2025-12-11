@@ -4,7 +4,7 @@ import AddToCartButton from '@/Components/Cart/AddToCartButton';
 import { useAppContext } from '@/providers/AppContext'
 import { Badge, Button, Card, Flex, Group, Text, Loader } from '@mantine/core'
 import { useRouter } from 'next/navigation'
-import { FaCartPlus, FaInfoCircle } from 'react-icons/fa'
+import { FaInfoCircle } from 'react-icons/fa'
 import { useState } from 'react'
 import Image from 'next/image';
 type Props = {

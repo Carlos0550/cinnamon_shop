@@ -1,6 +1,7 @@
 import { useAppContext } from "@/providers/AppContext";
 import { useState, useEffect, useCallback } from "react";
-import useBankInfo from "@/api/useBankInfo";
+import useBankInfo from "@/Api/useBankInfo";
+import { CheckoutFormValues } from "@/providers/useCart";
 
 export default function useCart(onClose: () => void) {
     const {
@@ -9,7 +10,13 @@ export default function useCart(onClose: () => void) {
         utils,
     } = useAppContext();
 
-    const [shippingInfoCompleted, setShippingInfoCompleted] = useState(false);
+    const shippingInfoCompleted = (() => {
+        if (!formValues.pickup) {
+            return !(!formValues.name || !formValues.email || !formValues.phone || !formValues.street || !formValues.postal_code || !formValues.city || !formValues.province || !formValues.selectedProvinceId || !formValues.selectedLocalityId);
+        } else {
+            return !(!formValues.name || !formValues.email || !formValues.phone);
+        }
+    })();
     const [provinces, setProvinces] = useState<{ id: string; nombre: string }[]>([]);
     const [localities, setLocalities] = useState<{ id: string; nombre: string }[]>([]);
     const [processingOrder, setProcessingOrder] = useState(false);
@@ -22,35 +29,37 @@ export default function useCart(onClose: () => void) {
         if (!raw) return;
         
         const s = JSON.parse(raw);
-        setFormValues((prev) => ({
-            ...prev,
-            pickup: !!s.pickup,
-            name: s.name || '',
-            email: s.email || '',
-            phone: s.phone || '',
-            street: s.street || '',
-            postal_code: s.postal_code || '',
-            city: s.city || '',
-            province: s.province || '',
-            selectedProvinceId: '',
-            selectedLocalityId: '',
-            orderMethod: s.pickup ? 'EN_LOCAL' : 'TRANSFERENCIA',
-            activeStep: 0,
-            checkoutOpen: true,
-        }));
+        setFormValues((prev): CheckoutFormValues => {
+            let nextValues = {
+                ...prev,
+                pickup: !!s.pickup,
+                name: s.name || '',
+                email: s.email || '',
+                phone: s.phone || '',
+                street: s.street || '',
+                postal_code: s.postal_code || '',
+                city: s.city || '',
+                province: s.province || '',
+                selectedProvinceId: '',
+                selectedLocalityId: '',
+                orderMethod: s.pickup ? 'EN_LOCAL' : 'TRANSFERENCIA',
+                activeStep: 0,
+                checkoutOpen: true,
+            };
 
-        if (auth?.state?.user) {
-            const u = auth.state.user;
-            if (!s.name || !s.email) {
-                const nv = { 
-                    ...formValues, 
-                    name: formValues.name || (u.name || ''), 
-                    email: formValues.email || (u.email || '') 
-                };
-                setFormValues(nv);
+            if (auth?.state?.user) {
+                const u = auth.state.user;
+                if (!s.name || !s.email) {
+                    nextValues = { 
+                        ...nextValues, 
+                        name: nextValues.name || (u.name || ''), 
+                        email: nextValues.email || (u.email || '') 
+                    };
+                }
             }
-        }
-    }, [auth?.state?.user, formValues, setFormValues]);
+            return nextValues as CheckoutFormValues;
+        });
+    }, [auth, setFormValues]);
 
     useEffect(() => {
         (async () => {
@@ -105,22 +114,6 @@ export default function useCart(onClose: () => void) {
         }
         setProcessingOrder(false);
     };
-
-    useEffect(() => {
-        if (!formValues.pickup) {
-            if (!formValues.name || !formValues.email || !formValues.phone || !formValues.street || !formValues.postal_code || !formValues.city || !formValues.province || !formValues.selectedProvinceId || !formValues.selectedLocalityId) {
-                setShippingInfoCompleted(false);
-            } else {
-                setShippingInfoCompleted(true);
-            }
-        } else {
-            if (!formValues.name || !formValues.email || !formValues.phone) {
-                 setShippingInfoCompleted(false);
-            } else {
-                 setShippingInfoCompleted(true);
-            }
-        }
-    }, [formValues]);
 
     return {
         cart,

@@ -102,7 +102,7 @@ export const useSetUsage = () => {
       if (!res.ok) throw new Error(json?.error || "Error configurando uso");
       return json;
     },
-    onSuccess: (_, { paletteId, target }) => {
+    onSuccess: (_, { target }) => {
       qc.invalidateQueries({ queryKey: ["palettes"] });
       if (target === "admin") {
         window.location.reload();

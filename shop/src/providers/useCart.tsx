@@ -63,7 +63,7 @@ function useCart(baseUrl: string, token: string | null) {
         checkoutOpen: false,
     })
 
-    const log = (action: string, data?: any) => {
+    const log = (action: string, data?: unknown) => {
         console.log(`[Cart] ${action}`, data ? data : '')
     }
 
@@ -162,7 +162,6 @@ function useCart(baseUrl: string, token: string | null) {
         log('Updating quantity', { product_id, quantity })
         if (quantity <= 0) {
             // Remove item if quantity is 0 or less
-            const itemToRemove = cart.items.find(item => item.product_id === product_id)
             const items = cart.items.filter(item => item.product_id !== product_id)
             const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
             setCart({

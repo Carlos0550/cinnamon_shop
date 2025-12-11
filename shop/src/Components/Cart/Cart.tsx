@@ -1,5 +1,5 @@
 'use client'
-import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select, Badge, Loader, Alert, Card, CopyButton, Tooltip } from '@mantine/core'
+import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select, Loader, Alert, Card, CopyButton, Tooltip } from '@mantine/core'
 import { FaMinus, FaPlus, FaUniversity, FaCopy, FaCheck } from 'react-icons/fa'
 import useCart from './useCart'
 import React from 'react'

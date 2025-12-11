@@ -1,5 +1,5 @@
 import { useListPalettes, useCreatePalette, useActivatePalette, useSetUsage, useGeneratePalette, useRandomPalette, useDeletePalette } from "@/components/Api/PalettesApi";
-import { Button, Container, Group, Stack, Table, TextInput, Title, Switch, ColorInput, ActionIcon } from "@mantine/core";
+import { Button, Container, Group, Stack, Table, TextInput, Title, Switch, ColorInput } from "@mantine/core";
 import ModalWrapper from "@/components/Common/ModalWrapper";
 import { useEffect, useState } from "react";
 import { FiTrash } from "react-icons/fi";

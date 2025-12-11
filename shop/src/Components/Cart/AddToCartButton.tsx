@@ -3,8 +3,6 @@ import { useState, useTransition } from "react"
 import { Button, Loader } from "@mantine/core"
 import { useCartActions } from "@/Components/Cart/Hooks/useCart"
 import { useAppContext } from "@/providers/AppContext"
-import { TbShoppingCartDiscount } from "react-icons/tb"
-import { BiCart, BiCartAdd } from "react-icons/bi"
 import { FaCartPlus } from "react-icons/fa"
 
 export default function AddToCartButton({ productId }: { productId: string }) {

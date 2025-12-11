@@ -1,6 +1,6 @@
 "use client";
 import useOrders from '@/Api/useOrders';
-import { Table, Pagination, Badge, Button, Card, Group, Stack, Text, Title } from '@mantine/core';
+import { Table, Pagination, Badge, Card, Group, Stack, Text, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '@/providers/AppContext';
 import { useRouter } from 'next/navigation';
@@ -18,7 +18,7 @@ export default function OrdersPage() {
     }
   }, [auth.isAuthenticated, router]);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const limit = 10;
   const { data } = useOrders(page, limit);
   const items = data?.items || [];
 
