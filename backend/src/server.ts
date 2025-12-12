@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { exec } from 'child_process';
 import '@/config/dayjs';
 import express from 'express';
 import cors from 'cors';
@@ -63,6 +64,20 @@ app.get('/docs.json', (_req, res) => res.json(spec));
 
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);
+  
+  if(process.env.NODE_ENV === "production"){
+    exec('npx prisma migrate deploy', (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Migration error: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.log(`Migration info: ${stderr}`);
+      }
+      console.log(`Migration result: ${stdout}`);
+    });
+  }
+
   initUploadsCleanupJob();
   initProductsCacheSyncJob();
 });
