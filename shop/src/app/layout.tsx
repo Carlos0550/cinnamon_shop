@@ -4,35 +4,49 @@ import SiteLayout from "../Components/Layout/SiteLayout";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
+import { getBusinessInfo } from "@/Api/useBusiness";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-stack" });
 
-export const metadata: Metadata = {
-  title: "Cinnamon Shop",
-  description: "Tienda Cinnamon",
-  icons: { icon: "/logo.png" },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"),
-  openGraph: {
-    title: "Cinnamon Shop",
-    description: "Tienda online de Maquillaje y cosméticos, situados en Candelaria Misiones Argentina",
-    url: "/",
-    type: "website",
-    images: [{ url: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Cinnamon Shop",
-    description: "Tienda online de Maquillaje y cosméticos, situados en Candelaria Misiones Argentina",
-    images: [process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png"],
-  },
-  robots: { index: true, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const business = await getBusinessInfo();
+  const businessName = business?.name || "Tienda Online";
+  const description = `Tienda online de ${businessName}`;
 
-export default function RootLayout({
+  return {
+    title: {
+      template: `%s | ${businessName}`,
+      default: businessName,
+    },
+    description: description,
+    icons: { icon: "/logo.png" },
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"),
+    openGraph: {
+      title: businessName,
+      description: description,
+      url: "/",
+      type: "website",
+      images: [{ url: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png" }],
+      siteName: businessName,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: businessName,
+      description: description,
+      images: [process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png"],
+    },
+    robots: { index: true, follow: true },
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const business = await getBusinessInfo();
+  const businessName = business?.name || "Tienda Online";
+  
   return (
     <html lang="es" className={inter.variable}>
       <head>
@@ -44,7 +58,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "Cinnamon Shop",
+              name: businessName,
               url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001",
               logo: "/logo.png",
               image: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png"

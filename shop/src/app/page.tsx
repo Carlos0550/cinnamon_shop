@@ -2,11 +2,14 @@ import type { Metadata } from "next"
 import HomeComponent from "@/Components/Home/Home"
 import { ProductsResponse, Products } from "@/Api/useProducts"
 import { CategoriesResponse } from "@/Api/useCategories"
+import { getBusinessInfo } from "@/Api/useBusiness"
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
+  const business = await getBusinessInfo();
+  const businessName = business?.name || "Tienda Online";
   
   // Prepare Query Params for Products
   const qp = new URLSearchParams()
@@ -55,7 +58,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebSite",
-            name: "Cinnamon Shop",
+            name: businessName,
             url: siteUrl,
             image: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/logo.png`,
           })
@@ -83,19 +86,23 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const titleQ = sp?.title?.trim()
   const catQ = sp?.categoryId?.trim()
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
-  const base = "Cinnamon Makeup"
+  
+  const business = await getBusinessInfo();
+  const businessName = business?.name || "Tienda Online";
+  const base = businessName;
+  
   const parts = [base]
   if (titleQ) parts.push(`Buscar: ${titleQ}`)
   if (catQ) parts.push(`Categoría: ${catQ}`)
   const fullTitle = parts.join(" · ")
   return {
     title: fullTitle,
-    description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
+    description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : `Explora categorías y productos en ${businessName}`,
     robots: { index: true, follow: true },
     alternates: { canonical: siteUrl },
     openGraph: {
       title: fullTitle,
-      description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
+      description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : `Explora categorías y productos en ${businessName}`,
       url: siteUrl,
       type: "website",
       images: [
@@ -105,7 +112,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
-      description: titleQ ? `Resultados para "${titleQ}" en Cinnamon` : "Explora categorías y productos en Cinnamon ",
+      description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : `Explora categorías y productos en ${businessName}`,
       images: [process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/opengraph-image`]
     }
   }

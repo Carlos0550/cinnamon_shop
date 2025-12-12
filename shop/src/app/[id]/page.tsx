@@ -113,11 +113,19 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   )
 }
 
+import { getBusinessInfo } from "@/Api/useBusiness"
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
   try {
-    const res = await fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 300 } })
+    const [res, business] = await Promise.all([
+      fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 300 } }),
+      getBusinessInfo()
+    ]);
+
+    const businessName = business?.name || "Tienda Online";
+
     if (!res.ok) {
       return { title: "Producto", description: "Detalle de producto" }
     }
@@ -126,8 +134,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     if (!product) {
       return { title: "Producto", description: "Detalle de producto" }
     }
-    const title = `${product.title} | Cinnamon`
-    const description = product.description || `Compra ${product.title} en Cinnamon`
+    const title = `${product.title} | ${businessName}`
+    const description = product.description || `Compra ${product.title} en ${businessName}`
     const urlBase = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
     const canonical = `${urlBase}/${id}`
     return {

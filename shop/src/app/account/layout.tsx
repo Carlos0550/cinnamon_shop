@@ -1,10 +1,15 @@
 import type { Metadata } from 'next'
+import { getBusinessInfo } from '@/Api/useBusiness'
 
-export const metadata: Metadata = {
-  title: 'Mi cuenta | Cinnamon',
-  description: 'Gestiona tu perfil y datos de envío en Cinnamon.',
-  robots: { index: false, follow: false },
-  alternates: { canonical: '/account' },
+export async function generateMetadata(): Promise<Metadata> {
+  const business = await getBusinessInfo();
+  const businessName = business?.name || "Tienda Online";
+  return {
+    title: `Mi cuenta | ${businessName}`,
+    description: `Gestiona tu perfil y datos de envío en ${businessName}.`,
+    robots: { index: false, follow: false },
+    alternates: { canonical: '/account' },
+  }
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
