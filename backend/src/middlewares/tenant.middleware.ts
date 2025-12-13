@@ -62,13 +62,45 @@ export async function tenantMiddleware(req: Request, res: Response, next: NextFu
       if (!resolved) {
         return res.status(400).json({ error: 'invalid_tenant_id' })
       }
-    } else if (host) {
-      resolved = await resolveTenantByHost(host)
+    } else {
+      if (host) {
+        resolved = await resolveTenantByHost(host)
+      }
+      if (!resolved) {
+        const originHeader = req.header('origin') || ''
+        if (originHeader) {
+          try {
+            const u = new URL(originHeader)
+            const originHost = normalizeHost(u.host)
+            if (originHost) resolved = await resolveTenantByHost(originHost)
+          } catch {}
+        }
+      }
+      if (!resolved) {
+        const refererHeader = req.header('referer') || ''
+        if (refererHeader) {
+          try {
+            const u = new URL(refererHeader)
+            const refererHost = normalizeHost(u.host)
+            if (refererHost) resolved = await resolveTenantByHost(refererHost)
+          } catch {}
+        }
+      }
+      if (!resolved) {
+        const fallbackSlug = (process.env.DEFAULT_TENANT_SLUG || '').trim().toLowerCase()
+        const fallbackId = (process.env.DEFAULT_TENANT_ID || '').trim()
+        if (fallbackId) {
+          resolved = await resolveTenantById(fallbackId)
+        } else if (fallbackSlug) {
+          const t = await prisma.tenant.findUnique({ where: { slug: fallbackSlug } })
+          if (t) {
+            resolved = { tenantId: t.id, status: t.status, slug: t.slug, expiresAt: Date.now() + 10 * 60 * 1000 }
+          }
+        }
+      }
       if (!resolved) {
         return res.status(404).json({ error: 'tenant_not_found' })
       }
-    } else {
-      return res.status(401).json({ error: 'tenant_required' })
     }
 
     if (resolved.status !== 'ACTIVE') {
