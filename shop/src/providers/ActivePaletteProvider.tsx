@@ -12,9 +12,20 @@ export default function ActivePaletteProvider({ children }: { children: React.Re
   useEffect(() => {
     (async () => {
       try {
-        const base =
-          process.env.NEXT_PUBLIC_API_URL
-          || (process.env.NEXT_PUBLIC_SITE_URL ? `${new URL(process.env.NEXT_PUBLIC_SITE_URL).origin}/api` : "http://localhost:3000/api");
+        const base = (() => {
+          const rawApi = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+          if (rawApi) {
+            const api = rawApi.replace(/^"+|"+$/g, "").replace(/\/+$/, "");
+            return api.endsWith("/api") ? api : `${api}/api`;
+          }
+          const site = (process.env.NEXT_PUBLIC_SITE_URL || "").trim();
+          try {
+            const origin = site ? new URL(site).origin : "http://localhost:3001";
+            return `${origin.replace(/\/+$/, "")}/api`;
+          } catch {
+            return "http://localhost:3000/api";
+          }
+        })();
         let siteHost = "localhost:3001";
         try { const u = new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"); siteHost = u.host } catch {}
         const res = await fetch(`${base}/theme/palette/shop`, { headers: { 'x-forwarded-host': siteHost } });

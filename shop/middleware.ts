@@ -14,7 +14,11 @@ async function resolveTenant(host: string) {
   const now = Date.now()
   const c = cache.get(host)
   if (c && c.expires > now) return c
-  const api = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+  const api = (() => {
+    const raw = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api').trim()
+    const cleaned = raw.replace(/^"+|"+$/g, '')
+    return cleaned
+  })()
   const res = await fetch(`${api}/tenant/resolve`, { headers: { host } })
   if (!res.ok) return null
   const data = await res.json().catch(() => null)
@@ -31,7 +35,7 @@ export default async function middleware(req: NextRequest) {
 
   const resolved = await resolveTenant(host)
   if (!resolved) {
-    return new NextResponse('Not Found', { status: 404 })
+    return NextResponse.next()
   }
 
   const { pathname } = req.nextUrl;

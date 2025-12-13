@@ -20,7 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: description,
     icons: { icon: "/logo.png" },
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"),
+    metadataBase: (() => {
+      try { return new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001") } catch { return new URL("http://localhost:3001") }
+    })(),
     openGraph: {
       title: businessName,
       description: description,
