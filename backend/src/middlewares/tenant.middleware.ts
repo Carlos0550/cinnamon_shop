@@ -23,8 +23,10 @@ export async function resolveTenantByHost(host: string) {
   const cached = cache.get(host)
   if (cached && cached.expiresAt > now) return cached
 
-  const domain = await prisma.domain.findUnique({
-    where: { domain: host },
+  const parts = host.split('.')
+  const apex = parts.length >= 3 ? parts.slice(-2).join('.') : host
+  const domain = await prisma.domain.findFirst({
+    where: { OR: [{ domain: host }, { domain: apex }] },
     include: { tenant: true },
   })
   if (!domain || !domain.tenant) return null
