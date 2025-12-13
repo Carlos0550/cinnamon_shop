@@ -1,14 +1,29 @@
-import { Box, Flex, Paper, Tabs, Title } from "@mantine/core";
+import { Box, Flex, Loader, Paper, Tabs, Title } from "@mantine/core";
 import LoginForm from "../components/Auth/LoginForm";
 import RegisterForm from "../components/Auth/RegisterForm";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRegister } from "@/components/Api/AuthApi";
 import { showNotification } from "@mantine/notifications";
+import { getPublicBusiness, useGetBusiness } from "@/components/Api/BusinessApi";
 
 
 export default function Login() {
+  const [businessName, setBusinessName] = useState<string>("");
+  const [loadingData, setLoadingData] = useState<boolean>(false);
   const [formType, setFormType] = useState<"register" | "login">("login");
   const registerHook = useRegister();
+
+  const getBusinessData = useCallback(async () => {
+    setLoadingData(true);
+    const business = await getPublicBusiness();
+    console.log(business)
+    setBusinessName(business?.name || "");
+    setLoadingData(false);
+  },[]) 
+
+  useEffect(() => {
+    getBusinessData();
+  }, [getBusinessData])
   return (
     <Flex
       justify="center"
@@ -16,7 +31,13 @@ export default function Login() {
       style={{ height: "100vh" }}
     >
       <Box m="auto">
-        <Title mb="md">Bienvenido a Cinnamon</Title>
+        <Title mb="md">{
+          loadingData ? (
+            <Loader type="bars"/>
+          ) : (
+            businessName ? `Bienvenido a ${businessName}` : "Bienvenido a tu Tienda online"
+          )
+          }</Title>
         <Paper withBorder p="md" radius="md">
           <Tabs defaultValue="login" value={formType} onChange={(v) => setFormType(v as "register" | "login")}>
             <Tabs.List>

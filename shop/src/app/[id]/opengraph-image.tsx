@@ -3,13 +3,16 @@ import { ImageResponse } from 'next/og'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 export const runtime = 'edge'
-export const alt = 'Producto | Cinnamon'
+export const alt = 'Producto | Tienda Online'
 
 export default async function OG({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
   const bizImage = process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || ''
+  const bizRes = await fetch(`${apiUrl}/business/public`, { next: { revalidate: 3600 } }).catch(() => null)
+  const business = bizRes && (await bizRes.json().catch(() => null)) || null
+  const businessName = (business && business.name) || 'Tienda Online'
   let product: { title?: string; category?: { title?: string }; price?: number; images?: string[] } = {}
   try {
     const res = await fetch(`${apiUrl}/products/public/${id}`, { next: { revalidate: 600 } })
@@ -45,7 +48,7 @@ export default async function OG({ params }: { params: Promise<{ id: string }> }
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
-          <div style={{ fontSize: 48, fontWeight: 800, color: '#111' }}>Cinnamon Shop</div>
+          <div style={{ fontSize: 48, fontWeight: 800, color: '#111' }}>{businessName}</div>
         </div>
         <div style={{ marginTop: 24, fontSize: 56, fontWeight: 700, color: '#111' }}>{title}</div>
         <div style={{ marginTop: 8, fontSize: 28, color: '#444' }}>{cat}</div>

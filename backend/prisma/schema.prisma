@@ -12,6 +12,56 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum TenantPlan {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum IntegrationType {
+  AUTHENTICATION
+  MODELLM
+}
+
+model Tenant {
+  id         String       @id @default(cuid())
+  slug       String       @unique
+  status     TenantStatus @default(ACTIVE)
+  plan       TenantPlan   @default(BASIC)
+  created_at DateTime     @default(now()) @db.Timestamptz(3)
+  domains    Domain[]
+  business   BusinessData?
+  users      User[]
+  admins     Admin[]
+  categories Categories[]
+  products   Products[]
+  promos     Promos[]
+  sales      Sales[]
+  carts      Cart[]
+  orderItems OrderItems[]
+  orders     Orders[]
+  faqs       FAQ[]
+  palettes   ColorPalette[]
+  bankData   BusinessBankData[]
+  integrations Integration[]
+}
+
+model Domain {
+  id       String  @id @default(cuid())
+  domain   String  @unique
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
 enum ProductState {
   active
   inactive
@@ -51,12 +101,14 @@ model User {
   name           String
   is_active      Boolean  @default(true)
   is_clerk       Boolean  @default(false)
-  clerk_user_id  String?  @unique
+  clerk_user_id  String?
   profile_image  String?
   created_at     DateTime @default(now()) @db.Timestamptz(3)
   updated_at     DateTime @updatedAt @db.Timestamptz(3)
   role           Int      @default(2)
   created_promos Promos[] @relation("PromosCreatedBy")
+  tenantId       String?
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   sales Sales[]
   orders Orders[]
@@ -67,7 +119,9 @@ model User {
   shipping_province String?
   cart Cart?
 
-  @@unique([email])
+  @@index([tenantId])
+  @@unique([tenantId, email])
+  @@unique([tenantId, clerk_user_id])
   @@index([is_active])
   @@index([role])
   @@index([created_at])
@@ -75,7 +129,7 @@ model User {
 
 model Admin {
   id            Int      @id @default(autoincrement())
-  email         String   @unique
+  email         String
   password      String
   name          String
   is_active     Boolean  @default(true)
@@ -83,9 +137,13 @@ model Admin {
   role          Int      @default(1)
   created_at    DateTime @default(now()) @db.Timestamptz(3)
   updated_at    DateTime @updatedAt @db.Timestamptz(3)
+  tenantId      String?
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([is_active])
   @@index([created_at])
+  @@unique([tenantId, email])
 }
 
 model Categories {
@@ -97,7 +155,10 @@ model Categories {
   status     CategoryStatus @default(active)
   products   Products[]
   promos     Promos[]
+  tenantId   String?
+  tenant     Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([status, is_active])
   @@index([created_at])
   @@index([title])
@@ -117,9 +178,12 @@ model Products {
   stock       Int          @default(1)
   category    Categories?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   promos      Promos[]
-  sales       Sales[]
+  sales      Sales[]
   orderItems  OrderItems[]
+  tenantId    String?
+  tenant      Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([categoryId])
   @@index([categoryId, is_active])
   @@index([is_active, state])
@@ -129,7 +193,7 @@ model Products {
 
 model Promos {
   id               String       @id @default(cuid())
-  code             String?      @unique
+  code             String?
   title            String
   description      String?
   image            String?
@@ -152,11 +216,15 @@ model Promos {
   updated_at       DateTime     @updatedAt @db.Timestamptz(3)
   createdById      Int?
   created_by       User?        @relation("PromosCreatedBy", fields: [createdById], references: [id])
+  tenantId         String?
+  tenant           Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([is_active])
   @@index([show_in_home, is_active])
   @@index([start_date, end_date])
   @@index([createdById])
+  @@unique([tenantId, code])
 }
 
 model Sales {
@@ -177,7 +245,10 @@ model Sales {
   decline_reason String?
 
   orders         Orders[]
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([created_at])
   @@index([userId])
   @@index([source, created_at])
@@ -190,7 +261,10 @@ model Cart {
   userId    Int      @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     OrderItems[]
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([userId])
 }
 
@@ -202,7 +276,10 @@ model OrderItems {
   cartId           Int
   cart             Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product          Products @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tenantId         String?
+  tenant           Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([cartId])
   @@index([productId])
 }
@@ -221,7 +298,10 @@ model Orders {
   saleId         String?
   sale           Sales?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
   transfer_receipt_path String?
+  tenantId       String?
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([userId])
   @@index([created_at])
   @@index([saleId])
@@ -236,7 +316,10 @@ model FAQ {
   deleted_at   DateTime?
   created_at   DateTime @default(now()) @db.Timestamptz(3)
   updated_at   DateTime @updatedAt @db.Timestamptz(3)
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([is_active, position])
   @@index([deleted_at])
   @@index([created_at])
@@ -251,6 +334,8 @@ model BusinessData {
   city      String
   state     String
   bankData  BusinessBankData[]
+  tenantId  String?  @unique
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 model BusinessBankData{
   id        String   @id @default(cuid())
@@ -259,19 +344,41 @@ model BusinessBankData{
   account_holder String
   businessId      String
   business       BusinessData @relation(fields: [businessId], references: [id])
+  tenantId       String?
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model ColorPalette {
   id              String   @id @default(cuid())
-  name            String   @unique
+  name            String
   colors          String[]
   is_active       Boolean  @default(true)
   use_for_admin   Boolean  @default(false)
   use_for_shop    Boolean  @default(false)
   created_at      DateTime @default(now()) @db.Timestamptz(3)
   updated_at      DateTime @updatedAt @db.Timestamptz(3)
+  tenantId        String?
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
+  @@unique([tenantId, name])
   @@index([is_active])
   @@index([use_for_admin])
   @@index([use_for_shop])
+}
+
+model Integration {
+  id         String          @id @default(cuid())
+  type       IntegrationType
+  name       String
+  secret     String
+  created_at DateTime        @default(now()) @db.Timestamptz(3)
+  updated_at DateTime        @updatedAt @db.Timestamptz(3)
+  tenantId   String?
+  tenant     Tenant?         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@unique([tenantId, type])
 }

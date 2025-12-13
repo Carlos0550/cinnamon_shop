@@ -13,7 +13,8 @@
     "seed:sales": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-sales.ts",
     "seed:users": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-users.ts",
     "seed:products": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-products.ts",
-    "seed:promos": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-promos.ts"
+    "seed:promos": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-promos.ts",
+    "seed:tenant": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-tenant.ts"
   },
   "keywords": [],
   "author": "",

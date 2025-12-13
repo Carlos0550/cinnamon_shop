@@ -129,7 +129,7 @@ export default function LoginForm({ onClose }: Props) {
           </Stack>
         )}
         </Stack>
-      {!showClerkSignIn && (
+      {!showClerkSignIn && auth.hasAuthIntegration && (
         <Flex direction={"column"} mt="md" gap="sm" align="center" justify={"space-between"}>
           <Text c="dimmed" >ó tambien</Text>
         <Button leftSection={<FcGoogle />} variant="outline" color="blue" onClick={() => setShowClerkSignIn(true)}>
@@ -138,7 +138,7 @@ export default function LoginForm({ onClose }: Props) {
       </Flex>
       )}
 
-      {showClerkSignIn && (
+      {showClerkSignIn && auth.hasAuthIntegration && (
         <Flex mt="md">
           <SignIn routing="hash" afterSignInUrl="/" afterSignUpUrl="/" />
         </Flex>

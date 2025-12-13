@@ -1,16 +1,17 @@
 import { Request, Response } from "express";
 import paletteServices from "./services/palette.services";
 import { generatePaletteFromPrompt } from "@/config/openai";
+import { getTenantId } from "@/config/tenantScope";
 
 class PaletteController {
   async list(req: Request, res: Response) {
-    const items = await paletteServices.list();
+    const items = await paletteServices.list(getTenantId(req));
     res.json(items);
   }
 
   async get(req: Request, res: Response) {
     const { id } = req.params as { id: string };
-    const item = await paletteServices.get(id);
+    const item = await paletteServices.get(getTenantId(req), id);
     if (!item) return res.status(404).json({ error: "Palette not found" });
     res.json(item);
   }
@@ -19,7 +20,7 @@ class PaletteController {
     try {
       const { name, colors, is_active } = req.body as { name: string; colors: string[]; is_active?: boolean };
       if (!name || !Array.isArray(colors) || colors.length !== 10) return res.status(400).json({ error: "Nombre y 10 colores requeridos" });
-      const created = await paletteServices.create({ name, colors, is_active });
+      const created = await paletteServices.createForTenant({ name, colors, is_active }, getTenantId(req));
       res.status(201).json(created);
     } catch (e) {
       return res.status(500).json({ error: "Error creando paleta" });
@@ -31,7 +32,7 @@ class PaletteController {
       const { id } = req.params as { id: string };
       const { name, colors, is_active } = req.body as { name: string; colors: string[]; is_active?: boolean };
       if (!name || !Array.isArray(colors) || colors.length !== 10) return res.status(400).json({ error: "Nombre y 10 colores requeridos" });
-      const updated = await paletteServices.update(id, { name, colors, is_active });
+      const updated = await paletteServices.update(getTenantId(req), id, { name, colors, is_active });
       res.json(updated);
     } catch {
       return res.status(500).json({ error: "Error actualizando paleta" });
@@ -41,7 +42,7 @@ class PaletteController {
   async remove(req: Request, res: Response) {
     try {
       const { id } = req.params as { id: string };
-      await paletteServices.remove(id);
+      await paletteServices.remove(getTenantId(req), id);
       res.status(204).send();
     } catch {
       return res.status(500).json({ error: "Error eliminando paleta" });
@@ -52,7 +53,7 @@ class PaletteController {
     try {
       const { id } = req.params as { id: string };
       const { active } = req.body as { active: boolean };
-      const updated = await paletteServices.activate(id, !!active);
+      const updated = await paletteServices.activate(getTenantId(req), id, !!active);
       res.json(updated);
     } catch {
       return res.status(500).json({ error: "Error actualizando estado" });
@@ -65,7 +66,7 @@ class PaletteController {
       if (!paletteId || !["admin", "shop"].includes(String(target))) {
         return res.status(400).json({ error: "Datos inválidos" });
       }
-      await paletteServices.setUsage(paletteId, target);
+      await paletteServices.setUsage(getTenantId(req), paletteId, target);
       res.json({ ok: true });
     } catch {
       return res.status(500).json({ error: "Error configurando uso" });
@@ -75,7 +76,7 @@ class PaletteController {
   async getActiveFor(req: Request, res: Response) {
     const { target } = req.params as { target: "admin" | "shop" };
     if (!["admin", "shop"].includes(String(target))) return res.status(400).json({ error: "target inválido" });
-    const palette = await paletteServices.getActiveFor(target);
+    const palette = await paletteServices.getActiveFor(getTenantId(req), target);
     if (!palette) return res.status(404).json({ error: "No hay paleta activa" });
     res.json(palette);
   }
@@ -84,8 +85,9 @@ class PaletteController {
     try {
       const { prompt } = req.body as { prompt: string };
       if (!prompt || typeof prompt !== 'string') return res.status(400).json({ error: 'Prompt requerido' });
-      const { name, colors } = await generatePaletteFromPrompt(prompt);
-      const created = await paletteServices.create({ name, colors, is_active: true });
+      const tenantId = getTenantId(req);
+      const { name, colors } = await generatePaletteFromPrompt(tenantId, prompt);
+      const created = await paletteServices.createForTenant({ name, colors, is_active: true }, tenantId);
       res.status(201).json(created);
     } catch (e) {
       return res.status(500).json({ error: 'Error generando paleta' });
@@ -97,7 +99,7 @@ class PaletteController {
       const { name } = req.body as { name?: string };
       const randHex = () => '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
       const base = Array.from({ length: 10 }, () => randHex());
-      const created = await paletteServices.create({ name: name ?? 'random', colors: base, is_active: true });
+      const created = await paletteServices.createForTenant({ name: name ?? 'random', colors: base, is_active: true }, getTenantId(req));
       res.status(201).json(created);
     } catch {
       return res.status(500).json({ error: 'Error generando paleta aleatoria' });

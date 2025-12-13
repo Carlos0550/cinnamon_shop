@@ -3,13 +3,16 @@ import { ImageResponse } from 'next/og'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 export const runtime = 'edge'
-export const alt = 'Cinnamon Shop'
+export const alt = 'Tienda Online'
 
 export default async function OG({ searchParams }: { searchParams?: { title?: string; categoryId?: string } }) {
   const titleQ = searchParams?.title?.trim() || ''
   const catQ = searchParams?.categoryId?.trim() || ''
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
   const bizImage = process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || ''
+  const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api") + "/business/public", { next: { revalidate: 3600 } }).catch(() => null)
+  const business = res && (await res.json().catch(() => null)) || null
+  const businessName = (business && business.name) || 'Tienda Online'
 
   return new ImageResponse(
     (
@@ -35,7 +38,7 @@ export default async function OG({ searchParams }: { searchParams?: { title?: st
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
-          <div style={{ fontSize: 56, fontWeight: 800, color: '#111' }}>Cinnamon Shop</div>
+          <div style={{ fontSize: 56, fontWeight: 800, color: '#111' }}>{businessName}</div>
         </div>
         <div style={{ marginTop: 24, fontSize: 32, color: '#333' }}>Explora categorías y productos</div>
         {titleQ && (

@@ -33,3 +33,6 @@ backend/docs/Guia-Endpoints-OpenAPI-Zod-Prisma.md
 backend/README.md
 .trae/documents/Arreglar autenticación Clerk y sincronización con backend.md
 shop/src/app/globals.css
+.trae/documents/Consola de Tenants y Domains con Vite + React.md
+.trae/documents/Migración a multi‑tenant por dominio (Express_Prisma_Next 19).md
+tenants-console/.env

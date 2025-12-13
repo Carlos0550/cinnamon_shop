@@ -11,9 +11,9 @@ type OrderItemInput = { product_id: string; quantity: number }
 type CustomerInput = { name: string; email: string; phone?: string; street?: string; postal_code?: string; city?: string; province?: string; pickup?: boolean }
 
 export default class OrdersServices {
-  async createOrder(userId: number | undefined, items: OrderItemInput[], paymentMethod: string, customer: CustomerInput) {
+  async createOrder(tenantId: string, userId: number | undefined, items: OrderItemInput[], paymentMethod: string, customer: CustomerInput) {
     const productIds = items.map(i => String(i.product_id))
-    const products = await prisma.products.findMany({ where: { id: { in: productIds } } })
+    const products = await prisma.products.findMany({ where: { id: { in: productIds }, tenantId } })
     const itemsMap = new Map(items.map(i => [i.product_id, Math.max(1, Number(i.quantity) || 1)]))
     const snapshot = products.map(p => ({ id: p.id, title: p.title, price: Number(p.price), quantity: itemsMap.get(p.id) || 1 }))
     const total = snapshot.reduce((acc, it) => acc + Number(it.price) * Number(it.quantity), 0)
@@ -28,26 +28,27 @@ export default class OrdersServices {
         buyer_phone: customer.phone || undefined,
         buyer_name: customer.name || undefined,
         ...(userId && Number.isInteger(userId) ? { user: { connect: { id: userId } } } : {}),
+        tenant: { connect: { id: tenantId } },
       }
     })
 
     if (userId && Number.isInteger(userId)) {
-      await prisma.user.update({ where: { id: userId }, data: {
+      await prisma.user.update({ where: { id: userId, tenantId }, data: {
         phone: customer.phone || undefined,
         shipping_street: customer.street || undefined,
         shipping_postal_code: customer.postal_code || undefined,
         shipping_city: customer.city || undefined,
         shipping_province: customer.province || undefined,
       } })
-      const cart = await prisma.cart.findUnique({ where: { userId }, select: { id: true } })
+      const cart = await prisma.cart.findFirst({ where: { userId, tenantId }, select: { id: true } })
       if (cart?.id) {
-        await prisma.orderItems.deleteMany({ where: { cartId: cart.id } })
-        await prisma.cart.update({ where: { id: cart.id }, data: { total: 0 } })
+        await prisma.orderItems.deleteMany({ where: { cartId: cart.id, tenantId } })
+        await prisma.cart.update({ where: { id: cart.id, tenantId }, data: { total: 0 } })
       }
     }
     const parsed_payment_method = paymentNormalized
     try {
-      const saleId = await salesServices.saveSale({
+      const saleId = await salesServices.saveSale(tenantId, {
         payment_method: parsed_payment_method,
         source: "WEB",
         product_ids: productIds,
@@ -55,13 +56,13 @@ export default class OrdersServices {
         items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
       }) as any;
       if (typeof saleId === 'string') {
-        await prisma.orders.update({ where: { id: order.id }, data: { saleId } });
+        await prisma.orders.update({ where: { id: order.id, tenantId }, data: { saleId } });
       }
     } catch (err) {
       console.error('order_sale_link_failed', err)
     }
     setImmediate(async () => {
-      await this.notify(order.id, snapshot, total, paymentMethod, customer)
+      await this.notify(tenantId, order.id, snapshot, total, paymentMethod, customer)
       try {
         for (const it of snapshot) {
           await prisma.$executeRaw`UPDATE "Products" 
@@ -97,11 +98,11 @@ export default class OrdersServices {
     }
   }
 
-  async listUserOrders(userId: number, page: number = 1, limit: number = 10) {
+  async listUserOrders(tenantId: string, userId: number, page: number = 1, limit: number = 10) {
     const skip = (Math.max(1, page) - 1) * Math.max(1, limit);
     const [items, total] = await Promise.all([
       prisma.orders.findMany({
-        where: { userId },
+        where: { userId, tenantId },
         orderBy: { created_at: 'desc' },
         skip,
         take: Math.max(1, limit),
@@ -113,16 +114,16 @@ export default class OrdersServices {
           created_at: true,
         },
       }),
-      prisma.orders.count({ where: { userId } }),
+      prisma.orders.count({ where: { userId, tenantId } }),
     ]);
     const totalPages = Math.ceil(total / Math.max(1, limit)) || 1;
     return { ok: true, items, page, total, totalPages, hasNextPage: page < totalPages, hasPrevPage: page > 1 };
   }
-  private async notify(orderId: string, items: { title: string; price: number; quantity: number }[], total: number, paymentMethod: string, customer: CustomerInput) {
+  private async notify(tenantId: string, orderId: string, items: { title: string; price: number; quantity: number }[], total: number, paymentMethod: string, customer: CustomerInput) {
     const productRows = items.map(it => ({ title: `${it.title} x${it.quantity}`, price: Number(it.price) * Number(it.quantity) }))
     if (customer.email && customer.email.trim()) {
-      const business = await BusinessServices.getBusiness();
-      const palette = await PaletteServices.getActiveFor("shop");
+      const business = await BusinessServices.getBusiness(tenantId);
+      const palette = await PaletteServices.getActiveFor(tenantId, "shop");
       const buyerHtml = purchase_email_html({
         payment_method: paymentMethod,
         products: productRows,

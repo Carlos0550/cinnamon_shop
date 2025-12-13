@@ -10,7 +10,7 @@ import PaletteServices from "@/modules/Palettes/services/palette.services";
 
 
 class SalesServices {
-    async saveSale(request: SaleRequest) {
+    async saveSale(tenantId: string, request: SaleRequest) {
         const { payment_method, source, product_ids, user_sale, items } = request;
         const { user_id } = user_sale || {};
 
@@ -25,7 +25,7 @@ class SalesServices {
                     ? items.map(it => ({ id: String(it.product_id), quantity: Math.max(1, Number(it.quantity) || 1) }))
                     : Array.from(product_ids || []).map(id => ({ id: String(id), quantity: 1 }));
                 const uniqueIds = Array.from(new Set(incoming.map(i => i.id)));
-                const found = await prisma.products.findMany({ where: { id: { in: uniqueIds } } }) as any;
+                const found = await prisma.products.findMany({ where: { id: { in: uniqueIds }, tenantId } }) as any;
                 const byId = new Map(found.map((p: any) => [p.id, p]));
                 product_data = incoming.map((i) => {
                     const p = byId.get(i.id);
@@ -65,15 +65,16 @@ class SalesServices {
                     manualProducts: isManual ? manualItems as any : undefined,
                     loadedManually: isManual,
                     paymentMethods: paymentBreakdown as any,
+                    tenant: { connect: { id: tenantId } },
                 }
             })
 
             setImmediate(async () => {
                 try {
-                    const user = parsedUserId ? await prisma.user.findUnique({ where: { id: parsedUserId } }) : null;
+                    const user = parsedUserId ? await prisma.user.findFirst({ where: { id: parsedUserId, tenantId } }) : null;
                     console.log(user)
-                    const business = await BusinessServices.getBusiness();
-                    const palette = await PaletteServices.getActiveFor("shop");
+                    const business = await BusinessServices.getBusiness(tenantId);
+                    const palette = await PaletteServices.getActiveFor(tenantId, "shop");
                     const html = sale_email_html({
                         source,
                         payment_method: primaryPaymentMethod,
@@ -88,7 +89,7 @@ class SalesServices {
                         business: business as any,
                         palette: palette as any,
                     });
-                    const admins: any[] = await prisma.admin.findMany({ where: { is_active: true } })
+                    const admins: any[] = await prisma.admin.findMany({ where: { is_active: true, tenantId } })
                     //const admins: any[] = ["carlospelinski03@gmail.com"] //testing
                     const adminEmails = admins.map((u: { email: string }) => u.email).filter((e: string): e is string => !!e);
                     const configuredRecipient = process.env.SALES_EMAIL_TO;
@@ -209,7 +210,7 @@ class SalesServices {
         }
     }
 
-    async getSales({ page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
+    async getSales(tenantId: string, { page = 1, per_page = 5, start_date, end_date }: { page?: number, per_page?: number, start_date?: string, end_date?: string }) {
         try {
             const take = Math.max(1, Number(per_page) || 5);
             const currentPage = Math.max(1, Number(page) || 1);
@@ -232,6 +233,7 @@ class SalesServices {
                     gte: start.toDate(),
                     lte: end.toDate(),
                 },
+                tenantId,
             };
             const pending = (global as any)?.__pendingFilter || false;
             if (pending) {
@@ -290,7 +292,7 @@ class SalesServices {
         }
     }
 
-    async getSalesAnalytics({ start_date, end_date }: { start_date?: string, end_date?: string }) {
+    async getSalesAnalytics(tenantId: string, { start_date, end_date }: { start_date?: string, end_date?: string }) {
         try {
             const defaultEnd = nowTz();
             const defaultStart = defaultEnd.subtract(30, 'day');
@@ -312,6 +314,7 @@ class SalesServices {
             const [currentSales, previousSales] = await Promise.all([
                 prisma.sales.findMany({
                     where: {
+                        tenantId,
                         created_at: {
                             gte: start.toDate(),
                             lte: end.toDate(),
@@ -328,6 +331,7 @@ class SalesServices {
                 }),
                 prisma.sales.findMany({
                     where: {
+                        tenantId,
                         created_at: {
                             gte: prevStart.toDate(),
                             lte: prevEnd.toDate(),
@@ -413,7 +417,7 @@ class SalesServices {
         }
     }
 
-    async markProcessed(id: string) {
+    async markProcessed(tenantId: string, id: string) {
         try {
             const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true, orders:true } });
             if (!sale) return { success: false, message: 'sale_not_found' };
@@ -423,8 +427,8 @@ class SalesServices {
             const buyerName = sale.orders[0].buyer_name || sale.user?.name || undefined;
             console.log("buyer_email", buyer_email);
             if (buyer_email) {
-                const business = await BusinessServices.getBusiness();
-                const palette = await PaletteServices.getActiveFor("shop");
+                const business = await BusinessServices.getBusiness(tenantId);
+                const palette = await PaletteServices.getActiveFor(tenantId, "shop");
                 const html = order_ready_email_html({ saleId: sale.id, buyerName, payment_method: String(sale.payment_method), business: business as any, palette: palette as any });
                 await sendEmail({ to: buyer_email, subject: `Tu orden #${sale.id} está lista`, html });
                 return { success: true };
@@ -437,7 +441,7 @@ class SalesServices {
         }
     }
 
-    async decline(id: string, reason: string) {
+    async decline(tenantId: string, id: string, reason: string) {
         try {
             const sale = await prisma.sales.findUnique({ where: { id }, include: { user: true, orders:true } });
             if (!sale) return { success: false, message: 'sale_not_found' };
@@ -445,8 +449,8 @@ class SalesServices {
             const buyer_email = sale.orders[0].buyer_email || sale.user?.email;
             const buyerName = sale.orders[0].buyer_name || sale.user?.name || undefined;
             if (buyer_email) {
-                const business = await BusinessServices.getBusiness();
-                const palette = await PaletteServices.getActiveFor("shop");
+                const business = await BusinessServices.getBusiness(tenantId);
+                const palette = await PaletteServices.getActiveFor(tenantId, "shop");
                 const html = order_declined_email_html({ saleId: sale.id, buyerName, reason, business: business as any, palette: palette as any });
                 await sendEmail({ to: buyer_email, subject: `Tu orden #${sale.id} fue declinada`, html });
             }

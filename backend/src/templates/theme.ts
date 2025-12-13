@@ -13,12 +13,13 @@ export type PaletteData = {
 
 export function applyTheme(html: string, business?: BusinessData | null, palette?: PaletteData | null) {
   // Default Business Info
-  const businessName = business?.name || "Cinnamon";
+  const businessName = business?.name || "Tienda Online";
   const businessAddress = business?.address || "";
   const businessCity = business?.city || "";
   const businessState = business?.state || "";
   const businessEmail = business?.email || "";
   const businessPhone = business?.phone || "";
+  const businessUrl = process.env.SHOP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
 
   // Default Palette (Kuromi / Original)
   // 0: Lightest, 9: Darkest
@@ -89,6 +90,7 @@ export function applyTheme(html: string, business?: BusinessData | null, palette
     '{{business_state}}': businessState,
     '{{business_email}}': businessEmail,
     '{{business_phone}}': businessPhone,
+    '{{business_url}}': businessUrl,
     '{{year}}': String(new Date().getFullYear())
   };
 

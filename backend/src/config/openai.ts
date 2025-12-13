@@ -1,11 +1,16 @@
 import OpenAI from 'openai';
+import { getIntegrationSecret } from './integrations';
+import { IntegrationType } from '@prisma/client';
 
-const openai = new OpenAI({
-  apiKey: process.env.openai_api_key,
-});
+export async function getOpenAIForTenant(tenantId: string) {
+  const apiKey = await getIntegrationSecret(tenantId, IntegrationType.MODELLM)
+  if (!apiKey) throw new Error('openai_key_missing')
+  return new OpenAI({ apiKey })
+}
 
-export const analyzeProductImages = async (imageUrls: string[]): Promise<{ title: string; description: string }> => {
+export const analyzeProductImages = async (tenantId: string, imageUrls: string[], hint?: string): Promise<{ title: string; description: string }> => {
   try {
+    const openai = await getOpenAIForTenant(tenantId)
     const imageMessages = imageUrls.map(url => ({
       type: "image_url" as const,
       image_url: {
@@ -60,33 +65,34 @@ export const analyzeProductImages = async (imageUrls: string[]): Promise<{ title
       }
     `;
     const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: systemPrompt
-      },
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: "Analiza estas imágenes y genera título y descripción."
-          },
-          ...imageMessages
-        ]
-      }
-    ],
-    max_tokens: 500,
-    temperature: 0.0
-  });
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: hint && hint.trim().length
+                ? `Contexto adicional: ${hint.trim()}`
+                : ""
+            },
+            ...imageMessages
+          ]
+        }
+      ],
+      max_tokens: 500,
+      temperature: 0.0
+    });
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
       throw new Error('No se recibió respuesta de OpenAI');
     }
 
-    // Remove markdown formatting if present
     let jsonContent = content.trim();
     if (jsonContent.startsWith('```json')) {
       jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -106,20 +112,39 @@ export const analyzeProductImages = async (imageUrls: string[]): Promise<{ title
   }
 };
 
-export { openai };
-
-export const generatePaletteFromPrompt = async (prompt: string): Promise<{ name: string; colors: string[] }> => {
+export const generatePaletteFromPrompt = async (tenantId: string, prompt: string): Promise<{ name: string; colors: string[] }> => {
+  const openai = await getOpenAIForTenant(tenantId)
   const systemPrompt = `
-Eres un diseñador experto de UI. Genera una paleta de 10 colores HEX compatible con Mantine (shades del 0 al 9) para un tema principal.
+    Eres un diseñador experto en color y sistemas de diseño UI.
 
-Requisitos:
-- Responder SOLO JSON válido con las claves: name (string corto) y colors (array de 10 strings HEX, p.ej. "#AABBCC").
-- colors MUST tener 10 entradas ordenadas de claro (índice 0) a oscuro (índice 9).
-- Usa combinaciones armónicas y legibles para UI.
-- No incluyas texto adicional ni markdown.
-Formato de salida:
-{"name":"...","colors":["#...", "#...", "#...", "#...", "#...", "#...", "#...", "#...", "#...", "#..."]}
-`;
+    Tu tarea es generar una paleta de 10 colores HEX (shades 0 a 9) compatible con Mantine, basada en la descripción del usuario.
+
+    REGLAS FUNDAMENTALES:
+    - Detecta la familia cromática principal solicitada por el usuario.
+    - Todos los colores de la paleta deben pertenecer claramente a esa familia cromática.
+    - Mantén el mismo matiz base a lo largo de toda la paleta.
+    - La variación entre shades debe lograrse principalmente ajustando lightness y saturación, no el hue.
+    - No reinterpretar ni “desplazar” el color hacia otra familia por razones estéticas.
+
+    PROGRESIÓN DE SHADES:
+    - colors[0] debe ser el tono más claro.
+    - colors[9] debe ser el tono más oscuro.
+    - La transición debe ser gradual, coherente y usable en UI.
+
+    CALIDAD UI:
+    - La paleta debe ser armónica, legible y adecuada para interfaces modernas.
+    - Evita extremos inutilizables (demasiado grisáceo, demasiado saturado o sin contraste funcional).
+
+    FORMATO DE SALIDA:
+    - Responder SOLO JSON válido.
+    - Claves exactas: name (string corto) y colors (array de 10 strings HEX).
+    - El array colors debe contener exactamente 10 valores HEX.
+    - No incluir texto adicional, comentarios ni markdown.
+
+    Formato EXACTO:
+    {"name":"...","colors":["#......","#......","#......","#......","#......","#......","#......","#......","#......","#......"]}
+    `;
+
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [

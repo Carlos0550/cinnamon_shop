@@ -3,7 +3,7 @@ import { BusinessDataRequest } from "./schemas/business.schemas";
 import { Prisma } from "@prisma/client";
 
 class BusinessServices {
-    async createBusiness(payload: BusinessDataRequest) {
+    async createBusiness(tenantId: string, payload: BusinessDataRequest) {
         const business_data: Prisma.BusinessDataCreateInput = {
             name: payload.name,
             email: payload.email,
@@ -20,6 +20,7 @@ class BusinessServices {
                     }))
                 }
                 : undefined,
+            tenant: { connect: { id: tenantId } },
         };
 
         const business = await prisma.businessData.create({
@@ -29,9 +30,9 @@ class BusinessServices {
         return business;
     }
 
-    async updateBusiness(id: string, payload: BusinessDataRequest) {
+    async updateBusiness(tenantId: string, id: string, payload: BusinessDataRequest) {
         const existing = await prisma.businessData.findUnique({
-            where: { id },
+            where: { id, tenantId },
             include: { bankData: true }
         });
         if (!existing) {
@@ -39,7 +40,7 @@ class BusinessServices {
         }
 
         const updated = await prisma.businessData.update({
-            where: { id },
+            where: { id, tenantId },
             data: {
                 name: payload.name,
                 email: payload.email,
@@ -64,8 +65,9 @@ class BusinessServices {
         return updated;
     }
 
-    async getBusiness() {
+    async getBusiness(tenantId: string) {
         const business = await prisma.businessData.findFirst({
+            where: { tenantId },
             include: { bankData: true },
             orderBy: { id: 'asc' }
         });

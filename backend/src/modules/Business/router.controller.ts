@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { BusinessDataRequest } from "./schemas/business.schemas";
 import businessServices from "./business.services";
+import { getTenantId } from "@/config/tenantScope";
 class BusinessController {
     async createBusiness(req: Request, res: Response) {
         const payload = req.body as BusinessDataRequest;
@@ -12,7 +13,8 @@ class BusinessController {
         if(!payload.name || !payload.email || !payload.phone || !payload.address || !payload.city || !payload.state) {
             return res.status(400).json({ error: "Todos los campos son requeridos" });
         }
-        const business = await businessServices.createBusiness(payload);
+        const tenantId = getTenantId(req);
+        const business = await businessServices.createBusiness(tenantId, payload);
         res.status(201).json(business);
     }
 
@@ -25,7 +27,8 @@ class BusinessController {
                 return res.status(400).json({ error: "Todos los campos son requeridos" });
             }
 
-            const business = await businessServices.updateBusiness(id, payload);
+            const tenantId = getTenantId(req);
+            const business = await businessServices.updateBusiness(tenantId, id, payload);
             return res.status(200).json(business);
         } catch (error) {
             if (error instanceof Error && error.message === "BUSINESS_NOT_FOUND") {
@@ -37,7 +40,8 @@ class BusinessController {
 
     async getBusiness(req: Request, res: Response) {
         try {
-            const data = await businessServices.getBusiness();
+            const tenantId = getTenantId(req);
+            const data = await businessServices.getBusiness(tenantId);
             if (!data) {
                 return res.status(404).json({ error: "Negocio no configurado" });
             }

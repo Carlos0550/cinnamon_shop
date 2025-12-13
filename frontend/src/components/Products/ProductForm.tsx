@@ -21,6 +21,7 @@ export type ProductFormValues = {
   fillWithAI?: boolean;
   publishAutomatically?: boolean;
   stock?: string;
+  aiDescription?: string;
 };
 
 type ProductFormProps = {
@@ -61,6 +62,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     fillWithAI: false,
     publishAutomatically: false,
     stock: "1",
+    aiDescription: "",
   });
 
   useEffect(() => {
@@ -106,6 +108,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       ...rest,
       state: isAI ? 'draft' : formValues.state,
       ...(product ? {} : { stock: stock ? Number(stock) : undefined }),
+      aiDescription: formValues.aiDescription,
     };
 
     if (isAI) {
@@ -215,6 +218,17 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
             />
           </Group>
         </>
+      )}
+
+      {fillWithAI && !product && (
+        <Textarea
+          name="aiDescription"
+          label="Describe un poco lo que hay en la imagen"
+          placeholder="Ej. Auriculares con diseño de personaje, color negro y morado"
+          minRows={2}
+          value={formValues.aiDescription}
+          onChange={handleChangeValues}
+        />
       )}
 
       <Stack>

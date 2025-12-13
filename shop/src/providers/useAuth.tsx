@@ -20,10 +20,20 @@ export function useAuth() {
   const { isSignedIn, getToken } = useClerkAuth();
   const { user: clerkUser } = useUser();
   const { signOut: clerkSignOut } = useClerk();
+  const [hasAuthIntegration, setHasAuthIntegration] = useState<boolean>(true);
 
   const [state, setState] = useState<AuthState>({ token: null, user: null, loading: false });
 
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${baseUrl}/integrations`);
+        const data = await res.json().catch(() => ({}));
+        setHasAuthIntegration(!!data?.hasAuth);
+      } catch {
+        setHasAuthIntegration(true);
+      }
+    })();
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
     if (!token) return;
     (async () => {
@@ -78,6 +88,7 @@ export function useAuth() {
   }, [baseUrl]);
 
   const exchangeClerkToBackend = useCallback(async () => {
+    if (!hasAuthIntegration) return;
     if (!isSignedIn || !clerkUser) return;
     setState((s) => ({ ...s, loading: true }));
     const email = clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || '';
@@ -147,6 +158,7 @@ export function useAuth() {
     signIn,
     exchangeClerkToBackend,
     signOut,
+    hasAuthIntegration,
   };
 }
 

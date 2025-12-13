@@ -306,7 +306,7 @@ const generator = new OpenApiGeneratorV3(registry.definitions);
 const spec = generator.generateDocument({
   openapi: '3.0.3',
   info: {
-    title: 'Cinnamon API',
+    title: 'API de Tienda Online',
     version: '1.0.0',
     description: 'Documentación generada automáticamente desde esquemas Zod',
   },

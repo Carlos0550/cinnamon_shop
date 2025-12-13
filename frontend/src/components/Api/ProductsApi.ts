@@ -62,6 +62,7 @@ type SaveProductPayload = {
   state?: ProductState;
   publishAutomatically?: boolean;
   stock?: number;
+  aiDescription?: string;
 };
 
 export const useSaveProduct = () => {
@@ -113,6 +114,9 @@ export const useSaveProduct = () => {
 
         if(value.publishAutomatically) {
           formData.append("publishAutomatically", "true");
+        }
+        if (value.aiDescription) {
+          formData.append("ai_description", value.aiDescription);
         }
 
         const res = await fetch(baseUrl + "/products/save-product", {

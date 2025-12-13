@@ -1,9 +1,9 @@
 import { prisma } from '@/config/prisma';
 
 export default class ProfileServices {
-  async getMe(userId: number) {
+  async getMe(tenantId: string, userId: number) {
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, tenantId },
       select: {
         id: true,
         email: true,
@@ -19,7 +19,7 @@ export default class ProfileServices {
     return { ok: true, user };
   }
 
-  async updateMe(userId: number, data: Partial<{
+  async updateMe(tenantId: string, userId: number, data: Partial<{
     name: string;
     phone: string;
     shipping_street: string;
@@ -28,7 +28,7 @@ export default class ProfileServices {
     shipping_province: string;
   }>) {
     const user = await prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, tenantId },
       data,
       select: {
         id: true,
@@ -45,9 +45,9 @@ export default class ProfileServices {
     return { ok: true, user };
   }
 
-  async updateAvatar(userId: number, filePath: string) {
+  async updateAvatar(tenantId: string, userId: number, filePath: string) {
     const user = await prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, tenantId },
       data: { profile_image: filePath },
       select: {
         id: true,
@@ -59,4 +59,3 @@ export default class ProfileServices {
     return { ok: true, user };
   }
 }
-

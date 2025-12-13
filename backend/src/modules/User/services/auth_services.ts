@@ -7,14 +7,19 @@ import { sendEmail } from "@/config/resend";
 import { welcomeKuromiHTML } from "@/templates/welcome_kuromi";
 import { new_user_html } from "@/templates/new_user";
 import { verifyToken as verifyClerkToken } from "@clerk/backend";
+import { IntegrationType } from "@prisma/client";
+import { getIntegrationSecret } from "@/config/integrations";
 import BusinessServices from "@/modules/Business/business.services";
 import PaletteServices from "@/modules/Palettes/services/palette.services";
+import { getTenantId } from "@/config/tenantScope";
 
 class AuthServices {
     async loginAdmin(req: Request, res: Response) {
         const { email, password } = req.body;
-        const rows: any[] = await prisma.$queryRaw`SELECT id, email, password, name, role, profile_image FROM "Admin" WHERE email = ${email} LIMIT 1`;
-        const user = rows[0];
+        const tenantId = getTenantId(req);
+        const user = await prisma.admin.findFirst({
+            where: { email, tenantId }
+        });
 
         if (!user) {
             return res.status(400).json({ ok: false, error: 'invalid_email', message: "El correo electrónico no está registrado" });
@@ -50,6 +55,7 @@ class AuthServices {
             where: {
                 email: email,
                 role: 2,
+                tenantId: req.tenantId
             }
         })
 
@@ -94,13 +100,17 @@ class AuthServices {
             }
             const clerkToken = parts[1];
             console.log("clerkToken", clerkToken)
-            if (!process.env.CLERK_SECRET_KEY) {
+            if (!req.tenantId) {
+                return res.status(401).json({ ok: false, error: 'tenant_required' });
+            }
+            const secretKey = await getIntegrationSecret(req.tenantId, IntegrationType.AUTHENTICATION)
+            if (!secretKey) {
                 console.error('clerk_login_missing_secret_key');
                 return res.status(500).json({ ok: false, error: 'missing_clerk_secret_key' });
             }
             const issuer = process.env.CLERK_ISSUER_URL || process.env.CLERK_PUBLISHABLE_KEY?.includes('clerk.') ? undefined : undefined;
             const verified = await verifyClerkToken(clerkToken, {
-                secretKey: process.env.CLERK_SECRET_KEY,
+                secretKey,
                 ...(issuer ? { issuer } : {}),
             });
             const { email, name, profileImage } = req.body as {
@@ -126,7 +136,7 @@ class AuthServices {
             const clerkUserId = payloadClaims?.sub as string | undefined;
             const picture = profileImage || payloadClaims?.picture || undefined;
 
-            const existingByClerkId = clerkUserId ? await prisma.user.findUnique({ where: { clerk_user_id: clerkUserId } }) : null;
+            const existingByClerkId = clerkUserId ? await prisma.user.findFirst({ where: { clerk_user_id: clerkUserId, tenantId: req.tenantId } }) : null;
 
             let user = existingByClerkId;
 
@@ -142,6 +152,7 @@ class AuthServices {
                         clerk_user_id: clerkUserId,
                         profile_image: picture,
                         role: 2,
+                        tenant: { connect: { id: req.tenantId } },
                     }
                 });
             } else {
@@ -182,12 +193,12 @@ class AuthServices {
                 const { email, name, profileImage } = req.body as { email?: string; name?: string; profileImage?: string };
                 if (!email) return res.status(401).json({ ok: false, error: 'invalid_clerk_token' });
                 const normalized_name = ((name || (email.split('@')[0]))).trim().toLowerCase();
-                let user = await prisma.user.findFirst({ where: { email, role: 2 } });
+                let user = await prisma.user.findFirst({ where: { email, role: 2, tenantId: req.tenantId } });
                 if (!user) {
                     const secure_password = Math.random().toString(36).slice(-12);
                     const hashed = await hashPassword(secure_password);
                     user = await prisma.user.create({
-                        data: { email, password: hashed, name: normalized_name, is_clerk: true, profile_image: profileImage, role: 2 }
+                        data: { email, password: hashed, name: normalized_name, is_clerk: true, profile_image: profileImage, role: 2, tenant: { connect: { id: req.tenantId } } }
                     });
                 } else {
                     await prisma.user.update({ where: { id: user.id }, data: { name: normalized_name, is_clerk: true, profile_image: profileImage } });
@@ -209,11 +220,11 @@ class AuthServices {
         try {
             const { email } = req.body as { email?: string };
             if (!email) return res.status(400).json({ ok: false, error: 'missing_email' });
-            const user = await prisma.user.findFirst({ where: { email, role: 2 } });
+            const user = await prisma.user.findFirst({ where: { email, role: 2, tenantId: getTenantId(req) } });
             if (!user) return res.status(404).json({ ok: false, error: 'user_not_found' });
             const code = String(Math.floor(100000 + Math.random() * 900000));
             const hashed = await hashPassword(code);
-            await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+            await prisma.user.updateMany({ where: { id: user.id, tenantId: getTenantId(req) }, data: { password: hashed } });
             try {
                 await sendEmail({ to: user.email, subject: 'Recuperación de contraseña', text: `Tu nueva contraseña temporal es: ${code}. Ingresa y cámbiala desde tu cuenta.` });
             } catch {}
@@ -228,12 +239,12 @@ class AuthServices {
             const { old_password, new_password } = req.body as { old_password?: string; new_password?: string };
             if (!old_password || !new_password) return res.status(400).json({ ok: false, error: 'missing_fields' });
             const userClaim = (req as any).user;
-            const user = await prisma.user.findUnique({ where: { id: Number(userClaim.sub || userClaim.id) } });
+            const user = await prisma.user.findFirst({ where: { id: Number(userClaim.sub || userClaim.id), tenantId: getTenantId(req) } });
             if (!user) return res.status(404).json({ ok: false, error: 'user_not_found' });
             const ok = await comparePassword(old_password, user.password);
             if (!ok) return res.status(401).json({ ok: false, error: 'invalid_old_password' });
             const hashed = await hashPassword(new_password);
-            await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+            await prisma.user.updateMany({ where: { id: user.id, tenantId: getTenantId(req) }, data: { password: hashed } });
             return res.status(200).json({ ok: true });
         } catch (err) {
             return res.status(500).json({ ok: false, error: 'change_password_failed' });
@@ -243,27 +254,36 @@ class AuthServices {
     
     async registerAdmin(req: Request, res: Response) {
         const { email, password, name } = req.body;
-        const existingRows: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE email = ${email} LIMIT 1`;
-        const user_exists = existingRows[0];
+        const tenantId = getTenantId(req);
+        const user_exists = await prisma.admin.findFirst({ where: { email, tenantId } });
 
         if (user_exists) {
             return res.status(400).json({ ok: false, error: 'email_already_registered' });
         }
         const normalized_name = name.trim().toLowerCase()
         const hashed = await hashPassword(password);
-        await prisma.$executeRaw`INSERT INTO "Admin" (email, password, name, is_active, role, created_at, updated_at) VALUES (${email}, ${hashed}, ${normalized_name}, true, 1, NOW(), NOW())`;
-        const createdRows: any[] = await prisma.$queryRaw`SELECT id, email, name, role, profile_image, created_at, updated_at FROM "Admin" WHERE email = ${email} LIMIT 1`;
-        const user = createdRows[0];
+        const user = await prisma.admin.create({
+            data: {
+                email,
+                password: hashed,
+                name: normalized_name,
+                is_active: true,
+                role: 1,
+                tenant: { connect: { id: tenantId } }
+            },
+            select: { id: true, email: true, name: true, role: true, profile_image: true, created_at: true, updated_at: true }
+        });
 
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
         try {
-            const business = await BusinessServices.getBusiness();
-            const palette = await PaletteServices.getActiveFor("shop");
+            const business = await BusinessServices.getBusiness(getTenantId(req));
+            const palette = await PaletteServices.getActiveFor(getTenantId(req), "shop");
             const html = welcomeKuromiHTML(capitalized_name, business as any, palette as any);
+            const businessName = (business as any)?.name || 'Tienda Online';
             const rs = await sendEmail({
                 to: user.email,
-                subject: 'Bienvenido/a a Cinnamon',
-                text: `Hola ${capitalized_name}, ¡bienvenido/a a Cinnamon!`,
+                subject: `Bienvenido/a a ${businessName}`,
+                text: `Hola ${capitalized_name}, ¡bienvenido/a a ${businessName}!`,
                 html,
             });
             console.log('resend_send_result', rs);
@@ -275,14 +295,14 @@ class AuthServices {
 
     async newUser(req: Request, res: Response) {
         const { email, role_id, name } = req.body;
+        const tenantId = getTenantId(req);
         if (Number(role_id) === 1) {
-            const rows: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE email = ${email} LIMIT 1`;
-            const exists = rows[0];
+            const exists = await prisma.admin.findFirst({ where: { email, tenantId } });
             if (exists) {
                 return res.status(400).json({ ok: false, error: 'email_already_registered' });
             }
         } else {
-            const exists = await prisma.user.findFirst({ where: { email, role: 2 } });
+            const exists = await prisma.user.findFirst({ where: { email, role: 2, tenantId } });
             if (exists) {
                 return res.status(400).json({ ok: false, error: 'email_already_registered' });
             }
@@ -293,9 +313,17 @@ class AuthServices {
         const normalized_name = name.trim().toLowerCase()
         let user: any;
         if (Number(role_id) === 1) {
-            await prisma.$executeRaw`INSERT INTO "Admin" (email, password, name, is_active, role, created_at, updated_at) VALUES (${email}, ${hashedPassword}, ${normalized_name}, true, 1, NOW(), NOW())`;
-            const created: any[] = await prisma.$queryRaw`SELECT id, email, name, role, profile_image, created_at, updated_at FROM "Admin" WHERE email = ${email} LIMIT 1`;
-            user = created[0];
+            user = await prisma.admin.create({
+                data: {
+                    email,
+                    password: hashedPassword,
+                    name: normalized_name,
+                    is_active: true,
+                    role: 1,
+                    tenant: { connect: { id: tenantId } }
+                },
+                select: { id: true, email: true, name: true, role: true, profile_image: true, created_at: true, updated_at: true }
+            });
         } else {
             user = await prisma.user.create({
                 data: {
@@ -303,6 +331,7 @@ class AuthServices {
                     password: hashedPassword,
                     name: normalized_name,
                     role: 2,
+                    tenant: { connect: { id: tenantId } }
                 }
             })
         }
@@ -314,7 +343,7 @@ class AuthServices {
                 desde maquillaje hasta accesorios, y descubrir tu estilo único.
               </p>
               <div style="text-align:center; margin:22px 0;">
-                <a href="https://cinnamon-makeup.com/" target="_blank" 
+                <a href="{{business_url}}" target="_blank" 
                    style="display:inline-block; background:{{color_button_bg}}; color:{{color_button_text}}; text-decoration:none; 
                           padding:12px 20px; border-radius:999px; font-weight:600; font-size:14px;">
                   Explorar catálogo
@@ -338,13 +367,14 @@ class AuthServices {
         }
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
         try {
-            const business = await BusinessServices.getBusiness();
-            const palette = await PaletteServices.getActiveFor("shop");
+            const business = await BusinessServices.getBusiness(getTenantId(req));
+            const palette = await PaletteServices.getActiveFor(getTenantId(req), "shop");
             const html = new_user_html(capitalized_name, text_message, business as any, palette as any);
+            const businessName = (business as any)?.name || 'Tienda Online';
             const rs = await sendEmail({
                 to: user.email,
-                subject: 'Bienvenido/a a Cinnamon',
-                text: `Hola ${capitalized_name}, ¡bienvenido/a a Cinnamon!`,
+                subject: `Bienvenido/a a ${businessName}`,
+                text: `Hola ${capitalized_name}, ¡bienvenido/a a ${businessName}!`,
                 html,
             });
             console.log('resend_send_result', rs);
@@ -364,17 +394,24 @@ class AuthServices {
 
         if (typeQ === 'admin') {
             try {
-                const pattern = `%${searchQ}%`
-                let countRows: any[] = []
-                let rows: any[] = []
+                const tenantId = getTenantId(req);
+                const where: any = { tenantId }
                 if (searchQ) {
-                    countRows = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Admin" WHERE name ILIKE ${pattern} OR email ILIKE ${pattern}`
-                    rows = await prisma.$queryRaw`SELECT id, name, email, role, is_active FROM "Admin" WHERE name ILIKE ${pattern} OR email ILIKE ${pattern} ORDER BY created_at DESC LIMIT ${limitQ} OFFSET ${(pageQ - 1) * limitQ}`
-                } else {
-                    countRows = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM "Admin"`
-                    rows = await prisma.$queryRaw`SELECT id, name, email, role, is_active FROM "Admin" ORDER BY created_at DESC LIMIT ${limitQ} OFFSET ${(pageQ - 1) * limitQ}`
+                    where.OR = [
+                        { name: { contains: searchQ, mode: 'insensitive' } },
+                        { email: { contains: searchQ, mode: 'insensitive' } },
+                    ]
                 }
-                const count = Number(countRows?.[0]?.count || 0)
+                const [count, rows] = await Promise.all([
+                    prisma.admin.count({ where }),
+                    prisma.admin.findMany({
+                        select: { id: true, name: true, email: true, role: true, is_active: true },
+                        where,
+                        orderBy: { created_at: 'desc' },
+                        skip: (pageQ - 1) * limitQ,
+                        take: limitQ
+                    })
+                ])
                 const users = rows.map((r: any) => ({ id: String(r.id), name: r.name, email: r.email, role: 1, is_active: !!r.is_active }))
                 const total_pages = Math.ceil(count / limitQ)
                 const pagination = { total: count, page: pageQ, limit: limitQ, totalPages: total_pages, hasNextPage: pageQ < total_pages, hasPrevPage: pageQ > 1 }
@@ -384,11 +421,11 @@ class AuthServices {
             }
         }
 
-        const where: any = { role: 2 }
+        const where: any = { role: 2, tenantId: getTenantId(req) }
         if (searchQ) {
             where.OR = [
-                { name: { contains: searchQ } },
-                { email: { contains: searchQ } }
+                { name: { contains: searchQ, mode: 'insensitive' } },
+                { email: { contains: searchQ, mode: 'insensitive' } }
             ]
         }
         const [count, users] = await Promise.all([
@@ -410,14 +447,15 @@ class AuthServices {
         const { id } = req.params as any
         const type = String((req.query as any)?.type || 'user').toLowerCase()
         if (type === 'admin') {
-            const exists: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE id = ${Number(id)} LIMIT 1`
-            if (!exists?.[0]) return res.status(404).json({ ok: false, error: 'user_not_found' })
-            await prisma.$executeRaw`UPDATE "Admin" SET is_active = FALSE, updated_at = NOW() WHERE id = ${Number(id)}`
+            const tenantId = getTenantId(req);
+            const found = await prisma.admin.findFirst({ where: { id: Number(id), tenantId } })
+            if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
+            await prisma.admin.updateMany({ where: { id: Number(id), tenantId }, data: { is_active: false } })
             return res.status(200).json({ ok: true })
         }
-        const found = await prisma.user.findUnique({ where: { id: Number(id) } })
+        const found = await prisma.user.findFirst({ where: { id: Number(id), tenantId: getTenantId(req) } })
         if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
-        await prisma.user.update({ where: { id: Number(id) }, data: { is_active: false } })
+        await prisma.user.updateMany({ where: { id: Number(id), tenantId: getTenantId(req) }, data: { is_active: false } })
         return res.status(200).json({ ok: true })
     }
 
@@ -425,14 +463,15 @@ class AuthServices {
         const { id } = req.params as any
         const type = String((req.query as any)?.type || 'user').toLowerCase()
         if (type === 'admin') {
-            const exists: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE id = ${Number(id)} LIMIT 1`
-            if (!exists?.[0]) return res.status(404).json({ ok: false, error: 'user_not_found' })
-            await prisma.$executeRaw`UPDATE "Admin" SET is_active = TRUE, updated_at = NOW() WHERE id = ${Number(id)}`
+            const tenantId = getTenantId(req);
+            const found = await prisma.admin.findFirst({ where: { id: Number(id), tenantId } })
+            if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
+            await prisma.admin.updateMany({ where: { id: Number(id), tenantId }, data: { is_active: true } })
             return res.status(200).json({ ok: true })
         }
-        const found = await prisma.user.findUnique({ where: { id: Number(id) } })
+        const found = await prisma.user.findFirst({ where: { id: Number(id), tenantId: getTenantId(req) } })
         if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
-        await prisma.user.update({ where: { id: Number(id) }, data: { is_active: true } })
+        await prisma.user.updateMany({ where: { id: Number(id), tenantId: getTenantId(req) }, data: { is_active: true } })
         return res.status(200).json({ ok: true })
     }
 
@@ -440,14 +479,15 @@ class AuthServices {
         const { id } = req.params as any
         const type = String((req.query as any)?.type || 'user').toLowerCase()
         if (type === 'admin') {
-            const exists: any[] = await prisma.$queryRaw`SELECT id FROM "Admin" WHERE id = ${Number(id)} LIMIT 1`
-            if (!exists?.[0]) return res.status(404).json({ ok: false, error: 'user_not_found' })
-            await prisma.$executeRaw`DELETE FROM "Admin" WHERE id = ${Number(id)}`
+            const tenantId = getTenantId(req);
+            const found = await prisma.admin.findFirst({ where: { id: Number(id), tenantId } })
+            if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
+            await prisma.admin.deleteMany({ where: { id: Number(id), tenantId } })
             return res.status(200).json({ ok: true })
         }
-        const found = await prisma.user.findUnique({ where: { id: Number(id) } })
+        const found = await prisma.user.findFirst({ where: { id: Number(id), tenantId: getTenantId(req) } })
         if (!found) return res.status(404).json({ ok: false, error: 'user_not_found' })
-        await prisma.user.delete({ where: { id: Number(id) } })
+        await prisma.user.deleteMany({ where: { id: Number(id), tenantId: getTenantId(req) } })
         return res.status(200).json({ ok: true })
     }
 
@@ -455,12 +495,11 @@ class AuthServices {
         try {
             const { email } = req.body as { email?: string };
             if (!email) return res.status(400).json({ ok: false, error: 'missing_email' });
-            const rows: any[] = await prisma.$queryRaw`SELECT id, email FROM "Admin" WHERE email = ${email} LIMIT 1`;
-            const admin = rows[0];
+            const admin = await prisma.admin.findFirst({ where: { email, tenantId: getTenantId(req) } });
             if (!admin) return res.status(404).json({ ok: false, error: 'user_not_found' });
             const code = String(Math.floor(100000 + Math.random() * 900000));
             const hashed = await hashPassword(code);
-            await prisma.$executeRaw`UPDATE "Admin" SET password = ${hashed}, updated_at = NOW() WHERE id = ${admin.id}`;
+            await prisma.admin.updateMany({ where: { id: admin.id, tenantId: getTenantId(req) }, data: { password: hashed } });
             try { await sendEmail({ to: admin.email, subject: 'Recuperación de contraseña', text: `Tu nueva contraseña temporal es: ${code}. Ingresa y cámbiala desde tu perfil.` }); } catch {}
             return res.status(200).json({ ok: true });
         } catch (err) {
@@ -473,13 +512,12 @@ class AuthServices {
             const { old_password, new_password } = req.body as { old_password?: string; new_password?: string };
             if (!old_password || !new_password) return res.status(400).json({ ok: false, error: 'missing_fields' });
             const claim = (req as any).user;
-            const rows: any[] = await prisma.$queryRaw`SELECT id, password FROM "Admin" WHERE id = ${Number(claim.sub || claim.id)} LIMIT 1`;
-            const admin = rows[0];
+            const admin = await prisma.admin.findFirst({ where: { id: Number(claim.sub || claim.id), tenantId: getTenantId(req) } });
             if (!admin) return res.status(404).json({ ok: false, error: 'user_not_found' });
             const ok = await comparePassword(old_password, admin.password);
             if (!ok) return res.status(401).json({ ok: false, error: 'invalid_old_password' });
             const hashed = await hashPassword(new_password);
-            await prisma.$executeRaw`UPDATE "Admin" SET password = ${hashed}, updated_at = NOW() WHERE id = ${admin.id}`;
+            await prisma.admin.updateMany({ where: { id: admin.id, tenantId: getTenantId(req) }, data: { password: hashed } });
             return res.status(200).json({ ok: true });
         } catch (err) {
             return res.status(500).json({ ok: false, error: 'change_password_failed' });

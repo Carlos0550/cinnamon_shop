@@ -22,6 +22,10 @@ import swaggerUi from 'swagger-ui-express';
 import spec from './docs/openapi';
 import morgan from 'morgan';
 import { initProductsCacheSyncJob } from './jobs/productsCacheSync';
+import { tenantMiddleware } from '@/middlewares/tenant.middleware';
+import { normalizeHost, resolveTenantByHost } from '@/middlewares/tenant.middleware';
+import { IntegrationType } from '@prisma/client';
+import SysRouter from '@/modules/Sys/routes';
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -34,6 +38,29 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
   },
 }));
 
+// Sys admin routes (no tenant resolution)
+app.use('/api/sys', SysRouter);
+
+app.use(tenantMiddleware);
+
+app.get('/api/tenant/resolve', async (req, res) => {
+  const rawHost = req.header('x-forwarded-host') || req.header('host') || ''
+  const host = normalizeHost(rawHost)
+  const resolved = host ? await resolveTenantByHost(host) : null
+  if (!resolved) return res.status(404).json({ ok: false, error: 'tenant_not_found' })
+  if (resolved.status !== 'ACTIVE') return res.status(423).json({ ok: false, error: 'tenant_inactive' })
+  return res.json({ ok: true, tenantId: resolved.tenantId, slug: resolved.slug })
+});
+
+app.get('/api/integrations', async (req, res) => {
+  const tenantId = req.tenantId
+  if (!tenantId) return res.status(401).json({ ok: false, error: 'tenant_required' })
+  const items = await prisma.integration.findMany({ where: { tenantId }, select: { type: true, name: true } })
+  const types = items.map(i => i.type)
+  const hasAuth = types.includes(IntegrationType.AUTHENTICATION)
+  const hasModel = types.includes(IntegrationType.MODELLM)
+  res.json({ ok: true, types, hasAuth, hasModel })
+})
 
 app.get('/api/health', async (_req, res) => {
   try {

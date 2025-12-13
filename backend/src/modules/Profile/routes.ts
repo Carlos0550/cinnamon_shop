@@ -3,6 +3,7 @@ import { requireAuth } from '@/middlewares/auth.middleware';
 import { uploadSingleImage, handleImageUploadError } from '@/middlewares/image.middleware';
 import ProfileServices from './services/profile.services';
 import { validateUpdatePayload } from './router.controller';
+import { getTenantId } from '@/config/tenantScope';
 
 const router = Router();
 const service = new ProfileServices();
@@ -10,7 +11,7 @@ const service = new ProfileServices();
 router.get('/profile/me', requireAuth, async (req: Request, res: Response) => {
   const user = (req as any).user;
   const userId = Number(user.sub || user.id);
-  const rs = await service.getMe(userId);
+  const rs = await service.getMe(getTenantId(req), userId);
   res.json(rs);
 });
 
@@ -18,7 +19,7 @@ router.put('/profile/me', requireAuth, validateUpdatePayload, async (req: Reques
   const user = (req as any).user;
   const userId = Number(user.sub || user.id);
   const data = (req as any).profileUpdate;
-  const rs = await service.updateMe(userId, data);
+  const rs = await service.updateMe(getTenantId(req), userId, data);
   res.json(rs);
 });
 
@@ -28,7 +29,7 @@ router.post('/profile/avatar', requireAuth, uploadSingleImage('image'), handleIm
   const file = (req as any).file as Express.Multer.File | undefined;
   if (!file) return res.status(400).json({ ok: false, error: 'missing_image' });
   const filePath = `/uploads/images/${file.filename}`;
-  const rs = await service.updateAvatar(userId, filePath);
+  const rs = await service.updateAvatar(getTenantId(req), userId, filePath);
   res.json({ ...rs, url: filePath });
 });
 
