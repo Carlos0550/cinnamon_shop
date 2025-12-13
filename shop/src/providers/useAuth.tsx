@@ -16,7 +16,17 @@ type AuthState = {
 };
 
 export function useAuth() {
-  const [baseUrl] = useState(() => process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api");
+  const [baseUrl] = useState(() => {
+    const api = process.env.NEXT_PUBLIC_API_URL
+    if (api && api.trim()) return api
+    const site = process.env.NEXT_PUBLIC_SITE_URL
+    try {
+      const origin = site ? new URL(site).origin : "http://localhost:3001"
+      return `${origin.replace(/\/+$/, '')}/api`
+    } catch {
+      return "http://localhost:3000/api"
+    }
+  });
   const { isSignedIn, getToken } = useClerkAuth();
   const { user: clerkUser } = useUser();
   const { signOut: clerkSignOut } = useClerk();

@@ -10,7 +10,7 @@ import CartWrapper from "@/Components/Cart/CartWrapper"
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NEXT_PUBLIC_SITE_URL ? `${new URL(process.env.NEXT_PUBLIC_SITE_URL).origin}/api` : "http://localhost:3000/api")
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
   let siteHost = "localhost:3001"
   try { const u = new URL(siteUrl); siteHost = u.host } catch {}
