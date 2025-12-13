@@ -4,7 +4,7 @@ import RegisterForm from "../components/Auth/RegisterForm";
 import { useCallback, useEffect, useState } from "react";
 import { useRegister } from "@/components/Api/AuthApi";
 import { showNotification } from "@mantine/notifications";
-import { getPublicBusiness, useGetBusiness } from "@/components/Api/BusinessApi";
+import { getPublicBusiness } from "@/components/Api/BusinessApi";
 
 
 export default function Login() {
