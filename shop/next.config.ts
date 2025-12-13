@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   reactCompiler: true,
+  output: 'standalone',
   outputFileTracingRoot: __dirname,
   experimental: {
     optimizePackageImports: ['@mantine/core', '@mantine/hooks', 'react-icons'],
