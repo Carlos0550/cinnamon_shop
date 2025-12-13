@@ -8,6 +8,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const sp = await searchParams
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
+  let siteHost = "localhost:3001"
+  try { const u = new URL(siteUrl); siteHost = u.host } catch {}
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
   
@@ -21,7 +23,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   let productsData: ProductsResponse | undefined = undefined
   let products: Products[] = []
   try {
-    const res = await fetch(`${baseUrl}/products/public?${qp.toString()}`, { next: { revalidate: 180 } })
+    const res = await fetch(`${baseUrl}/products/public?${qp.toString()}`, { next: { revalidate: 180 }, headers: { 'x-forwarded-host': siteHost } })
     if (res.ok) {
         productsData = await res.json()
         products = productsData?.data?.products || []
@@ -31,7 +33,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   // Fetch Categories
   let categoriesData: CategoriesResponse | undefined = undefined
   try {
-    const resCat = await fetch(`${baseUrl}/products/public/categories`, { next: { revalidate: 3600 } })
+    const resCat = await fetch(`${baseUrl}/products/public/categories`, { next: { revalidate: 3600 }, headers: { 'x-forwarded-host': siteHost } })
     if (resCat.ok) {
         categoriesData = await resCat.json()
     }

@@ -12,7 +12,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { id } = await params
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
-  const res = await fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 60 } })
+  let siteHost = "localhost:3001"
+  try { const u = new URL(siteUrl); siteHost = u.host } catch {}
+  const res = await fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 60 }, headers: { 'x-forwarded-host': siteHost } })
   if (!res.ok) {
     return notFound()
   }
@@ -23,7 +25,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   try {
     const categoryId = product?.category?.id
     if (categoryId) {
-      const sRes = await fetch(`${baseUrl}/products/public?categoryId=${encodeURIComponent(categoryId)}&limit=10`, { next: { revalidate: 120 } })
+      const sRes = await fetch(`${baseUrl}/products/public?categoryId=${encodeURIComponent(categoryId)}&limit=10`, { next: { revalidate: 120 }, headers: { 'x-forwarded-host': siteHost } })
       const sJson = await sRes.json().catch(() => null)
       const list: Products[] = Array.isArray(sJson?.data?.products) ? (sJson.data.products as Products[]) : []
       similar = list.filter((p: Products) => p.id !== product.id)
@@ -119,8 +121,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
   try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
+    let siteHost = "localhost:3001"
+    try { const u = new URL(siteUrl); siteHost = u.host } catch {}
     const [res, business] = await Promise.all([
-      fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 300 } }),
+      fetch(`${baseUrl}/products/public/${id}`, { next: { revalidate: 300 }, headers: { 'x-forwarded-host': siteHost } }),
       getBusinessInfo()
     ]);
 
