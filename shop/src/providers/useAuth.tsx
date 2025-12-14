@@ -1,12 +1,10 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth as useClerkAuth, useUser, useClerk } from "@clerk/nextjs";
+import { useCallback, useEffect, useState } from "react";
 
 type AuthProps = {
   email: string;
   name: string;
   profileImage?: string;
-  is_clerk?: boolean;
 };
 
 type AuthState = {
@@ -17,9 +15,6 @@ type AuthState = {
 
 export function useAuth() {
   const [baseUrl] = useState(() => process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api");
-  const { isSignedIn, getToken } = useClerkAuth();
-  const { user: clerkUser } = useUser();
-  const { signOut: clerkSignOut } = useClerk();
 
   const [state, setState] = useState<AuthState>({ token: null, user: null, loading: false });
 
@@ -38,7 +33,6 @@ export function useAuth() {
           email: data.email,
           name: data.name,
           profileImage: data.profileImage || '',
-          is_clerk: !!data.is_clerk,
         };
         setState({ token, user, loading: false });
         try { document.cookie = `auth_token=${token}; Max-Age=${60 * 60 * 24}; Path=/`; } catch {}
@@ -67,8 +61,7 @@ export function useAuth() {
     const user: AuthProps = {
       email: data.user.email,
       name: data.user.name,
-      profileImage: data.user.profileImage || '',
-      is_clerk: !!data.user.is_clerk,
+      profileImage: data.user.profile_image || '',
     };
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_exchange_done', '1');
@@ -77,67 +70,39 @@ export function useAuth() {
     return { token, user };
   }, [baseUrl]);
 
-  const exchangeClerkToBackend = useCallback(async () => {
-    if (!isSignedIn || !clerkUser) return;
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
     setState((s) => ({ ...s, loading: true }));
-    const email = clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress || '';
-    const name = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || email.split('@')[0];
-    const profileImage = clerkUser?.imageUrl || '';
-    const template = process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE;
-    let clerkToken = template ? await getToken({ template }).catch(() => null) : null;
-    if (!clerkToken) {
-      clerkToken = await getToken().catch(() => null);
-    }
-
-    if (!clerkToken) {
-      setState((s) => ({ ...s, loading: false }));
-      return;
-    }
-    const res = await fetch(`${baseUrl}/shop/clerk-login`, {
+    const res = await fetch(`${baseUrl}/shop/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${clerkToken}`,
-      },
-      body: JSON.stringify({ email, name, profileImage }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
     });
     if (!res.ok) {
       setState((s) => ({ ...s, loading: false }));
       const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error || 'clerk_exchange_failed');
+      throw new Error(err?.error || 'register_failed');
     }
     const data = await res.json();
     const token = data.token as string;
-    
+    const user: AuthProps = {
+      email: data.user.email,
+      name: data.user.name,
+      profileImage: data.user.profileImage || '',
+    };
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_exchange_done', '1');
     try { document.cookie = `auth_token=${token}; Max-Age=${60 * 60 * 24}; Path=/`; } catch {}
-    window.location.reload()
-    return { token };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, isSignedIn, clerkUser]);
-
-  const exchangeAttemptedRef = useRef(false);
-  useEffect(() => {
-    const exchangedDone = typeof window !== 'undefined' ? localStorage.getItem('auth_exchange_done') : null;
-    if (isSignedIn && !state.token && !exchangeAttemptedRef.current && !exchangedDone) {
-      exchangeAttemptedRef.current = true;
-      (async () => {
-        try {
-          await exchangeClerkToBackend();
-        } catch {}
-      })();
-    }
-  }, [isSignedIn, state.token, exchangeClerkToBackend]);
+    setState({ token, user, loading: false });
+    return { token, user };
+  }, [baseUrl]);
 
   const signOut = useCallback(async () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_exchange_done');
     setState({ token: null, user: null, loading: false });
     try { document.cookie = `auth_token=; Max-Age=0; Path=/`; } catch {}
-    try { await clerkSignOut(); } catch {}
     window.location.reload()
-  }, [clerkSignOut]);
+  }, []);
 
   const isAuthenticated = !!state.token && !!state.user;
 
@@ -145,7 +110,7 @@ export function useAuth() {
     state,
     isAuthenticated,
     signIn,
-    exchangeClerkToBackend,
+    signUp,
     signOut,
   };
 }

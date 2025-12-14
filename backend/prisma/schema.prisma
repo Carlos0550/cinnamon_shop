@@ -50,8 +50,6 @@ model User {
   password       String
   name           String
   is_active      Boolean  @default(true)
-  is_clerk       Boolean  @default(false)
-  clerk_user_id  String?  @unique
   profile_image  String?
   created_at     DateTime @default(now()) @db.Timestamptz(3)
   updated_at     DateTime @updatedAt @db.Timestamptz(3)

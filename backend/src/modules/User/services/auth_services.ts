@@ -6,7 +6,6 @@ import { redis } from "@/config/redis";
 import { sendEmail } from "@/config/resend";
 import { welcomeKuromiHTML } from "@/templates/welcome_kuromi";
 import { new_user_html } from "@/templates/new_user";
-import { verifyToken as verifyClerkToken } from "@clerk/backend";
 import BusinessServices from "@/modules/Business/business.services";
 import PaletteServices from "@/modules/Palettes/services/palette.services";
 
@@ -30,7 +29,6 @@ class AuthServices {
             email: user.email,
             name: user.name,
             role: 1,
-            is_clerk: false,
             subjectType: 'admin',
         }
         const token = signToken(payload);
@@ -50,6 +48,15 @@ class AuthServices {
             where: {
                 email: email,
                 role: 2,
+            },
+            select: {
+                id: true,
+                email: true,
+                password: true,
+                name: true,
+                role: true,
+                is_active: true,
+                profile_image: true,
             }
         })
 
@@ -65,8 +72,8 @@ class AuthServices {
             sub: user.id.toString(),
             email: user.email,
             name: user.name,
+            profile_image: user.profile_image,
             role: 2,
-            is_clerk: user.is_clerk ?? false,
             subjectType: 'user',
         }
         const token = signToken(payload);
@@ -80,128 +87,79 @@ class AuthServices {
         return res.status(200).json({ ok: true, token, user: user_without_password });
     }
 
-    async clerkLogin(req: Request, res: Response) {
+    async registerShop(req: Request, res: Response) {
         try {
-            const authHeader = (req.headers['authorization'] || req.headers['Authorization']) as string | undefined;
-            if (!authHeader) {
-                console.warn('clerk_login_missing_token');
-                return res.status(401).json({ ok: false, error: 'missing_clerk_token' });
+            const { email, password, name } = req.body;
+            if (!email || !password || !name) {
+                return res.status(400).json({ ok: false, error: 'missing_fields', message: "Todos los campos son obligatorios" });
             }
-            const parts = authHeader.split(' ');
-            if (parts.length !== 2 || !/^Bearer$/i.test(parts[0])) {
-                console.warn('clerk_login_invalid_auth_header');
-                return res.status(401).json({ ok: false, error: 'invalid_auth_header' });
-            }
-            const clerkToken = parts[1];
-            console.log("clerkToken", clerkToken)
-            if (!process.env.CLERK_SECRET_KEY) {
-                console.error('clerk_login_missing_secret_key');
-                return res.status(500).json({ ok: false, error: 'missing_clerk_secret_key' });
-            }
-            const issuer = process.env.CLERK_ISSUER_URL || process.env.CLERK_PUBLISHABLE_KEY?.includes('clerk.') ? undefined : undefined;
-            const verified = await verifyClerkToken(clerkToken, {
-                secretKey: process.env.CLERK_SECRET_KEY,
-                ...(issuer ? { issuer } : {}),
+
+            const existingUser = await prisma.user.findFirst({
+                where: { email, role: 2 },
+                select: { id: true }
             });
-            const { email, name, profileImage } = req.body as {
-                email?: string;
-                name?: string;
-                profileImage?: string;
-            };
-
-            const payloadClaims = (verified as any) || {};
-            console.log("payloadClaims", payloadClaims)
-            const claimedEmail = payloadClaims?.email || email;
-            if (!claimedEmail) {
-                console.warn('clerk_login_missing_email');
-                return res.status(400).json({ ok: false, error: 'missing_email' });
-            }
-            if (payloadClaims?.email_verified === false) {
-                console.warn('clerk_login_email_not_verified');
-                return res.status(400).json({ ok: false, error: 'email_not_verified' });
+            if (existingUser) {
+                return res.status(400).json({ ok: false, error: 'email_already_registered', message: "El correo ya está registrado" });
             }
 
-            const normalized_name = ((name || (claimedEmail.split('@')[0]))).trim().toLowerCase();
+            const normalized_name = name.trim().toLowerCase();
+            const hashed = await hashPassword(password);
 
-            const clerkUserId = payloadClaims?.sub as string | undefined;
-            const picture = profileImage || payloadClaims?.picture || undefined;
+            const user = await prisma.user.create({
+                data: {
+                    email,
+                    password: hashed,
+                    name: normalized_name,
+                    role: 2,
+                    is_active: true,
+                }
+            });
 
-            const existingByClerkId = clerkUserId ? await prisma.user.findUnique({ where: { clerk_user_id: clerkUserId } }) : null;
-
-            let user = existingByClerkId;
-
-            if (!user) {
-                const secure_password = Math.random().toString(36).slice(-12);
-                const hashed = await hashPassword(secure_password);
-                user = await prisma.user.create({
-                    data: {
-                        email: claimedEmail,
-                        password: hashed,
-                        name: normalized_name,
-                        is_clerk: true,
-                        clerk_user_id: clerkUserId,
-                        profile_image: picture,
-                        role: 2,
-                    }
+            // Send welcome email
+            const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
+            try {
+                const business = await BusinessServices.getBusiness();
+                const palette = await PaletteServices.getActiveFor("shop");
+                const text_message = `
+                    <p style="margin:0 0 18px; font-size:15px; line-height:1.6; color:{{color_text_main}};">
+                    Desde hoy, estás listo/a para explorar todo nuestro catálogo de productos, 
+                    desde maquillaje hasta accesorios, y descubrir tu estilo único.
+                    </p>
+                    <div style="text-align:center; margin:22px 0;">
+                    <a href="https://cinnamon-makeup.com/" target="_blank" 
+                        style="display:inline-block; background:{{color_button_bg}}; color:{{color_button_text}}; text-decoration:none; 
+                        padding:12px 20px; border-radius:999px; font-weight:600; font-size:14px;">
+                        Explorar catálogo
+                    </a>
+                    </div>
+                `;
+                const html = new_user_html(capitalized_name, text_message, business as any, palette as any);
+                await sendEmail({
+                    to: user.email,
+                    subject: 'Bienvenido/a a Cinnamon',
+                    text: `Hola ${capitalized_name}, ¡bienvenido/a a Cinnamon!`,
+                    html,
                 });
-            } else {
-                try {
-                    await prisma.user.update({
-                        where: { id: user.id },
-                        data: {
-                            name: normalized_name,
-                            is_clerk: true,
-                            clerk_user_id: clerkUserId,
-                            profile_image: picture,
-                        }
-                    });
-                    user = { ...user, name: normalized_name, is_clerk: true, clerk_user_id: clerkUserId, profile_image: picture } as any;
-                } catch { }
+            } catch (err) {
+                console.error('resend_send_failed', err);
             }
 
-            if (!user) {
-                return res.status(500).json({ ok: false, error: 'user_persist_failed' });
-            }
             const payload = {
                 sub: user.id.toString(),
                 email: user.email,
                 name: user.name,
-                role: user.role,
-                profileImage: picture,
-                is_clerk: true,
+                role: 2,
                 subjectType: 'user',
             };
             const token = signToken(payload);
-
             await redis.set(`user:${token}`, JSON.stringify(payload), 'EX', 60 * 60 * 24);
-            const user_without_password = { ...user, password: undefined } as any;
+            
+            const user_without_password = { ...user, password: undefined };
             return res.status(200).json({ ok: true, token, user: user_without_password });
+
         } catch (err) {
-            console.warn('clerk_login_invalid_token', err);
-            try {
-                const { email, name, profileImage } = req.body as { email?: string; name?: string; profileImage?: string };
-                if (!email) return res.status(401).json({ ok: false, error: 'invalid_clerk_token' });
-                const normalized_name = ((name || (email.split('@')[0]))).trim().toLowerCase();
-                let user = await prisma.user.findFirst({ where: { email, role: 2 } });
-                if (!user) {
-                    const secure_password = Math.random().toString(36).slice(-12);
-                    const hashed = await hashPassword(secure_password);
-                    user = await prisma.user.create({
-                        data: { email, password: hashed, name: normalized_name, is_clerk: true, profile_image: profileImage, role: 2 }
-                    });
-                } else {
-                    await prisma.user.update({ where: { id: user.id }, data: { name: normalized_name, is_clerk: true, profile_image: profileImage } });
-                    user = { ...user, name: normalized_name, is_clerk: true, profile_image: profileImage } as any;
-                }
-                const payload = { sub: user!.id.toString(), email: user!.email, name: user!.name, role: user!.role, profileImage, is_clerk: true, subjectType: 'user' };
-                const token = signToken(payload);
-                await redis.set(`user:${token}`, JSON.stringify(payload), 'EX', 60 * 60 * 24);
-                const user_without_password = { ...user, password: undefined } as any;
-                return res.status(200).json({ ok: true, token, user: user_without_password });
-            } catch (fallbackErr) {
-                console.warn('clerk_login_fallback_failed', fallbackErr);
-                return res.status(401).json({ ok: false, error: 'invalid_clerk_token' });
-            }
+            console.error('register_shop_failed', err);
+            return res.status(500).json({ ok: false, error: 'register_failed', message: "Error al registrar usuario" });
         }
     }
 

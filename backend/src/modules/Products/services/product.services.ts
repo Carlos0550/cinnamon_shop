@@ -38,6 +38,7 @@ class ProductServices {
             fillWithAI,
             publishAutomatically,
             stock,
+            additionalContext,
         } = req.body
 
         const productImages = req.files
@@ -80,7 +81,7 @@ class ProductServices {
             }
 
             try {
-                const aiResult = await analyzeProductImages(imageUrls);
+                const aiResult = await analyzeProductImages(imageUrls, additionalContext);
                 finalTitle = aiResult.title;
                 finalDescription = aiResult.description;
                 finalTags = []; 
@@ -657,6 +658,7 @@ class ProductServices {
                     status: CategoryStatus.active
                 }
             })
+            console.log("Categorías públicas:", categories);
             return res.status(200).json({
                 ok: true,
                 data: categories

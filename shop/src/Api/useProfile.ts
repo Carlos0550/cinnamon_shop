@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAppContext } from '@/providers/AppContext';
+import { showNotification } from '@mantine/notifications';
 
 type Profile = {
   id: number;
@@ -50,6 +51,12 @@ export function useUpdateProfile() {
       if (!res.ok) throw new Error(json?.error || 'profile_update_failed');
       return json;
     },
+    onSuccess() {
+      return showNotification({ message: 'Perfil actualizado con éxito', color: 'teal' });
+    },
+    onError() {
+      return showNotification({ message: 'Error al actualizar perfil', color: 'red' });
+    },
   });
 }
 
@@ -64,6 +71,24 @@ export function useUploadAvatar() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'avatar_upload_failed');
       return json;
+    },
+  });
+}
+
+export function useChangePassword() {
+  const { utils: { baseUrl }, auth: { state } } = useAppContext();
+  return useMutation<{ ok: boolean }, Error, { old_password: string; new_password: string }>({
+    mutationKey: ['profile_change_password'],
+    mutationFn: async (payload) => {
+      const res = await fetch(`${baseUrl}/shop/password/change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.token}` },
+        body: JSON.stringify(payload),
+      });
+      type ChangePasswordResponse = { ok: boolean; error?: string };
+      const json = await res.json().catch(() => null) as ChangePasswordResponse | null;
+      if (!res.ok || !json?.ok) throw new Error(json?.error || 'change_failed');
+      return { ok: true };
     },
   });
 }

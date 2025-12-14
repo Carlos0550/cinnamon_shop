@@ -9,7 +9,7 @@ export function useUtils() {
 
     const [windowWidth, setWindowWidth] = useState<number>(1024);
     const capitalizeTexts = (text: string) => {
-        return text.charAt(0).toUpperCase() + text.slice(1);
+        return text.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
     }
 
     const queryClient = useQueryClient();

@@ -6,7 +6,7 @@ const router = Router();
 const authServices = new AuthServices();
 
 router.post('/login', (req, _res, next) => next(), (req, res) => authServices.loginShop(req, res));
-router.post('/clerk-login', (req, _res, next) => next(), (req, res) => authServices.clerkLogin(req, res));
+router.post('/register', (req, _res, next) => next(), (req, res) => authServices.registerShop(req, res));
 router.post('/password/reset', (req, _res, next) => next(), (req, res) => authServices.resetPasswordShop(req, res));
 router.post('/password/change', requireAuth, (req, res) => authServices.changePasswordShop(req, res));
 
@@ -20,7 +20,6 @@ router.get('/validate-token', requireAuth, (req, res) => {
     is_active: true,
     role: user.role || 2,
     profileImage: user.profileImage || null,
-    is_clerk: !!user.is_clerk,
     subjectType: 'user',
   });
 });

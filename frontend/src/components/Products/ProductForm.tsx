@@ -21,6 +21,7 @@ export type ProductFormValues = {
   fillWithAI?: boolean;
   publishAutomatically?: boolean;
   stock?: string;
+  additionalContext?: string;
 };
 
 type ProductFormProps = {
@@ -61,6 +62,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     fillWithAI: false,
     publishAutomatically: false,
     stock: "1",
+    additionalContext: "",
   });
 
   useEffect(() => {
@@ -166,6 +168,19 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
             onChange={(event) => setFillWithAI(event.currentTarget.checked)}
           />
         </Group>
+      )}
+
+      {fillWithAI && (
+        <Textarea
+          label="Contexto adicional (Opcional)"
+          description="Ayuda a la IA a describir mejor tu producto. Ej: Materiales, ocasión de uso, beneficios clave."
+          name="additionalContext"
+          placeholder="Ej: Es un labial rojo mate de larga duración, ideal para fiestas..."
+          value={formValues.additionalContext}
+          onChange={handleChangeValues}
+          minRows={2}
+          mb="md"
+        />
       )}
 
       {!fillWithAI && (

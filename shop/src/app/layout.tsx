@@ -2,7 +2,6 @@ import "./globals.css";
 import AppProvider from "../providers/AppProvider";
 import SiteLayout from "../Components/Layout/SiteLayout";
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
 import { getBusinessInfo } from "@/Api/useBusiness";
 
@@ -67,11 +66,9 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
           <AppProvider>
               <SiteLayout>{children}</SiteLayout>
           </AppProvider>
-        </ClerkProvider>
       </body>
     </html>
   );

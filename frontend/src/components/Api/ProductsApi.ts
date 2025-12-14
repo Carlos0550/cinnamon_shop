@@ -62,6 +62,7 @@ type SaveProductPayload = {
   state?: ProductState;
   publishAutomatically?: boolean;
   stock?: number;
+  additionalContext?: string;
 };
 
 export const useSaveProduct = () => {
@@ -113,6 +114,9 @@ export const useSaveProduct = () => {
 
         if(value.publishAutomatically) {
           formData.append("publishAutomatically", "true");
+        }
+        if (value.additionalContext) {
+          formData.append("additionalContext", value.additionalContext);
         }
 
         const res = await fetch(baseUrl + "/products/save-product", {
@@ -333,6 +337,9 @@ export const useUpdateProduct = () => {
         }
         if (typeof value.stock === "number") {
           formData.append("stock", String(value.stock));
+        }
+        if (value.additionalContext) {
+          formData.append("additionalContext", value.additionalContext);
         }
 
         console.log("Actualizando producto...")

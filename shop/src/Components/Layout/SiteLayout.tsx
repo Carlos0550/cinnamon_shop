@@ -12,8 +12,8 @@ type Props = {
 export default function SiteLayout({ children }: Props) {
   const [opened, { toggle, close }] = useDisclosure(false);
   const [authOpened, { open: openAuth, close: closeAuth }] = useDisclosure(false);
-  const { auth } = useAppContext();
-  const fullName = auth.state.user?.name || "";
+  const { auth, utils } = useAppContext();
+  const fullName = utils.capitalizeTexts(auth.state.user?.name || "");
   const email = auth.state.user?.email || "";
   const {
     utils: {

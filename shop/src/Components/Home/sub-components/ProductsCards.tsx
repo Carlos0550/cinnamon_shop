@@ -49,10 +49,10 @@ function ProductsCards({ product, priority = false }: Props) {
             <Group justify="space-between" mt="md" mb="xs">
                 <div>
                     <Text fw={500}>{product.title}</Text>
-                    <Text fw={700} c="green" size="lg">${product.price}</Text>
+                    <Text fw={700} size="lg">${product.price}</Text>
                 </div>
                 <Group>
-                    <Badge color="pink">{product.category.title}</Badge>
+                    <Badge >{product.category.title}</Badge>
                     <Badge variant="outline">En stock</Badge>
                 </Group>
             </Group>
