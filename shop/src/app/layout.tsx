@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001";
   const businessImage = business?.business_image || "/logo.png";
   const favicon = business?.favicon || "/logo.png";
-
+  console.log("layout",description)
   return {
     title: {
       template: `%s | ${businessName}`,
