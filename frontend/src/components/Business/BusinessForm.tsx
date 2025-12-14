@@ -1,7 +1,7 @@
-import { Button, Flex, Group, Stack, TextInput, Title, ActionIcon, Text, Divider, Paper } from "@mantine/core";
+import { Button, Flex, Group, Stack, TextInput, Title, ActionIcon, Text, Divider, Paper, Textarea, Tooltip } from "@mantine/core";
 import Loading from "../Loader/Loading";
 import { useBusinessForm } from "./useBusinessForm";
-import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCity, FaBuilding, FaUniversity, FaCreditCard, FaTrash, FaPlus, FaSave } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCity, FaBuilding, FaUniversity, FaCreditCard, FaTrash, FaPlus, FaSave, FaMagic } from "react-icons/fa";
 
 export default function BusinessForm() {
   const { 
@@ -13,7 +13,9 @@ export default function BusinessForm() {
     handleBankChange, 
     addBankAccount, 
     removeBankAccount,
-    handleSubmit 
+    handleSubmit,
+    handleGenerateDescription,
+    isGeneratingDescription
   } = useBusinessForm();
 
   if (isLoading) {
@@ -89,6 +91,28 @@ export default function BusinessForm() {
               leftSection={<FaBuilding size={14} />}
             />
           </Group>
+
+          <Stack gap={0}>
+             <Group justify="space-between" align="center" mb={5}>
+                <Text size="sm" fw={500}>Descripción del negocio</Text>
+                <Tooltip label="Mejorar con IA">
+                  <ActionIcon 
+                    variant="light" 
+                    color="grape" 
+                    onClick={handleGenerateDescription} 
+                    loading={isGeneratingDescription}
+                  >
+                    <FaMagic size={14} />
+                  </ActionIcon>
+                </Tooltip>
+             </Group>
+             <Textarea
+              placeholder="Descripción breve del negocio (para SEO y metadatos)"
+              value={form.description || ""}
+              onChange={(e) => handleChange("description", e.currentTarget.value)}
+              minRows={3}
+             />
+          </Stack>
 
           <Divider my="sm" label="Datos Bancarios" labelPosition="center" />
 

@@ -113,6 +113,7 @@ model Products {
   categoryId  String?
   tags        Json?        @default("[]")
   stock       Int          @default(1)
+  options     Json         @default("[]")
   category    Categories?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   promos      Promos[]
   sales       Sales[]
@@ -167,6 +168,7 @@ model Sales {
   tax            Float         @default(0.00)
   user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   products       Products[]
+  items          Json          @default("[]")
   manualProducts Json?         @default("[]")
   loadedManually Boolean       @default(false)
   paymentMethods Json?         @default("[]")
@@ -196,6 +198,7 @@ model OrderItems {
   id               String   @id @default(cuid())
   productId        String
   quantity         Int      @default(1)
+  selected_options Json     @default("[]")
   price_has_changed Boolean  @default(false)
   cartId           Int
   cart             Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -248,6 +251,7 @@ model BusinessData {
   address   String
   city      String
   state     String
+  description String?
   bankData  BusinessBankData[]
 }
 model BusinessBankData{

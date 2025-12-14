@@ -90,7 +90,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </Box>
             )}
             <Group gap="sm">
-              <AddToCartButton productId={product.id} />
+              <AddToCartButton productId={product.id} options={product.options} />
               <BackButton />
             </Group>
           </Stack>

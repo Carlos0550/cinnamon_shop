@@ -4,11 +4,14 @@ import RegisterForm from "../components/Auth/RegisterForm";
 import { useState } from "react";
 import { useRegister } from "@/components/Api/AuthApi";
 import { showNotification } from "@mantine/notifications";
+import { useGetBusiness } from "@/components/Api/BusinessApi";
 
 
 export default function Login() {
   const [formType, setFormType] = useState<"register" | "login">("login");
   const registerHook = useRegister();
+  const { data } = useGetBusiness();
+
   return (
     <Flex
       justify="center"
@@ -16,7 +19,7 @@ export default function Login() {
       style={{ height: "100vh" }}
     >
       <Box m="auto">
-        <Title mb="md">Bienvenido a Cinnamon</Title>
+        <Title mb="md">Bienvenido a {data?.name || "Tienda online"}</Title>
         <Paper withBorder p="md" radius="md">
           <Tabs defaultValue="login" value={formType} onChange={(v) => setFormType(v as "register" | "login")}>
             <Tabs.List>

@@ -17,6 +17,8 @@ export const SaveProductRequestSchema = z.object({
   fillWithAI: z.boolean().optional(),
   state: z.enum(['active','inactive','draft','out_stock','deleted']).optional(),
   stock: z.union([z.number().int().min(0), z.string()]).optional(),
+  additionalContext: z.string().optional(),
+  options: z.union([z.array(z.object({ name: z.string(), values: z.array(z.string()) })), z.string()]).optional(),
 }).openapi({ description: 'Body multipart para crear producto' });
 
 export const SaveCategoryRequestSchema = z.object({
@@ -47,6 +49,7 @@ export const UpdateProductRequestSchema = z.object({
   fillWithAI: z.boolean().optional(),
   state: z.enum(['active','inactive','draft','out_stock','deleted']).optional(),
   stock: z.union([z.number().int().min(0), z.string()]).optional(),
+  options: z.union([z.array(z.object({ name: z.string(), values: z.array(z.string()) })), z.string()]).optional(),
 }).openapi({ description: 'Body multipart para actualizar producto' });
 
 export const UpdateCategoryStatusSchema = z.object({

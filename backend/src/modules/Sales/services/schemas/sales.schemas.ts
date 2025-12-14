@@ -15,9 +15,9 @@ export type SaleRequest = {
     user_sale?: UserSale
     tax?: number
     loadedManually?: boolean
-    manualProducts?: { quantity: number; title: string; price: number }[]
+    manualProducts?: { quantity: number; title: string; price: number; options?: any }[]
     payment_methods?: { method: PaymentMethods; amount: number }[]
-    items?: { product_id: string; quantity: number }[]
+    items?: { product_id: string; quantity: number; options?: any }[]
     sale_date?: string
 }
 

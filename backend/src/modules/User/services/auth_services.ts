@@ -119,6 +119,7 @@ class AuthServices {
             const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
             try {
                 const business = await BusinessServices.getBusiness();
+                const businessName = business?.name || "Tienda online";
                 const palette = await PaletteServices.getActiveFor("shop");
                 const text_message = `
                     <p style="margin:0 0 18px; font-size:15px; line-height:1.6; color:{{color_text_main}};">
@@ -136,8 +137,8 @@ class AuthServices {
                 const html = new_user_html(capitalized_name, text_message, business as any, palette as any);
                 await sendEmail({
                     to: user.email,
-                    subject: 'Bienvenido/a a Cinnamon',
-                    text: `Hola ${capitalized_name}, ¡bienvenido/a a Cinnamon!`,
+                    subject: `Bienvenido/a a ${businessName}`,
+                    text: `Hola ${capitalized_name}, ¡bienvenido/a a ${businessName}!`,
                     html,
                 });
             } catch (err) {
@@ -216,12 +217,13 @@ class AuthServices {
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
         try {
             const business = await BusinessServices.getBusiness();
+            const businessName = business?.name || "Tienda online";
             const palette = await PaletteServices.getActiveFor("shop");
             const html = welcomeKuromiHTML(capitalized_name, business as any, palette as any);
             const rs = await sendEmail({
                 to: user.email,
-                subject: 'Bienvenido/a a Cinnamon',
-                text: `Hola ${capitalized_name}, ¡bienvenido/a a Cinnamon!`,
+                subject: `Bienvenido/a a ${businessName}`,
+                text: `Hola ${capitalized_name}, ¡bienvenido/a a ${businessName}!`,
                 html,
             });
             console.log('resend_send_result', rs);
@@ -297,12 +299,13 @@ class AuthServices {
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());
         try {
             const business = await BusinessServices.getBusiness();
+            const businessName = business?.name || "Tienda online";
             const palette = await PaletteServices.getActiveFor("shop");
             const html = new_user_html(capitalized_name, text_message, business as any, palette as any);
             const rs = await sendEmail({
                 to: user.email,
-                subject: 'Bienvenido/a a Cinnamon',
-                text: `Hola ${capitalized_name}, ¡bienvenido/a a Cinnamon!`,
+                subject: `Bienvenido/a a ${businessName}`,
+                text: `Hola ${capitalized_name}, ¡bienvenido/a a ${businessName}!`,
                 html,
             });
             console.log('resend_send_result', rs);

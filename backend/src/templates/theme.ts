@@ -13,7 +13,7 @@ export type PaletteData = {
 
 export function applyTheme(html: string, business?: BusinessData | null, palette?: PaletteData | null) {
   // Default Business Info
-  const businessName = business?.name || "Cinnamon";
+  const businessName = business?.name || "Tienda online";
   const businessAddress = business?.address || "";
   const businessCity = business?.city || "";
   const businessState = business?.state || "";

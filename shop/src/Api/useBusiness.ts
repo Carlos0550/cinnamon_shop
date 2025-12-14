@@ -6,6 +6,7 @@ export type BusinessData = {
   address: string;
   city: string;
   state: string;
+  description?: string;
 };
 
 export const getBusinessInfo = async (): Promise<BusinessData | null> => {

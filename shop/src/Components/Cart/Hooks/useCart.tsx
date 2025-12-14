@@ -54,7 +54,7 @@ export function useCartActions() {
     }
   }
 
-  const addToCart = async (product_id: string) => {
+  const addToCart = async (product_id: string, options: any = []) => {
     const productInfo = await validateProductStock(product_id)
     
     if (!productInfo) return
@@ -66,6 +66,7 @@ export function useCartActions() {
       quantity: 1,
       image_url: productInfo.images[0],
       price_changed: false,
+      options
     })
 
     showNotification({

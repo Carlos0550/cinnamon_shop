@@ -23,7 +23,7 @@ export interface Products {
     images: string[],
     description: string,
     category: ProductCategory
-
+    options?: { name: string; values: string[] }[];
 }
 
 export type ProductsResponse = {

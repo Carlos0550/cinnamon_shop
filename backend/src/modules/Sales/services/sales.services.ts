@@ -17,25 +17,37 @@ class SalesServices {
         try {
             const isManual = !!request.loadedManually;
             const manualItems = Array.isArray(request.manualProducts) ? request.manualProducts : [];
-            let product_data: { id: string; title: string; price: number }[] = [];
+            let product_data: { id: string; title: string; price: number; quantity: number; options?: any }[] = [];
             let subtotal = 0;
 
             if (!isManual) {
                 const incoming = Array.isArray(items) && items.length > 0
-                    ? items.map(it => ({ id: String(it.product_id), quantity: Math.max(1, Number(it.quantity) || 1) }))
-                    : Array.from(product_ids || []).map(id => ({ id: String(id), quantity: 1 }));
+                    ? items.map(it => ({ id: String(it.product_id), quantity: Math.max(1, Number(it.quantity) || 1), options: (it as any).options }))
+                    : Array.from(product_ids || []).map(id => ({ id: String(id), quantity: 1, options: [] }));
                 const uniqueIds = Array.from(new Set(incoming.map(i => i.id)));
                 const found = await prisma.products.findMany({ where: { id: { in: uniqueIds } } }) as any;
                 const byId = new Map(found.map((p: any) => [p.id, p]));
                 product_data = incoming.map((i) => {
                     const p = byId.get(i.id);
                     if (!p) throw new Error(`Product not found: ${i.id}`);
-                    return { id: (p as any).id, title: `${(p as any).title} x${i.quantity}`, price: Number((p as any).price) * i.quantity };
+                    return { 
+                        id: (p as any).id, 
+                        title: `${(p as any).title}`, 
+                        price: Number((p as any).price) * i.quantity,
+                        quantity: i.quantity,
+                        options: i.options 
+                    };
                 });
                 subtotal = product_data.reduce((acc, product) => acc + Number(product.price), 0);
             } else {
                 subtotal = manualItems.reduce((acc, item) => acc + Number(item.quantity) * Number(item.price), 0);
-                product_data = manualItems.map(mi => ({ id: '', title: mi.title, price: Number(mi.quantity) * Number(mi.price) }));
+                product_data = manualItems.map(mi => ({ 
+                    id: '', 
+                    title: mi.title, 
+                    price: Number(mi.quantity) * Number(mi.price),
+                    quantity: Number(mi.quantity),
+                    options: (mi as any).options
+                }));
             }
 
             const parsedUserId = user_id !== undefined ? Number(user_id) : undefined;
@@ -65,6 +77,7 @@ class SalesServices {
                     manualProducts: isManual ? manualItems as any : undefined,
                     loadedManually: isManual,
                     paymentMethods: paymentBreakdown as any,
+                    items: product_data as any,
                 }
             })
 
@@ -77,7 +90,13 @@ class SalesServices {
                     const html = sale_email_html({
                         source,
                         payment_method: primaryPaymentMethod,
-                        products: product_data.map(p => ({ title: p.title, price: Number(p.price) })),
+                        products: product_data.map(p => {
+                            const optionsStr = Array.isArray(p.options) 
+                                ? p.options.map((o: any) => `${o.name}: ${o.value || o.values}`).join(', ') 
+                                : '';
+                            const title = `${p.title} x${p.quantity}${optionsStr ? ` (${optionsStr})` : ''}`;
+                            return { title, price: Number(p.price) }
+                        }),
                         subtotal,
                         taxPercent,
                         finalTotal,

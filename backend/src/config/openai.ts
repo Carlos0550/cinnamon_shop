@@ -4,7 +4,7 @@ const openai = new OpenAI({
   apiKey: process.env.openai_api_key,
 });
 
-export const analyzeProductImages = async (imageUrls: string[], additionalContext?: string): Promise<{ title: string; description: string }> => {
+export const analyzeProductImages = async (imageUrls: string[], additionalContext?: string): Promise<{ title: string; description: string; options: { name: string; values: string[] }[] }> => {
   try {
     const imageMessages = imageUrls.map(url => ({
       type: "image_url" as const,
@@ -14,7 +14,7 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
       }
     }));
     const systemPrompt = `
-      Actúa como un generador experto de contenido para productos de e-commerce. Analiza exclusivamente las imágenes proporcionadas y produce dos campos:
+      Actúa como un generador experto de contenido para productos de e-commerce. Analiza exclusivamente las imágenes proporcionadas y produce tres campos:
 
       1. title  
         - Título corto, profesional y atractivo  
@@ -28,6 +28,13 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
         - Puede incluir entre 0 y 4 emojis (no más)  
         - Destaca beneficios, sensación de calidad o motivos para comprar  
         - Evita palabras como “básico”, “común” o equivalentes
+
+      3. options
+        - Array de objetos con "name" (ej: "Color", "Talle", "Material") y "values" (ej: ["Rojo", "Azul"]).
+        - Detecta variaciones visibles o inferidas del contexto adicional (ej: si dice "tenemos rojo y azul", genera la opción Color).
+        - Si no hay opciones claras, devuelve un array vacío [].
+        - Si se detectan colores, intenta usar nombres de colores estándar.
+        - Si se detectan talles, intenta usar S, M, L, XL, etc.
 
       **Reglas estrictas de interpretación**  
       - Describe únicamente elementos que puedan verse con claridad en las imágenes.  
@@ -47,7 +54,7 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
       - Verifica que no se agregaron elementos no visibles.  
       - Verifica que el JSON es válido.  
       - Verifica que no se incluyó información sobre elementos biológicos humanos.  
-      Si alguna regla falla, corrige silenciosamente antes de responder.
+      - Si alguna regla falla, corrige silenciosamente antes de responder.
 
       - Asegurate que la descripción tenga un tono natural, como si no hubiera sido generado por IA.
       - Si la imagen contiene una marca de producto, intenta incluir el nombre de la marca en la descripción, esto asegura que el producto se sienta legítimo y seguro.
@@ -56,7 +63,8 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
       Responde exclusivamente con un objeto JSON válido, sin texto adicional, sin markdown, sin explicaciones:
       {
         "title": "...",
-        "description": "..."
+        "description": "...",
+        "options": [{ "name": "...", "values": ["...", "..."] }]
       }
     `;
     const response = await openai.chat.completions.create({
@@ -71,13 +79,13 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
         content: [
           {
             type: "text",
-            text: `Analiza estas imágenes y genera título y descripción.${additionalContext ? `\n\nContexto adicional del usuario (ÚSALO PARA MEJORAR LA DESCRIPCIÓN Y EL TÍTULO): ${additionalContext}` : ''}`
+            text: `Analiza estas imágenes y genera título, descripción y opciones de compra.${additionalContext ? `\n\nContexto adicional del usuario (ÚSALO PARA MEJORAR LA DESCRIPCIÓN, EL TÍTULO Y DETECTAR OPCIONES): ${additionalContext}` : ''}`
           },
           ...imageMessages
         ]
       }
     ],
-    max_tokens: 500,
+    max_tokens: 600,
     temperature: 0.0
   });
 
@@ -98,8 +106,9 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
     
     const title = parsed.title?.substring(0, 50) || 'Producto Generado por IA';
     const description = parsed.description?.substring(0, 300) || 'Descripción generada automáticamente por IA.';
+    const options = Array.isArray(parsed.options) ? parsed.options : [];
 
-    return { title, description };
+    return { title, description, options };
   } catch (error) {
     console.error('Error al analizar imágenes con OpenAI:', error);
     throw error instanceof Error ? error : new Error(String(error));
@@ -163,4 +172,38 @@ Formato EXACTO:
     throw new Error('La paleta generada no es válida');
   }
   return { name, colors };
+};
+
+export const generateBusinessDescription = async (name: string, city: string, type: string = "e-commerce"): Promise<string> => {
+  const systemPrompt = `
+    Eres un experto en copywriting y SEO para negocios digitales.
+    Tu tarea es generar una descripción atractiva, profesional y optimizada para SEO para un negocio.
+    
+    Reglas:
+    - La descripción debe tener entre 150 y 200 caracteres.
+    - Debe destacar la identidad del negocio.
+    - Debe incluir el nombre del negocio y su ubicación (si se proporciona).
+    - El tono debe ser profesional pero cercano.
+    - Debe estar optimizada para SEO (palabras clave relevantes).
+    - No uses emojis en exceso (máximo 1 o 2).
+    
+    Devuelve SOLO el texto de la descripción, sin comillas ni etiquetas adicionales.
+  `;
+  
+  const userPrompt = `Genera una descripción para un negocio llamado "${name}" ubicado en "${city}". Tipo de negocio: ${type}.`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 100,
+  });
+
+  const content = response.choices[0]?.message?.content?.trim();
+  if (!content) throw new Error("No se recibió respuesta de OpenAI");
+  
+  return content;
 };

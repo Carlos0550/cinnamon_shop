@@ -14,21 +14,24 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.post("/items", requireAuth, ensureProductId, ensureQuantity, async (req, res) => {
   const user = (req as any).user
-  const rs = await service.addItem(Number(user.sub || user.id), (req as any).product_id, (req as any).quantity)
+  const options = (req.body as any).options || []
+  const rs = await service.addItem(Number(user.sub || user.id), (req as any).product_id, (req as any).quantity, options)
   if (!rs.ok) return res.status(rs.status || 400).json(rs)
   res.json({ ok: true, item: rs.item, total: rs.total })
 })
 
 router.patch("/items/:product_id", requireAuth, ensureProductId, ensureQuantity, async (req, res) => {
   const user = (req as any).user
-  const rs = await service.updateQuantity(Number(user.sub || user.id), (req as any).product_id, (req as any).quantity)
+  const options = (req.body as any)?.options
+  const rs = await service.updateQuantity(Number(user.sub || user.id), (req as any).product_id, (req as any).quantity, options)
   if (!rs.ok) return res.status(rs.status || 400).json(rs)
   res.json({ ok: true, total: rs.total })
 })
 
 router.delete("/items/:product_id", requireAuth, ensureProductId, async (req, res) => {
   const user = (req as any).user
-  const rs = await service.removeItem(Number(user.sub || user.id), (req as any).product_id)
+  const options = (req.body as any)?.options
+  const rs = await service.removeItem(Number(user.sub || user.id), (req as any).product_id, options)
   if (!rs.ok) return res.status(rs.status || 400).json(rs)
   res.json({ ok: true, total: rs.total })
 })

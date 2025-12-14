@@ -1,7 +1,23 @@
 import { Request, Response } from "express";
 import { BusinessDataRequest } from "./schemas/business.schemas";
 import businessServices from "./business.services";
+import { generateBusinessDescription } from "@/config/openai";
+
 class BusinessController {
+    async generateDescription(req: Request, res: Response) {
+        try {
+            const { name, city, type } = req.body;
+            if (!name || !city) {
+                return res.status(400).json({ error: "Nombre y ciudad son requeridos" });
+            }
+            const description = await generateBusinessDescription(name, city, type);
+            return res.json({ description });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ error: "Error generando descripción" });
+        }
+    }
+
     async createBusiness(req: Request, res: Response) {
         const payload = req.body as BusinessDataRequest;
 
@@ -28,6 +44,7 @@ class BusinessController {
             const business = await businessServices.updateBusiness(id, payload);
             return res.status(200).json(business);
         } catch (error) {
+            console.error('updateBusiness_error', error);
             if (error instanceof Error && error.message === "BUSINESS_NOT_FOUND") {
                 return res.status(404).json({ error: "Negocio no encontrado" });
             }

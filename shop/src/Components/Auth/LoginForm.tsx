@@ -4,6 +4,7 @@ import { useAppContext } from "@/providers/AppContext";
 import { Button, Stack, TextInput, Title, Text, Flex, PasswordInput, Group } from "@mantine/core";
 import { Form, useForm } from "@mantine/form";
 import { showNotification } from "@mantine/notifications";
+import useBankInfo from "@/Api/useBankInfo";
 
 type Props = {
   onClose: () => void;
@@ -11,6 +12,7 @@ type Props = {
 
 export default function LoginForm({ onClose }: Props) {
   const { auth, utils } = useAppContext();
+  const { data: business } = useBankInfo();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recoverMode, setRecoverMode] = useState(false);
@@ -63,7 +65,7 @@ export default function LoginForm({ onClose }: Props) {
       const result = await auth.signUp(values.name, values.email, values.password);
       if (result?.user) {
         showNotification({
-          title: `Bienvenido a Cinnamon, ${utils.capitalizeTexts(result?.user?.name)}`,
+          title: `Bienvenido a ${business?.name || "Tienda online"}, ${utils.capitalizeTexts(result?.user?.name)}`,
           message: "Tu cuenta ha sido creada exitosamente.",
           color: "green",
           autoClose: 3000,

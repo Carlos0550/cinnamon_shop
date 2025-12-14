@@ -30,6 +30,7 @@ export type Product = {
   category?: Category_info;
   created_at?: string | number | Date;
   stock?: number;
+  options?: { name: string; values: string[] }[];
 };
 
 export type Pagination = {
@@ -63,6 +64,7 @@ type SaveProductPayload = {
   publishAutomatically?: boolean;
   stock?: number;
   additionalContext?: string;
+  options?: { name: string; values: string[] }[];
 };
 
 export const useSaveProduct = () => {
@@ -117,6 +119,9 @@ export const useSaveProduct = () => {
         }
         if (value.additionalContext) {
           formData.append("additionalContext", value.additionalContext);
+        }
+        if (value.options) {
+          formData.append("options", JSON.stringify(value.options));
         }
 
         const res = await fetch(baseUrl + "/products/save-product", {
@@ -340,6 +345,9 @@ export const useUpdateProduct = () => {
         }
         if (value.additionalContext) {
           formData.append("additionalContext", value.additionalContext);
+        }
+        if (value.options) {
+          formData.append("options", JSON.stringify(value.options));
         }
 
         console.log("Actualizando producto...")

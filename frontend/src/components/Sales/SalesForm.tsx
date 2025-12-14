@@ -20,6 +20,7 @@ export type ManualProductItem = {
     quantity: number;
     title: string;
     price: number;
+    options?: any;
 }
 
 export type SaleRequest = {
@@ -32,6 +33,7 @@ export type SaleRequest = {
     total?: number
     tax: number
     payment_methods?: { method: PaymentMethods; amount: number }[]
+    items?: { product_id: string; quantity: number; options?: any }[]
     sale_date?: string
 }
 

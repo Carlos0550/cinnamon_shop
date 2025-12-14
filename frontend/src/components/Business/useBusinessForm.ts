@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useCreateBusiness, useGetBusiness, useUpdateBusiness, type BusinessData } from "@/components/Api/BusinessApi";
+import { useCreateBusiness, useGetBusiness, useUpdateBusiness, useGenerateDescription, type BusinessData } from "@/components/Api/BusinessApi";
 import { notifications } from "@mantine/notifications";
 
 export interface FormErrors {
@@ -23,6 +23,7 @@ const INITIAL_STATE: BusinessData = {
   address: "",
   city: "",
   state: "",
+  description: "",
   bankData: [{ bank_name: "", account_number: "", account_holder: "" }]
 };
 
@@ -30,6 +31,7 @@ export function useBusinessForm() {
   const { data, isPending: isLoadingData } = useGetBusiness();
   const createMutation = useCreateBusiness();
   const updateMutation = useUpdateBusiness();
+  const generateDescriptionMutation = useGenerateDescription();
 
   const [form, setForm] = useState<BusinessData>(INITIAL_STATE);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -45,6 +47,7 @@ export function useBusinessForm() {
         address: data.address || "",
         city: data.city || "",
         state: data.state || "",
+        description: data.description || "",
         bankData: Array.isArray(data.bankData) && data.bankData.length 
           ? data.bankData 
           : [{ bank_name: "", account_number: "", account_holder: "" }]
@@ -135,6 +138,15 @@ export function useBusinessForm() {
     }));
   }, []);
 
+  const handleGenerateDescription = async () => {
+    if (!form.name || !form.city) {
+      notifications.show({ message: "Nombre y Ciudad son requeridos para generar descripción", color: "yellow" });
+      return;
+    }
+    const description = await generateDescriptionMutation.mutateAsync({ name: form.name, city: form.city });
+    handleChange("description", description);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate(form)) {
@@ -165,6 +177,8 @@ export function useBusinessForm() {
     handleBankChange,
     addBankAccount,
     removeBankAccount,
-    handleSubmit
+    handleSubmit,
+    handleGenerateDescription,
+    isGeneratingDescription: generateDescriptionMutation.isPending
   };
 }

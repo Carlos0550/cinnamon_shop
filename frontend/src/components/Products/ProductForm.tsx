@@ -22,6 +22,7 @@ export type ProductFormValues = {
   publishAutomatically?: boolean;
   stock?: string;
   additionalContext?: string;
+  options: { name: string; values: string[] }[];
 };
 
 type ProductFormProps = {
@@ -63,6 +64,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
     publishAutomatically: false,
     stock: "1",
     additionalContext: "",
+    options: [],
   });
 
   useEffect(() => {
@@ -80,6 +82,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
         deletedImageUrls: [],
         productId: product.id,
         state: product.state || 'active',
+        options: product.options || [],
       }));
     }
   }, [product]);
@@ -139,6 +142,30 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       deletedImageUrls: [...prev.deletedImageUrls, prev.existingImageUrls[index]]
     }));
   }
+
+  const addOption = () => {
+    setFormValues(prev => ({ ...prev, options: [...prev.options, { name: "", values: [] }] }));
+  };
+
+  const removeOption = (index: number) => {
+    setFormValues(prev => ({ ...prev, options: prev.options.filter((_, i) => i !== index) }));
+  };
+
+  const updateOptionName = (index: number, name: string) => {
+    setFormValues(prev => {
+      const newOptions = [...prev.options];
+      newOptions[index] = { ...newOptions[index], name };
+      return { ...prev, options: newOptions };
+    });
+  };
+
+  const updateOptionValues = (index: number, values: string[]) => {
+    setFormValues(prev => {
+      const newOptions = [...prev.options];
+      newOptions[index] = { ...newOptions[index], values };
+      return { ...prev, options: newOptions };
+    });
+  };
 
   useEffect(() => {
     console.log("values:", formValues);
@@ -229,6 +256,34 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
               onChange={(value) => setFormValues(prev => ({ ...prev, tags: value || [] }))}
             />
           </Group>
+
+          <Stack gap="xs" mt="md">
+            <Text fw={500}>Opciones de compra</Text>
+            {formValues.options.map((opt, idx) => (
+              <Group key={idx} align="flex-end">
+                <TextInput
+                  label={idx === 0 ? "Nombre (ej: Color)" : ""}
+                  placeholder="Nombre"
+                  value={opt.name}
+                  onChange={(e) => updateOptionName(idx, e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <TagsInput
+                  label={idx === 0 ? "Valores (ej: Rojo, Azul)" : ""}
+                  placeholder="Escribe y presiona enter"
+                  value={opt.values}
+                  onChange={(vals) => updateOptionValues(idx, vals)}
+                  style={{ flex: 2 }}
+                />
+                <Button color="red" variant="subtle" onClick={() => removeOption(idx)} mb={2}>
+                  🗑️
+                </Button>
+              </Group>
+            ))}
+            <Button variant="outline" size="xs" onClick={addOption} w="fit-content">
+              + Agregar opción
+            </Button>
+          </Stack>
         </>
       )}
 

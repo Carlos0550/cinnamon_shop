@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-stack" });
 export async function generateMetadata(): Promise<Metadata> {
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
-  const description = `Tienda online de ${businessName}`;
+  const description = business?.description || `Tienda online de ${businessName}`;
 
   return {
     title: {

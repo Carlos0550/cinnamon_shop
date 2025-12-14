@@ -8,13 +8,31 @@ export type CartItem = {
     quantity: number,
     image_url: string,
     price_changed: boolean,
-
+    options?: any,
 }
 
 export type Cart = {
     items: CartItem[],
     total: number,
     promo_code?: string
+}
+
+function areOptionsEqual(a: any, b: any) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  try {
+    const arrA = Array.isArray(a) ? a : JSON.parse(JSON.stringify(a));
+    const arrB = Array.isArray(b) ? b : JSON.parse(JSON.stringify(b));
+    if (!Array.isArray(arrA) || !Array.isArray(arrB)) return JSON.stringify(a) === JSON.stringify(b);
+    if (arrA.length !== arrB.length) return false;
+    
+    const sortedA = [...arrA].sort((x, y) => (x.name || "").localeCompare(y.name || ""));
+    const sortedB = [...arrB].sort((x, y) => (x.name || "").localeCompare(y.name || ""));
+    
+    return JSON.stringify(sortedA) === JSON.stringify(sortedB);
+  } catch {
+    return false;
+  }
 }
 
 export type OrderMethod = 'EN_LOCAL' | 'TRANSFERENCIA'
@@ -70,16 +88,12 @@ function useCart(baseUrl: string, token: string | null) {
     const addProductIntoCart = useCallback(async (product: CartItem) => {
         log('Adding product', product)
         let newCart: Cart
-        const existingItem = cart.items.find(item => item.product_id === product.product_id)
+        const existingItem = cart.items.find(item => item.product_id === product.product_id && areOptionsEqual(item.options, product.options))
         const qtyToAdd = product.quantity > 0 ? product.quantity : 1
         
         if (existingItem) {
             // If product already exists, increment quantity
-            const updatedItems = cart.items.map(item => 
-                item.product_id === product.product_id 
-                    ? { ...item, quantity: item.quantity + qtyToAdd }
-                    : item
-            )
+            const updatedItems = cart.items.map(item => (item.product_id === product.product_id && areOptionsEqual(item.options, product.options)) ? { ...item, quantity: item.quantity + qtyToAdd } : item)
             const newTotal = updatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
             newCart = {
                 ...cart,
@@ -104,7 +118,7 @@ function useCart(baseUrl: string, token: string | null) {
                 await fetch(`${baseUrl}/cart/items`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ product_id: product.product_id, quantity: qtyToAdd })
+                    body: JSON.stringify({ product_id: product.product_id, quantity: qtyToAdd, options: product.options })
                 })
             } catch (e) {
                 log('Error syncing add', e)
@@ -158,11 +172,11 @@ function useCart(baseUrl: string, token: string | null) {
         }
     }, [cart, token, baseUrl])
 
-    const updateQuantity = useCallback(async (product_id: string, quantity: number) => {
-        log('Updating quantity', { product_id, quantity })
+    const updateQuantity = useCallback(async (product_id: string, quantity: number, options?: any) => {
+        log('Updating quantity', { product_id, quantity, options })
         if (quantity <= 0) {
             // Remove item if quantity is 0 or less
-            const items = cart.items.filter(item => item.product_id !== product_id)
+            const items = cart.items.filter(item => !(item.product_id === product_id && (options ? areOptionsEqual(item.options, options) : true)))
             const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
             setCart({
                 ...cart,
@@ -175,7 +189,8 @@ function useCart(baseUrl: string, token: string | null) {
                     log('Syncing remove (qty <= 0) to server')
                     await fetch(`${baseUrl}/cart/items/${product_id}`, {
                         method: 'DELETE',
-                        headers: { Authorization: `Bearer ${token}` }
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ options })
                     })
                 } catch (e) {
                     log('Error syncing remove', e)
@@ -183,7 +198,7 @@ function useCart(baseUrl: string, token: string | null) {
             }
         } else {
             // Update quantity if greater than 0
-            const items = cart.items.map(item => item.product_id === product_id ? { ...item, quantity } : item)
+            const items = cart.items.map(item => (item.product_id === product_id && (options ? areOptionsEqual(item.options, options) : true)) ? { ...item, quantity } : item)
             const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
             setCart({
                 ...cart,
@@ -197,7 +212,7 @@ function useCart(baseUrl: string, token: string | null) {
                     await fetch(`${baseUrl}/cart/items/${product_id}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ quantity })
+                        body: JSON.stringify({ quantity, options })
                     })
                 } catch (e) {
                     log('Error syncing update', e)
@@ -213,7 +228,7 @@ function useCart(baseUrl: string, token: string | null) {
     },[cart])
 
     const processOrder = useCallback(async (baseUrl: string, token: string | null) => {
-        const items = cart.items.map(it => ({ product_id: it.product_id, quantity: it.quantity }))
+        const items = cart.items.map(it => ({ product_id: it.product_id, quantity: it.quantity, options: it.options }))
         if (items.length === 0) {
             showNotification({ title: 'Carrito vacío', message: 'No hay productos para procesar la orden.', color: 'yellow', autoClose: 3000 })
             return { ok: false }
@@ -252,7 +267,7 @@ function useCart(baseUrl: string, token: string | null) {
 
     const syncWithServer = useCallback(async (baseUrl: string, token: string | null) => {
         if (!token) return
-        const items = cart.items.map(it => ({ product_id: it.product_id, quantity: it.quantity, price: it.price }))
+        const items = cart.items.map(it => ({ product_id: it.product_id, quantity: it.quantity, price: it.price, options: it.options }))
         try {
             if (items.length > 0) {
                 await fetch(`${baseUrl}/cart/merge`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ items }) })
@@ -261,7 +276,7 @@ function useCart(baseUrl: string, token: string | null) {
             const json = await res.json().catch(() => null)
             const serverCart = json?.cart
             if (serverCart && Array.isArray(serverCart.items)) {
-                const mappedItems: CartItem[] = serverCart.items.map((it: { productId: string; product?: { title?: string; price?: number; images?: string[] }; quantity?: number; price_has_changed?: boolean }) => ({ product_id: it.productId, product_name: it.product?.title || '', price: Number(it.product?.price) || 0, quantity: Number(it.quantity) || 1, image_url: Array.isArray(it.product?.images) ? (it.product?.images?.[0] || '') : '', price_changed: !!it.price_has_changed }))
+                const mappedItems: CartItem[] = serverCart.items.map((it: { productId: string; product?: { title?: string; price?: number; images?: string[] }; quantity?: number; price_has_changed?: boolean; selected_options?: any }) => ({ product_id: it.productId, product_name: it.product?.title || '', price: Number(it.product?.price) || 0, quantity: Number(it.quantity) || 1, image_url: Array.isArray(it.product?.images) ? (it.product?.images?.[0] || '') : '', price_changed: !!it.price_has_changed, options: it.selected_options || [] }))
                 const total = mappedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
                 setCart({ items: mappedItems, total, promo_code: cart.promo_code })
             }

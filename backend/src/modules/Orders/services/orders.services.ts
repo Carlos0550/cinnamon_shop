@@ -7,15 +7,27 @@ import PaletteServices from "@/modules/Palettes/services/palette.services"
 import { PaymentMethod } from "@prisma/client"
 import fs from 'fs'
 import { uploadToBucket } from '@/config/supabase'
-type OrderItemInput = { product_id: string; quantity: number }
+type OrderItemInput = { product_id: string; quantity: number; options?: any }
 type CustomerInput = { name: string; email: string; phone?: string; street?: string; postal_code?: string; city?: string; province?: string; pickup?: boolean }
 
 export default class OrdersServices {
   async createOrder(userId: number | undefined, items: OrderItemInput[], paymentMethod: string, customer: CustomerInput) {
     const productIds = items.map(i => String(i.product_id))
     const products = await prisma.products.findMany({ where: { id: { in: productIds } } })
-    const itemsMap = new Map(items.map(i => [i.product_id, Math.max(1, Number(i.quantity) || 1)]))
-    const snapshot = products.map(p => ({ id: p.id, title: p.title, price: Number(p.price), quantity: itemsMap.get(p.id) || 1 }))
+    const productsMap = new Map(products.map(p => [p.id, p]))
+
+    const snapshot = items.map(item => {
+      const product = productsMap.get(item.product_id)
+      if (!product) return null
+      return {
+        id: product.id,
+        title: product.title,
+        price: Number(product.price),
+        quantity: Math.max(1, Number(item.quantity) || 1),
+        options: item.options || []
+      }
+    }).filter(i => i !== null) as { id: string, title: string, price: number, quantity: number, options: any }[]
+
     const total = snapshot.reduce((acc, it) => acc + Number(it.price) * Number(it.quantity), 0)
 
     const paymentNormalized: PaymentMethod = (String(paymentMethod).toUpperCase() === 'EN_LOCAL') ? 'EFECTIVO' : (String(paymentMethod).toUpperCase() as PaymentMethod)
@@ -52,7 +64,7 @@ export default class OrdersServices {
         source: "WEB",
         product_ids: productIds,
         user_sale:{ user_id: userId?.toString() || undefined },
-        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, options: (i as any).options }))
       }) as any;
       if (typeof saleId === 'string') {
         await prisma.orders.update({ where: { id: order.id }, data: { saleId } });

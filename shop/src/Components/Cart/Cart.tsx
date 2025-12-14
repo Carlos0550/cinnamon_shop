@@ -1,5 +1,5 @@
 'use client'
-import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select, Loader, Alert, Card, CopyButton, Tooltip } from '@mantine/core'
+import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select, Loader, Alert, Card, CopyButton, Tooltip, Badge } from '@mantine/core'
 import { FaMinus, FaPlus, FaUniversity, FaCopy, FaCheck } from 'react-icons/fa'
 import useCart from './useCart'
 import React from 'react'
@@ -42,24 +42,34 @@ function Cart({ opened = true, onClose }: CartProps) {
               <Text c="dimmed">Tu carrito está vacío</Text>
             ) : (
               cart.items.map((item) => (
-                <Box key={item.product_id} style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 8, padding: 12 }}>
+                <Box key={`${item.product_id}-${JSON.stringify(item.options)}`} style={{ border: '1px solid var(--mantine-color-gray-3)', borderRadius: 8, padding: 12 }}>
                   <Group justify="space-between" align="center">
                     <Group align="center" gap="md">
                       <Image src={item.image_url} alt={item.product_name} w={64} h={64} fit="cover" radius="sm" />
                       <Stack gap={4}>
                         <Text fw={600}>{item.product_name}</Text>
                         <Text>{formatCurrency(item.price)}</Text>
+                        {Array.isArray(item.options) && item.options.length > 0 && (
+                          <Group gap="xs">
+                            {item.options.map((opt: any, idx: number) => (
+                              <Badge key={idx} variant="light" color="gray">
+                                {`${opt?.name || ''}: ${opt?.value || ''}`}
+                              </Badge>
+                            ))}
+                            <Badge variant="filled" color="blue">x{item.quantity}</Badge>
+                          </Group>
+                        )}
                         {item.price_changed && (
                           <Text size="xs" c="yellow.6">El precio de este producto ha cambiado recientemente</Text>
                         )}
                       </Stack>
                     </Group>
                     <Group align="center" gap="sm">
-                      <ActionIcon variant="light" aria-label="decrement" onClick={() => updateQuantity(item.product_id, item.quantity - 1)}>
+                      <ActionIcon variant="light" aria-label="decrement" onClick={() => updateQuantity(item.product_id, item.quantity - 1, item.options)}>
                         <FaMinus />
                       </ActionIcon>
                       <Text fw={600}>{item.quantity}</Text>
-                      <ActionIcon variant="light" aria-label="increment" onClick={() => updateQuantity(item.product_id, item.quantity + 1)}>
+                      <ActionIcon variant="light" aria-label="increment" onClick={() => updateQuantity(item.product_id, item.quantity + 1, item.options)}>
                         <FaPlus />
                       </ActionIcon>
                     </Group>

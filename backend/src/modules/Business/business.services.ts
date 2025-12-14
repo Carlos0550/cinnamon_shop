@@ -11,6 +11,7 @@ class BusinessServices {
             address: payload.address,
             city: payload.city,
             state: payload.state,
+            description: payload.description,
             bankData: Array.isArray(payload.bankData) && payload.bankData.length > 0
                 ? {
                     create: payload.bankData.map(b => ({
@@ -30,38 +31,44 @@ class BusinessServices {
     }
 
     async updateBusiness(id: string, payload: BusinessDataRequest) {
-        const existing = await prisma.businessData.findUnique({
-            where: { id },
-            include: { bankData: true }
-        });
-        if (!existing) {
-            throw new Error("BUSINESS_NOT_FOUND");
+        try {
+            const existing = await prisma.businessData.findUnique({
+                where: { id },
+                include: { bankData: true }
+            });
+            if (!existing) {
+                throw new Error("BUSINESS_NOT_FOUND");
+            }
+
+            const updated = await prisma.businessData.update({
+                where: { id },
+                data: {
+                    name: payload.name,
+                    email: payload.email,
+                    phone: payload.phone,
+                    address: payload.address,
+                    city: payload.city,
+                    state: payload.state,
+                    description: payload.description,
+                    bankData: Array.isArray(payload.bankData) && payload.bankData.length > 0
+                        ? {
+                            deleteMany: {},
+                            create: payload.bankData.map(b => ({
+                                bank_name: b.bank_name,
+                                account_number: b.account_number,
+                                account_holder: b.account_holder,
+                            }))
+                        }
+                        : { deleteMany: {} },
+                },
+                include: { bankData: true }
+            });
+
+            return updated;
+        } catch (e) {
+            console.error('BusinessServices.updateBusiness error:', e);
+            throw e;
         }
-
-        const updated = await prisma.businessData.update({
-            where: { id },
-            data: {
-                name: payload.name,
-                email: payload.email,
-                phone: payload.phone,
-                address: payload.address,
-                city: payload.city,
-                state: payload.state,
-                bankData: Array.isArray(payload.bankData) && payload.bankData.length > 0
-                    ? {
-                        deleteMany: {},
-                        create: payload.bankData.map(b => ({
-                            bank_name: b.bank_name,
-                            account_number: b.account_number,
-                            account_holder: b.account_holder,
-                        }))
-                    }
-                    : { deleteMany: {} },
-            },
-            include: { bankData: true }
-        });
-
-        return updated;
     }
 
     async getBusiness() {

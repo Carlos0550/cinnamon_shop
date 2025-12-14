@@ -3,7 +3,7 @@ import { ImageResponse } from 'next/og'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 export const runtime = 'edge'
-export const alt = 'Producto | Cinnamon'
+export const alt = 'Producto | Tienda Online'
 
 export default async function OG({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -45,7 +45,7 @@ export default async function OG({ params }: { params: Promise<{ id: string }> }
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
-          <div style={{ fontSize: 48, fontWeight: 800, color: '#111' }}>Cinnamon Shop</div>
+          <div style={{ fontSize: 48, fontWeight: 800, color: '#111' }}>Tienda Online</div>
         </div>
         <div style={{ marginTop: 24, fontSize: 56, fontWeight: 700, color: '#111' }}>{title}</div>
         <div style={{ marginTop: 8, fontSize: 28, color: '#444' }}>{cat}</div>

@@ -1,0 +1,156 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "carlospelinski03@gmail.com",
+      "password": "$2b$10$K6h4Abl86uOd3D9NrFROD./h1D9Gtt8S7w0QSQku.wImNRiQ2skga",
+      "name": "carlos pelinski",
+      "is_active": true,
+      "profile_image": "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/avatars/avatar-1-1765679740871-725007415.jpeg",
+      "created_at": "2025-12-14T02:17:37.379Z",
+      "updated_at": "2025-12-14T02:49:33.080Z",
+      "role": 2,
+      "phone": "3765223959",
+      "shipping_street": "tarelli 233",
+      "shipping_postal_code": "3308",
+      "shipping_city": "Candelaria",
+      "shipping_province": "misiones"
+    }
+  ],
+  "admins": [
+    {
+      "id": 1,
+      "email": "carlospelinski03@gmail.com",
+      "password": "$2b$10$dvADR/wdpzmdeFhD4A9SBuxFyuQPYnp2W.TjuNL1sGiBndaRVqHfy",
+      "name": "carlos pelinski",
+      "is_active": true,
+      "profile_image": null,
+      "role": 1,
+      "created_at": "2025-12-14T02:24:29.801Z",
+      "updated_at": "2025-12-14T03:25:49.710Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cmj56rfmy00060qk618w7prnj",
+      "title": "decoración téxtil",
+      "image": "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/categories/category-1765684161930-210264946",
+      "is_active": true,
+      "created_at": "2025-12-14T03:49:23.050Z",
+      "status": "active"
+    },
+    {
+      "id": "cmj56s03700070qk6yc9kun7m",
+      "title": "toallones",
+      "image": "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/categories/category-1765684188859-513687924",
+      "is_active": true,
+      "created_at": "2025-12-14T03:49:49.555Z",
+      "status": "active"
+    },
+    {
+      "id": "cmj56umnx00080qk6y6a3lxnk",
+      "title": "ropa de cama",
+      "image": "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/categories/category-1765684311585-688830850",
+      "is_active": true,
+      "created_at": "2025-12-14T03:51:52.125Z",
+      "status": "active"
+    }
+  ],
+  "products": [
+    {
+      "id": "cmj56vrle00090qk65c2wq56b",
+      "title": "Sábanas Elegantes para Cama",
+      "price": 40000,
+      "description": "Transforma tu dormitorio con nuestras sábanas de alta calidad en blanco, gris oscuro y negro. Suave al tacto y con un diseño moderno, ofrecen comodidad y estilo. Perfectas para cualquier decoración. ¡Dale un toque de elegancia a tus noches! 🛏️✨",
+      "is_active": true,
+      "state": "active",
+      "created_at": "2025-12-14T03:52:44.469Z",
+      "images": [
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765684355954-212754239",
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765684356755-115997510",
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765684357219-401320017",
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765684358059-795775377"
+      ],
+      "categoryId": "cmj56umnx00080qk6y6a3lxnk",
+      "tags": [],
+      "stock": 30
+    }
+  ],
+  "promos": [],
+  "sales": [],
+  "cart": [
+    {
+      "id": 1,
+      "total": 0,
+      "userId": 1
+    }
+  ],
+  "orderItems": [],
+  "orders": [],
+  "faq": [],
+  "businessData": [
+    {
+      "id": "cmj56pn4100030qk6pbon15ux",
+      "name": "Blanqueria GH",
+      "email": "blanqueriagh@gmail.com",
+      "phone": "376512345678",
+      "address": "Calle falsa 123",
+      "city": "Candelaria ",
+      "state": "Misiones",
+      "description": null,
+      "bankData": [
+        {
+          "id": "cmj56pn7d00040qk683ipw3qh",
+          "bank_name": "",
+          "account_number": "",
+          "account_holder": "",
+          "businessId": "cmj56pn4100030qk6pbon15ux"
+        }
+      ]
+    }
+  ],
+  "colorPalette": [
+    {
+      "id": "cmj55yumt00020qk6bzwe06ej",
+      "name": "Pastel Pink",
+      "colors": [
+        "#F8D3E0",
+        "#F5B8D1",
+        "#F29CC2",
+        "#F181B3",
+        "#ED66A4",
+        "#E94B95",
+        "#E23086",
+        "#D91C77",
+        "#C81168",
+        "#A7005A"
+      ],
+      "is_active": true,
+      "use_for_admin": false,
+      "use_for_shop": false,
+      "created_at": "2025-12-14T03:27:09.461Z",
+      "updated_at": "2025-12-14T03:53:38.167Z"
+    },
+    {
+      "id": "cmj56qkgx00050qk6t7xudche",
+      "name": "Blanco y negro",
+      "colors": [
+        "#FFFFFF",
+        "#F0F0F0",
+        "#D9D9D9",
+        "#B3B3B3",
+        "#A6A6A6",
+        "#7F7F7F",
+        "#4D4D4D",
+        "#333333",
+        "#1A1A1A",
+        "#000000"
+      ],
+      "is_active": true,
+      "use_for_admin": true,
+      "use_for_shop": true,
+      "created_at": "2025-12-14T03:48:42.657Z",
+      "updated_at": "2025-12-14T03:53:38.516Z"
+    }
+  ]
+}

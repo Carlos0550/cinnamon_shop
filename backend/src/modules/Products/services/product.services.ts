@@ -39,6 +39,7 @@ class ProductServices {
             publishAutomatically,
             stock,
             additionalContext,
+            options,
         } = req.body
 
         const productImages = req.files
@@ -71,6 +72,7 @@ class ProductServices {
         let productState: ProductState = ProductState.active;
         const parsedStock = typeof stock === 'string' ? parseInt(stock, 10) : (typeof stock === 'number' ? stock : 1);
         const finalStock = Number.isFinite(parsedStock) && parsedStock >= 0 ? parsedStock : 1;
+        let finalOptions = typeof options === 'string' ? JSON.parse(options) : (Array.isArray(options) ? options : []);
 
         if (fillWithAI === true || fillWithAI === 'true') {
             if (imageUrls.length === 0) {
@@ -85,6 +87,9 @@ class ProductServices {
                 finalTitle = aiResult.title;
                 finalDescription = aiResult.description;
                 finalTags = []; 
+                if (aiResult.options && aiResult.options.length > 0) {
+                    finalOptions = aiResult.options;
+                }
                 productState = publishAutomatically === "true" || publishAutomatically === true ? ProductState.active : ProductState.draft; 
             } catch (error) {
                 console.error('Error al procesar con IA:', error);
@@ -105,6 +110,7 @@ class ProductServices {
                 images: imageUrls,
                 state: productState,
                 stock: finalStock,
+                options: finalOptions,
             }
         });
 
@@ -362,7 +368,8 @@ class ProductServices {
                 existingImageUrls,
                 deletedImageUrls,
                 state,
-                stock
+                stock,
+                options
             } = req.body as UpdateProductRequest;
             console.log("Estatus actual:", state);
 
@@ -435,6 +442,7 @@ class ProductServices {
             const updatedImages = [...normalizedExisting, ...imageUrls];
             const parsedStock = typeof stock === 'string' ? parseInt(stock, 10) : (typeof stock === 'number' ? stock : undefined);
             const finalStock = parsedStock !== undefined && Number.isFinite(parsedStock) && parsedStock >= 0 ? parsedStock : undefined;
+            const finalOptions = options ? (typeof options === 'string' ? JSON.parse(options) : options) : undefined;
 
             await prisma.products.update({
                 where: { id: product_id },
@@ -447,6 +455,7 @@ class ProductServices {
                     images: updatedImages,
                     state: state || ProductState.active,
                     ...(finalStock !== undefined ? { stock: finalStock } : {}),
+                    ...(finalOptions !== undefined ? { options: finalOptions } : {}),
                 }
             });
 

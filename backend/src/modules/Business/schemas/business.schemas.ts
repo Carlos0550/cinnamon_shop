@@ -8,5 +8,6 @@ export type BusinessDataRequest = {
     address: string
     city: string
     state: string
+    description?: string
     bankData: BusinessBankData[]
 }

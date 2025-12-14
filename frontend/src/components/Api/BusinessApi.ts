@@ -17,6 +17,7 @@ export type BusinessData = {
   address: string;
   city: string;
   state: string;
+  description?: string;
   bankData: BankData[];
 };
 
@@ -71,6 +72,29 @@ export const useCreateBusiness = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business"] });
       notifications.show({ message: "Negocio creado", color: "green" });
+    },
+    onError: (e: Error) => {
+      notifications.show({ message: e.message || "Error", color: "red" });
+    }
+  });
+};
+
+export const useGenerateDescription = () => {
+  const { auth: { token } } = useAppContext();
+  return useMutation({
+    mutationKey: ["generateDescription"],
+    mutationFn: async ({ name, city, type }: { name: string; city: string; type?: string }) => {
+      const res = await fetch(`${baseUrl}/business/generate-description`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, city, type })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Error generando descripción");
+      return json.description as string;
     },
     onError: (e: Error) => {
       notifications.show({ message: e.message || "Error", color: "red" });
