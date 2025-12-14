@@ -6,7 +6,7 @@ export function ensureCreatePayload(req: Request, res: Response, next: NextFunct
   const customer = req.body?.customer || {}
   if (items.length === 0) return res.status(400).json({ ok: false, error: "missing_items" })
   if (!payment) return res.status(400).json({ ok: false, error: "missing_payment_method" })
-  const normalizedItems = items.map((it: any) => ({ product_id: String(it.product_id), quantity: Number(it.quantity) || 1 }))
+  const normalizedItems = items.map((it: any) => ({ product_id: String(it.product_id), quantity: Number(it.quantity) || 1, options: it?.options || [] }))
   const normalizedCustomer = {
     name: String(customer?.name || ""),
     email: String(customer?.email || ""),
@@ -22,4 +22,3 @@ export function ensureCreatePayload(req: Request, res: Response, next: NextFunct
   ;(req as any).customer = normalizedCustomer
   next()
 }
-

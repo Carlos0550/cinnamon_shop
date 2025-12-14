@@ -10,6 +10,8 @@ import React, { useMemo, useState, useEffect } from "react"
 import { SalesForm } from "./SalesForm"
 import { FiEdit, FiTrash } from "react-icons/fi"
 
+export type SaleItemOption = { name: string; value?: string; values?: string[] }
+export type SaleItem = { id: string; title: string; price: number; quantity: number; options?: SaleItemOption[] }
 export type Sales = {
   id: string,
   created_at: string,
@@ -25,6 +27,7 @@ export type Sales = {
   orders?: { buyer_name?: string; buyer_email?: string; buyer_phone?: string }[],
   products: Product[],
   manualProducts?: ManualProductItem[],
+  items?: SaleItem[],
   loadedManually?: boolean,
   processed?: boolean
   declined?: boolean
@@ -300,6 +303,7 @@ export default function SalesTable() {
                     <Text>Total</Text>
                     <Text fw={700}>{currency.format(finalTotal)}</Text>
                   </Group>
+                  {/* Items detallados se muestran en el modal de \"Ver productos\" */}
                   <Group justify="space-between">
                     <Text>Cliente</Text>
                     <Text>{sale.user?.name || sale.orders?.[0]?.buyer_name || '—'} {sale.user?.email || sale.orders?.[0]?.buyer_email ? `(${sale.user?.email || sale.orders?.[0]?.buyer_email})` : ''}</Text>
@@ -420,34 +424,35 @@ export default function SalesTable() {
           fullScreen={isMobile}
         >
           <Stack>
-            {(selectedSale.loadedManually ? (selectedSale.manualProducts?.length ?? 0) > 0 : (selectedSale.products?.length ?? 0) > 0) ? (
+            {Array.isArray(selectedSale.items) && selectedSale.items.length > 0 ? (
               <Table>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Producto</Table.Th>
                     <Table.Th>Precio</Table.Th>
+                    <Table.Th>Opciones</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {(() => {
-                    const rows = selectedSale.loadedManually
-                      ? (selectedSale.manualProducts || []).map((mp, idx) => ({
-                        key: String(idx),
-                        title: mp.title + (mp.quantity && mp.quantity > 1 ? ` x${mp.quantity}` : ''),
-                        price: Number(mp.quantity) * Number(mp.price),
-                      }))
-                      : (selectedSale.products || []).map((p) => ({
-                        key: String(p.id),
-                        title: p.title,
-                        price: typeof p.price === 'number' ? p.price : Number(p.price || 0),
-                      }));
-                    return rows.map((r) => (
-                      <Table.Tr key={r.key}>
-                        <Table.Td>{r.title}</Table.Td>
-                        <Table.Td>{currency.format(r.price)}</Table.Td>
-                      </Table.Tr>
-                    ))
-                  })()}
+                  {selectedSale.items.map((it, idx) => (
+                    <Table.Tr key={`${selectedSale.id}-view-item-${idx}`}>
+                      <Table.Td>{`${it.title}${it.quantity && it.quantity > 1 ? ` x${it.quantity}` : ''}`}</Table.Td>
+                      <Table.Td>{currency.format(Number(it.price) || 0)}</Table.Td>
+                      <Table.Td>
+                        {Array.isArray(it.options) && it.options.length > 0 ? (
+                          <Group gap="xs" wrap="wrap">
+                            {it.options.map((o, i) => (
+                              <Badge key={i} variant="light">
+                                {(o?.name || '') + ': ' + (o?.value || (Array.isArray(o?.values) ? o.values.join(', ') : ''))}
+                              </Badge>
+                            ))}
+                          </Group>
+                        ) : (
+                          <Text c="dimmed">—</Text>
+                        )}
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
                 </Table.Tbody>
               </Table>
             ) : (
