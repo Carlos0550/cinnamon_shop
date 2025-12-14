@@ -17,6 +17,7 @@ export type BusinessData = {
     address: string;
     city: string;
     state: string;
+
     bankData: BankData[];
 };
 

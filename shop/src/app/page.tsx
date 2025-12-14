@@ -3,6 +3,7 @@ import HomeComponent from "@/Components/Home/Home"
 import { ProductsResponse, Products } from "@/Api/useProducts"
 import { CategoriesResponse } from "@/Api/useCategories"
 import { getBusinessInfo } from "@/Api/useBusiness"
+import { BusinessData } from "@/Api/useBankInfo"
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams
@@ -90,6 +91,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
+  const bizDescription = (business as any)?.business_description || ''
   const businessImage = business?.business_image || `${siteUrl}/opengraph-image`;
   const base = businessName;
   
@@ -99,12 +101,12 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const fullTitle = parts.join(" · ")
   return {
     title: fullTitle,
-    description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : `Explora categorías y productos en ${businessName}`,
+    description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : bizDescription,
     robots: { index: true, follow: true },
     alternates: { canonical: siteUrl },
     openGraph: {
       title: fullTitle,
-      description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : `Explora categorías y productos en ${businessName}`,
+      description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : bizDescription,
       url: siteUrl,
       type: "website",
       images: [
@@ -114,7 +116,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
-      description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : `Explora categorías y productos en ${businessName}`,
+      description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : bizDescription,
       images: [businessImage]
     }
   }
