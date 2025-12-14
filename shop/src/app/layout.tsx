@@ -7,6 +7,8 @@ import { getBusinessInfo } from "@/Api/useBusiness";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-stack" });
 
+export const revalidate = 60;
+
 export async function generateMetadata(): Promise<Metadata> {
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
