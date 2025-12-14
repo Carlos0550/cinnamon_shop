@@ -10,11 +10,13 @@ export default async function OG({ searchParams }: { searchParams?: { title?: st
   
   // Fetch business data to get the dynamic image
   let bizImage = ''
+  let bizDescription = ''
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/business/public`, { next: { revalidate: 60 } })
     if (res.ok) {
         const data = await res.json()
         bizImage = data.business_image || ''
+        bizDescription = data.business_description || ''
     }
   } catch {}
 
@@ -44,7 +46,7 @@ export default async function OG({ searchParams }: { searchParams?: { title?: st
           <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
           <div style={{ fontSize: 56, fontWeight: 800, color: '#111' }}>Tienda Online</div>
         </div>
-        <div style={{ marginTop: 24, fontSize: 32, color: '#333' }}>Explora categorías y productos</div>
+        <div style={{ marginTop: 24, fontSize: 32, color: '#333' }}>{bizDescription}</div>
         {titleQ && (
           <div style={{ marginTop: 12, fontSize: 28, color: '#555' }}>Buscar: {titleQ}</div>
         )}
