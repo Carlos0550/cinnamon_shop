@@ -2,8 +2,56 @@ import { Request, Response } from "express";
 import { BusinessDataRequest } from "./schemas/business.schemas";
 import businessServices from "./business.services";
 import { generateBusinessDescription } from "@/config/openai";
+import { uploadToBucket, getPublicUrlFor } from "@/config/supabase";
+import fs from "fs";
 
 class BusinessController {
+    async uploadImage(req: Request, res: Response) {
+        try {
+            const file = (req as any).file as Express.Multer.File | undefined;
+            if (!file) {
+                return res.status(400).json({ error: "No se proporcionó ningún archivo" });
+            }
+            const fieldRaw = (req.query.field as string) || (req.body as any)?.field || 'business_image';
+            const field = fieldRaw === 'favicon' ? 'favicon' : 'business_image';
+            const idParam = (req.query.id as string) || (req.body as any)?.id;
+            const buffer: Buffer = file.buffer ?? fs.readFileSync(file.path);
+            const timestamp = Date.now();
+            const uniqueName = `business-${timestamp}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+            
+            const uploaded = await uploadToBucket(
+                buffer,
+                uniqueName,
+                "business",
+                "images",
+                file.mimetype
+            );
+
+            if (!uploaded.path) {
+                return res.status(500).json({ error: "Error al subir la imagen" });
+            }
+
+            let id = idParam;
+            if (!id) {
+                const current = await businessServices.getBusiness();
+                id = current?.id;
+            }
+            const publicUrl = getPublicUrlFor("business", uploaded.path);
+            if (id) {
+                await businessServices.updateImageField(id, field as any, publicUrl);
+            }
+            return res.json({
+                success: true,
+                url: publicUrl,
+                field,
+                id
+            });
+        } catch (error) {
+            console.error("uploadImage_error", error);
+            return res.status(500).json({ error: "Error al procesar la imagen" });
+        }
+    }
+
     async generateDescription(req: Request, res: Response) {
         try {
             const { name, city, type } = req.body;

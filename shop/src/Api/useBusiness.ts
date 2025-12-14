@@ -7,6 +7,8 @@ export type BusinessData = {
   city: string;
   state: string;
   description?: string;
+  business_image?: string;
+  favicon?: string;
 };
 
 export const getBusinessInfo = async (): Promise<BusinessData | null> => {

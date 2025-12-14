@@ -252,6 +252,8 @@ model BusinessData {
   city      String
   state     String
   description String?
+  business_image String?
+  favicon        String?
   bankData  BusinessBankData[]
 }
 model BusinessBankData{

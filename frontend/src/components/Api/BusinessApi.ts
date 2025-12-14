@@ -18,6 +18,8 @@ export type BusinessData = {
   city: string;
   state: string;
   description?: string;
+  business_image?: string;
+  favicon?: string;
   bankData: BankData[];
 };
 
@@ -100,6 +102,33 @@ export const useGenerateDescription = () => {
       notifications.show({ message: e.message || "Error", color: "red" });
     }
   });
+};
+
+export const useUploadBusinessImage = () => {
+    const { auth: { token } } = useAppContext();
+    return useMutation({
+        mutationKey: ["uploadBusinessImage"],
+        mutationFn: async ({ file, field, id }: { file: File; field: 'business_image' | 'favicon'; id?: string }) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            const url = new URL(`${baseUrl}/business/upload-image`);
+            url.searchParams.set("field", field);
+            if (id) url.searchParams.set("id", id);
+            const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json?.error || "Error subiendo imagen");
+            return json.url as string;
+        },
+        onError: (e: Error) => {
+            notifications.show({ message: e.message || "Error al subir imagen", color: "red" });
+        }
+    });
 };
 
 export const useUpdateBusiness = () => {

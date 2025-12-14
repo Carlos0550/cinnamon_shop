@@ -11,6 +11,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
   const description = business?.description || `Tienda online de ${businessName}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001";
+  const businessImage = business?.business_image || "/logo.png";
+  const favicon = business?.favicon || "/logo.png";
 
   return {
     title: {
@@ -18,21 +21,21 @@ export async function generateMetadata(): Promise<Metadata> {
       default: businessName,
     },
     description: description,
-    icons: { icon: "/logo.png" },
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"),
+    icons: { icon: favicon },
+    metadataBase: new URL(siteUrl),
     openGraph: {
       title: businessName,
       description: description,
       url: "/",
       type: "website",
-      images: [{ url: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png" }],
+      images: [{ url: businessImage }],
       siteName: businessName,
     },
     twitter: {
       card: "summary_large_image",
       title: businessName,
       description: description,
-      images: [process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png"],
+      images: [businessImage],
     },
     robots: { index: true, follow: true },
   };
@@ -45,6 +48,8 @@ export default async function RootLayout({
 }>) {
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001";
+  const businessImage = business?.business_image || "/logo.png";
   
   return (
     <html lang="es" className={inter.variable}>
@@ -58,9 +63,9 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               name: businessName,
-              url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001",
+              url: siteUrl,
               logo: "/logo.png",
-              image: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || "/logo.png"
+              image: businessImage
             })
           }}
         />

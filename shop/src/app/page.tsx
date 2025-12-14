@@ -10,6 +10,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
+  const businessImage = business?.business_image || `${siteUrl}/logo.png`;
   
   // Prepare Query Params for Products
   const qp = new URLSearchParams()
@@ -60,7 +61,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             "@type": "WebSite",
             name: businessName,
             url: siteUrl,
-            image: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/logo.png`,
+            image: businessImage,
           })
         }}
       />
@@ -72,7 +73,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             "@type": "WebPage",
             name: "Productos",
             url: siteUrl,
-            primaryImageOfPage: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/logo.png`,
+            primaryImageOfPage: businessImage,
           })
         }}
       />
@@ -89,6 +90,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
+  const businessImage = business?.business_image || `${siteUrl}/opengraph-image`;
   const base = businessName;
   
   const parts = [base]
@@ -106,14 +108,14 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
       url: siteUrl,
       type: "website",
       images: [
-        { url: process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/opengraph-image` },
+        { url: businessImage },
       ]
     },
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
       description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : `Explora categorías y productos en ${businessName}`,
-      images: [process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || `${siteUrl}/opengraph-image`]
+      images: [businessImage]
     }
   }
 }

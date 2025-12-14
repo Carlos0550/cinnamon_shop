@@ -28,6 +28,17 @@
       "role": 1,
       "created_at": "2025-12-14T02:24:29.801Z",
       "updated_at": "2025-12-14T03:25:49.710Z"
+    },
+    {
+      "id": 2,
+      "email": "bejw542iau@xkxkud.com",
+      "password": "$2b$10$a4QzsfQficy1siJ97WWfDulLZSA16Ye6ElrLV4ool62KIQkUrsABu",
+      "name": "badu",
+      "is_active": true,
+      "profile_image": null,
+      "role": 1,
+      "created_at": "2025-12-14T04:15:49.865Z",
+      "updated_at": "2025-12-14T04:15:49.865Z"
     }
   ],
   "categories": [
@@ -58,6 +69,50 @@
   ],
   "products": [
     {
+      "id": "cmj57vwtk0004akulg7tpdndv",
+      "title": "Toallas de Baño Premium de Algodón",
+      "price": 12000,
+      "description": "Disfruta de la suavidad y absorción superior de nuestras toallas de baño premium. Confeccionadas en algodón de alta calidad, son perfectas para envolver tu piel después de un baño relajante. Dale un toque de elegancia a tu baño con este esencial. 🛁✨",
+      "is_active": true,
+      "state": "active",
+      "created_at": "2025-12-14T04:20:51.052Z",
+      "images": [
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765686043161-204677661",
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765686043826-788074465",
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765686044175-556981379",
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765686044399-644576297"
+      ],
+      "categoryId": "cmj56s03700070qk6yc9kun7m",
+      "tags": [],
+      "stock": 12,
+      "options": []
+    },
+    {
+      "id": "cmj59edwh000074ul4827tyet",
+      "title": "Almohadas de Algodón Elegantes",
+      "price": 15000,
+      "description": "Descubre la suavidad y el estilo de nuestras almohadas de algodón. Disponibles en blanco y negro, son perfectas para cualquier decoración. Disfruta de un descanso reparador con un toque de elegancia. 🛏️✨",
+      "is_active": true,
+      "state": "active",
+      "created_at": "2025-12-14T05:03:13.009Z",
+      "images": [
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765688585372-3933740",
+        "https://ngnhndkqglbuggomkjnt.supabase.co/storage/v1/object/public/images/products/product-1765688586696-557085612"
+      ],
+      "categoryId": "cmj56umnx00080qk6y6a3lxnk",
+      "tags": [],
+      "stock": 46,
+      "options": [
+        {
+          "name": "Color",
+          "values": [
+            "Blanco",
+            "Negro"
+          ]
+        }
+      ]
+    },
+    {
       "id": "cmj56vrle00090qk65c2wq56b",
       "title": "Sábanas Elegantes para Cama",
       "price": 40000,
@@ -73,11 +128,87 @@
       ],
       "categoryId": "cmj56umnx00080qk6y6a3lxnk",
       "tags": [],
-      "stock": 30
+      "stock": 20,
+      "options": [
+        {
+          "name": "Colores",
+          "values": [
+            "Rojo",
+            "Negro",
+            "Blanco"
+          ]
+        }
+      ]
     }
   ],
   "promos": [],
-  "sales": [],
+  "sales": [
+    {
+      "id": "cmj59orrk0001ekul0gr1sd4k",
+      "payment_method": "EFECTIVO",
+      "source": "WEB",
+      "total": 110000,
+      "created_at": "2025-12-14T05:11:17.591Z",
+      "userId": null,
+      "tax": 0,
+      "items": [
+        {
+          "id": "cmj59edwh000074ul4827tyet",
+          "price": 15000,
+          "title": "Almohadas de Algodón Elegantes",
+          "options": [
+            {
+              "name": "Color",
+              "value": "Blanco"
+            }
+          ],
+          "quantity": 1
+        },
+        {
+          "id": "cmj59edwh000074ul4827tyet",
+          "price": 15000,
+          "title": "Almohadas de Algodón Elegantes",
+          "options": [
+            {
+              "name": "Color",
+              "value": "Negro"
+            }
+          ],
+          "quantity": 1
+        },
+        {
+          "id": "cmj56vrle00090qk65c2wq56b",
+          "price": 40000,
+          "title": "Sábanas Elegantes para Cama",
+          "options": [
+            {
+              "name": "Colores",
+              "value": "Rojo"
+            }
+          ],
+          "quantity": 1
+        },
+        {
+          "id": "cmj56vrle00090qk65c2wq56b",
+          "price": 40000,
+          "title": "Sábanas Elegantes para Cama",
+          "options": [
+            {
+              "name": "Colores",
+              "value": "Negro"
+            }
+          ],
+          "quantity": 1
+        }
+      ],
+      "manualProducts": [],
+      "loadedManually": false,
+      "paymentMethods": [],
+      "processed": true,
+      "declined": false,
+      "decline_reason": null
+    }
+  ],
   "cart": [
     {
       "id": 1,
@@ -86,8 +217,102 @@
     }
   ],
   "orderItems": [],
-  "orders": [],
-  "faq": [],
+  "orders": [
+    {
+      "id": "cmj59ormn0000ekulewrtjk1y",
+      "userId": null,
+      "items": [
+        {
+          "id": "cmj59edwh000074ul4827tyet",
+          "price": 15000,
+          "title": "Almohadas de Algodón Elegantes",
+          "options": [
+            {
+              "name": "Color",
+              "value": "Blanco"
+            }
+          ],
+          "quantity": 1
+        },
+        {
+          "id": "cmj59edwh000074ul4827tyet",
+          "price": 15000,
+          "title": "Almohadas de Algodón Elegantes",
+          "options": [
+            {
+              "name": "Color",
+              "value": "Negro"
+            }
+          ],
+          "quantity": 1
+        },
+        {
+          "id": "cmj56vrle00090qk65c2wq56b",
+          "price": 40000,
+          "title": "Sábanas Elegantes para Cama",
+          "options": [
+            {
+              "name": "Colores",
+              "value": "Rojo"
+            }
+          ],
+          "quantity": 1
+        },
+        {
+          "id": "cmj56vrle00090qk65c2wq56b",
+          "price": 40000,
+          "title": "Sábanas Elegantes para Cama",
+          "options": [
+            {
+              "name": "Colores",
+              "value": "Negro"
+            }
+          ],
+          "quantity": 1
+        }
+      ],
+      "total": 110000,
+      "payment_method": "EFECTIVO",
+      "created_at": "2025-12-14T05:11:17.470Z",
+      "buyer_email": "carlospelinski03@gmail.com",
+      "buyer_name": "carlos pelinski",
+      "buyer_phone": "3765223959",
+      "saleId": "cmj59orrk0001ekul0gr1sd4k",
+      "transfer_receipt_path": null
+    }
+  ],
+  "faq": [
+    {
+      "id": "cmj57s7rc0001akul2ndlio13",
+      "question": "¿Qué diferencia hay entre un acolchado, una colcha y un cubrecama?",
+      "answer": "El acolchado es más grueso y está diseñado para brindar abrigo, ideal para las estaciones frías. La colcha es más liviana y cumple una función principalmente decorativa, aunque aporta una cobertura suave. El cubrecama se utiliza para proteger y vestir la cama durante el día, y suele combinarse con otros elementos de ropa de cama.",
+      "position": 0,
+      "is_active": true,
+      "deleted_at": null,
+      "created_at": "2025-12-14T04:17:59.112Z",
+      "updated_at": "2025-12-14T04:17:59.112Z"
+    },
+    {
+      "id": "cmj57sma30002akulzwrzakmn",
+      "question": "¿Cómo elijo el tamaño correcto de ropa de cama para mi colchón?",
+      "answer": "Es importante verificar la medida del colchón (ancho, largo y altura) antes de comprar. En cada producto indicamos el tamaño correspondiente (una plaza, dos plazas, queen o king) y, cuando aplica, la altura recomendada del colchón para asegurar un calce adecuado.",
+      "position": 0,
+      "is_active": true,
+      "deleted_at": null,
+      "created_at": "2025-12-14T04:18:17.931Z",
+      "updated_at": "2025-12-14T04:18:17.931Z"
+    },
+    {
+      "id": "cmj57st3k0003akulrhnd1ekj",
+      "question": "¿Cómo debo lavar y cuidar los productos de blanquería para que duren más?",
+      "answer": "Recomendamos seguir siempre las instrucciones de lavado indicadas en cada producto. En general, se aconseja lavar con agua fría o tibia, usar jabón neutro, evitar el uso de lavandina y no secar a temperaturas altas para preservar las fibras y los colores.",
+      "position": 0,
+      "is_active": true,
+      "deleted_at": null,
+      "created_at": "2025-12-14T04:18:26.768Z",
+      "updated_at": "2025-12-14T04:18:26.768Z"
+    }
+  ],
   "businessData": [
     {
       "id": "cmj56pn4100030qk6pbon15ux",
@@ -97,10 +322,10 @@
       "address": "Calle falsa 123",
       "city": "Candelaria ",
       "state": "Misiones",
-      "description": null,
+      "description": "Blanqueria GH, en Candelaria, ofrece productos de blanquería de alta calidad en línea. Descubre nuestra variedad de ropa de cama y accesorios para un hogar acogedor.",
       "bankData": [
         {
-          "id": "cmj56pn7d00040qk683ipw3qh",
+          "id": "cmj57o1hq0000akulcoxpwhzu",
           "bank_name": "",
           "account_number": "",
           "account_holder": "",
@@ -110,27 +335,6 @@
     }
   ],
   "colorPalette": [
-    {
-      "id": "cmj55yumt00020qk6bzwe06ej",
-      "name": "Pastel Pink",
-      "colors": [
-        "#F8D3E0",
-        "#F5B8D1",
-        "#F29CC2",
-        "#F181B3",
-        "#ED66A4",
-        "#E94B95",
-        "#E23086",
-        "#D91C77",
-        "#C81168",
-        "#A7005A"
-      ],
-      "is_active": true,
-      "use_for_admin": false,
-      "use_for_shop": false,
-      "created_at": "2025-12-14T03:27:09.461Z",
-      "updated_at": "2025-12-14T03:53:38.167Z"
-    },
     {
       "id": "cmj56qkgx00050qk6t7xudche",
       "name": "Blanco y negro",

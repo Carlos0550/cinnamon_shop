@@ -1,7 +1,7 @@
-import { Button, Flex, Group, Stack, TextInput, Title, ActionIcon, Text, Divider, Paper, Textarea, Tooltip } from "@mantine/core";
+import { Button, Flex, Group, Stack, TextInput, Title, ActionIcon, Text, Divider, Paper, Textarea, Tooltip, FileInput, Image, Loader } from "@mantine/core";
 import Loading from "../Loader/Loading";
 import { useBusinessForm } from "./useBusinessForm";
-import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCity, FaBuilding, FaUniversity, FaCreditCard, FaTrash, FaPlus, FaSave, FaMagic } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCity, FaBuilding, FaUniversity, FaCreditCard, FaTrash, FaPlus, FaSave, FaMagic, FaUpload, FaImage } from "react-icons/fa";
 
 export default function BusinessForm() {
   const { 
@@ -15,7 +15,10 @@ export default function BusinessForm() {
     removeBankAccount,
     handleSubmit,
     handleGenerateDescription,
-    isGeneratingDescription
+    isGeneratingDescription,
+    handleImageUpload,
+    isUploadingImage,
+    isUploadingFavicon
   } = useBusinessForm();
 
   if (isLoading) {
@@ -90,6 +93,44 @@ export default function BusinessForm() {
               error={errors.state}
               leftSection={<FaBuilding size={14} />}
             />
+          </Group>
+
+          <Divider my="sm" label="Imágenes" labelPosition="center" />
+
+          <Group grow align="flex-start">
+            <Stack gap={5}>
+              <FileInput
+                label="Logo/Imagen del Negocio (OpenGraph/Twitter)"
+                placeholder="Subir imagen..."
+                leftSection={isUploadingImage ? <Loader size="xs" /> : <FaUpload size={14} />}
+                accept="image/*"
+                onChange={(file) => handleImageUpload(file, 'business_image')}
+                disabled={isUploadingImage}
+              />
+              {form.business_image && (
+                <Paper p="xs" withBorder>
+                   <Image src={form.business_image} h={100} w="auto" fit="contain" radius="sm" />
+                   <Text size="xs" c="dimmed" ta="center" mt={4}>Vista previa</Text>
+                </Paper>
+              )}
+            </Stack>
+
+            <Stack gap={5}>
+              <FileInput
+                label="Favicon"
+                placeholder="Subir favicon..."
+                leftSection={isUploadingFavicon ? <Loader size="xs" /> : <FaImage size={14} />}
+                accept="image/*"
+                onChange={(file) => handleImageUpload(file, 'favicon')}
+                disabled={isUploadingFavicon}
+              />
+              {form.favicon && (
+                <Paper p="xs" withBorder>
+                   <Image src={form.favicon} h={32} w={32} fit="contain" radius="sm" mx="auto" />
+                   <Text size="xs" c="dimmed" ta="center" mt={4}>Vista previa</Text>
+                </Paper>
+              )}
+            </Stack>
           </Group>
 
           <Stack gap={0}>

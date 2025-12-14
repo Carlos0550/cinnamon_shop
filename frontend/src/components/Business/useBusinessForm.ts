@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useCreateBusiness, useGetBusiness, useUpdateBusiness, useGenerateDescription, type BusinessData } from "@/components/Api/BusinessApi";
+import { useCreateBusiness, useGetBusiness, useUpdateBusiness, useGenerateDescription, useUploadBusinessImage, type BusinessData } from "@/components/Api/BusinessApi";
 import { notifications } from "@mantine/notifications";
 
 export interface FormErrors {
@@ -24,6 +24,8 @@ const INITIAL_STATE: BusinessData = {
   city: "",
   state: "",
   description: "",
+  business_image: "",
+  favicon: "",
   bankData: [{ bank_name: "", account_number: "", account_holder: "" }]
 };
 
@@ -32,10 +34,13 @@ export function useBusinessForm() {
   const createMutation = useCreateBusiness();
   const updateMutation = useUpdateBusiness();
   const generateDescriptionMutation = useGenerateDescription();
+  const uploadImageMutation = useUploadBusinessImage();
 
   const [form, setForm] = useState<BusinessData>(INITIAL_STATE);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -48,6 +53,8 @@ export function useBusinessForm() {
         city: data.city || "",
         state: data.state || "",
         description: data.description || "",
+        business_image: data.business_image || "",
+        favicon: data.favicon || "",
         bankData: Array.isArray(data.bankData) && data.bankData.length 
           ? data.bankData 
           : [{ bank_name: "", account_number: "", account_holder: "" }]
@@ -147,6 +154,23 @@ export function useBusinessForm() {
     handleChange("description", description);
   };
 
+  const handleImageUpload = async (file: File | null, type: 'business_image' | 'favicon') => {
+    if (!file) return;
+    
+    if (type === 'business_image') setIsUploadingImage(true);
+    else setIsUploadingFavicon(true);
+
+    try {
+        const url = await uploadImageMutation.mutateAsync({ file, field: type, id: form.id });
+        handleChange(type, url);
+    } catch (error) {
+        console.error(error);
+    } finally {
+        if (type === 'business_image') setIsUploadingImage(false);
+        else setIsUploadingFavicon(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate(form)) {
@@ -179,6 +203,9 @@ export function useBusinessForm() {
     removeBankAccount,
     handleSubmit,
     handleGenerateDescription,
-    isGeneratingDescription: generateDescriptionMutation.isPending
+    isGeneratingDescription: generateDescriptionMutation.isPending,
+    handleImageUpload,
+    isUploadingImage,
+    isUploadingFavicon
   };
 }

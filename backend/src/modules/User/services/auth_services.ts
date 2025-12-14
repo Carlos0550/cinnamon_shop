@@ -127,11 +127,6 @@ class AuthServices {
                     desde maquillaje hasta accesorios, y descubrir tu estilo único.
                     </p>
                     <div style="text-align:center; margin:22px 0;">
-                    <a href="https://cinnamon-makeup.com/" target="_blank" 
-                        style="display:inline-block; background:{{color_button_bg}}; color:{{color_button_text}}; text-decoration:none; 
-                        padding:12px 20px; border-radius:999px; font-weight:600; font-size:14px;">
-                        Explorar catálogo
-                    </a>
                     </div>
                 `;
                 const html = new_user_html(capitalized_name, text_message, business as any, palette as any);
@@ -273,13 +268,6 @@ class AuthServices {
                 Desde hoy, estás listo/a para explorar todo nuestro catálogo de productos, 
                 desde maquillaje hasta accesorios, y descubrir tu estilo único.
               </p>
-              <div style="text-align:center; margin:22px 0;">
-                <a href="https://cinnamon-makeup.com/" target="_blank" 
-                   style="display:inline-block; background:{{color_button_bg}}; color:{{color_button_text}}; text-decoration:none; 
-                          padding:12px 20px; border-radius:999px; font-weight:600; font-size:14px;">
-                  Explorar catálogo
-                </a>
-              </div>
             `
         } else {
             text_message = `
@@ -287,13 +275,6 @@ class AuthServices {
                 Fuiste invitado para administrar y gestionar todo nuestro catálogo de productos, ofertas, promociones, etc.
                 Tu contraseña temporal es: ${secure_password}
               </p>
-              <div style="text-align:center; margin:22px 0;">
-                <a href="https://cinnamon-makeup.com/" target="_blank" 
-                   style="display:inline-block; background:{{color_button_bg}}; color:{{color_button_text}}; text-decoration:none; 
-                          padding:12px 20px; border-radius:999px; font-weight:600; font-size:14px;">
-                  Iniciar sesión
-                </a>
-              </div>
           `
         }
         const capitalized_name = normalized_name.replace(/\b\w/g, (match: string) => match.toUpperCase());

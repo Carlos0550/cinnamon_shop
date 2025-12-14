@@ -114,3 +114,10 @@ export function getImageUrl(filePath: string): string {
   
   return publicUrl;
 }
+
+export function getPublicUrlFor(bucket: string, filePath: string): string {
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(filePath);
+  return publicUrl;
+}

@@ -1,6 +1,7 @@
 import { prisma } from "@/config/prisma";
 import { BusinessDataRequest } from "./schemas/business.schemas";
 import { Prisma } from "@prisma/client";
+import { getPublicUrlFor } from "@/config/supabase";
 
 class BusinessServices {
     async createBusiness(payload: BusinessDataRequest) {
@@ -12,6 +13,8 @@ class BusinessServices {
             city: payload.city,
             state: payload.state,
             description: payload.description,
+            business_image: payload.business_image,
+            favicon: payload.favicon,
             bankData: Array.isArray(payload.bankData) && payload.bankData.length > 0
                 ? {
                     create: payload.bankData.map(b => ({
@@ -50,6 +53,8 @@ class BusinessServices {
                     city: payload.city,
                     state: payload.state,
                     description: payload.description,
+                    business_image: payload.business_image,
+                    favicon: payload.favicon,
                     bankData: Array.isArray(payload.bankData) && payload.bankData.length > 0
                         ? {
                             deleteMany: {},
@@ -76,7 +81,31 @@ class BusinessServices {
             include: { bankData: true },
             orderBy: { id: 'asc' }
         });
-        return business;
+        if (!business) return null;
+        const img = business.business_image;
+        const fav = business.favicon;
+        const isHttp = (s?: string) => !!s && /^https?:\/\//i.test(s);
+        const toPublic = (s?: string) => (!s || isHttp(s)) ? (s || undefined) : getPublicUrlFor("business", s);
+        return {
+            ...business,
+            business_image: toPublic(img!),
+            favicon: toPublic(fav!),
+        } as any;
+    }
+
+    async updateImageField(id: string, field: 'business_image' | 'favicon', url: string) {
+        const data: Prisma.BusinessDataUpdateInput = {};
+        if (field === 'business_image') {
+            (data as any).business_image = url;
+        } else {
+            (data as any).favicon = url;
+        }
+        const updated = await prisma.businessData.update({
+            where: { id },
+            data,
+            select: { id: true, business_image: true, favicon: true }
+        });
+        return updated;
     }
 }
 

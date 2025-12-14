@@ -13,6 +13,23 @@ async function backup() {
   console.log('📦 Iniciando backup de la base de datos...');
   
   try {
+    // Fallback dinámico para BusinessData ante drift de columnas
+    const businessColumnsRows: { column_name: string }[] = await prisma.$queryRawUnsafe(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'BusinessData' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    const businessColumns = businessColumnsRows.map(r => `"${r.column_name}"`).join(', ');
+    const businessRaw: any[] = businessColumns
+      ? await prisma.$queryRawUnsafe(`SELECT ${businessColumns} FROM "BusinessData"`)
+      : [];
+    const bankDataAll = await prisma.businessBankData.findMany();
+    const businessData = businessRaw.map((row) => ({
+      ...row,
+      bankData: bankDataAll.filter(b => b.businessId === row.id)
+    }));
+
     const data = {
       users: await prisma.user.findMany(),
       admins: await prisma.admin.findMany(),
@@ -24,7 +41,7 @@ async function backup() {
       orderItems: await prisma.orderItems.findMany(),
       orders: await prisma.orders.findMany(),
       faq: await prisma.fAQ.findMany(),
-      businessData: await prisma.businessData.findMany({ include: { bankData: true } }),
+      businessData,
       colorPalette: await prisma.colorPalette.findMany(),
     };
 

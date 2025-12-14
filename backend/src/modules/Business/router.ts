@@ -1,9 +1,13 @@
 import { Request, Response, Router } from "express"
 import businessController from "./router.controller"
 import { requireAuth, requireRole } from "@/middlewares/auth.middleware"
+import { uploadSingleImage, handleImageUploadError } from "@/middlewares/image.middleware"
+
 const router = Router()
 
 router.post("/", requireAuth, requireRole([1]), (req:Request, res: Response) => businessController.createBusiness(req, res))
+
+router.post("/upload-image", requireAuth, requireRole([1]), uploadSingleImage("file"), handleImageUploadError, (req:Request, res: Response) => businessController.uploadImage(req, res))
 
 router.post("/generate-description", requireAuth, requireRole([1]), (req:Request, res: Response) => businessController.generateDescription(req, res))
 
