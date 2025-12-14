@@ -91,7 +91,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   
   const business = await getBusinessInfo();
   const businessName = business?.name || "Tienda Online";
-  const bizDescription = (business as any)?.business_description || ''
+  const bizDescription = business?.description || ''
   const businessImage = business?.business_image || `${siteUrl}/opengraph-image`;
   const base = businessName;
   
