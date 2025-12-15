@@ -2,7 +2,6 @@
 import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select, Loader, Alert, Card, CopyButton, Tooltip, Badge } from '@mantine/core'
 import { FaMinus, FaPlus, FaUniversity, FaCopy, FaCheck } from 'react-icons/fa'
 import useCart from './useCart'
-import React from 'react'
 import type { SelectedOption } from '@/providers/useCart'
 
 type CartProps = {

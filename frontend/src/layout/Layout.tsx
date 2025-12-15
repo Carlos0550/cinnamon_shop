@@ -1,6 +1,6 @@
 'use client'
 import { useDisclosure } from '@mantine/hooks';
-import { AppShell, Burger, Group, Anchor, Stack, ActionIcon, Button, PasswordInput, Text, Loader, Paper, Avatar, Divider } from '@mantine/core';
+import { AppShell, Burger, Group, Anchor, Stack, ActionIcon, Button, PasswordInput, Text, Loader, Paper, Avatar } from '@mantine/core';
 import { Link, Outlet } from 'react-router-dom';
 import { FiMenu, FiHome, FiUser, FiBox, FiHelpCircle, FiExternalLink } from 'react-icons/fi';
 import { useMantineColorScheme } from '@mantine/core';
