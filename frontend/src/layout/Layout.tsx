@@ -1,14 +1,15 @@
 'use client'
 import { useDisclosure } from '@mantine/hooks';
-import { AppShell, Burger, Group, Anchor, Stack, ActionIcon, Button, PasswordInput, Text, Loader } from '@mantine/core';
+import { AppShell, Burger, Group, Anchor, Stack, ActionIcon, Button, PasswordInput, Text, Loader, Paper, Avatar, Divider } from '@mantine/core';
 import { Link, Outlet } from 'react-router-dom';
-import { FiMenu } from 'react-icons/fi';
+import { FiMenu, FiHome, FiUser, FiBox, FiHelpCircle, FiExternalLink } from 'react-icons/fi';
 import { useMantineColorScheme } from '@mantine/core';
 import { FiMoon, FiSun } from 'react-icons/fi';
 import { useAppContext } from '@/Context/AppContext';
 import ModalWrapper from '@/components/Common/ModalWrapper';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useGetBusiness } from '@/components/Api/BusinessApi';
+import { useLocation } from 'react-router-dom';
 
 export default function Layout() {
   const [opened, { toggle, close }] = useDisclosure(false);
@@ -20,6 +21,7 @@ export default function Layout() {
   const [confirmNew, setConfirmNew] = useState('');
   const [changing, setChanging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const location = useLocation();
   const goToShop = () => {
     const environment = import.meta.env.VITE_ENV;
     if (environment === 'development') {
@@ -28,6 +30,18 @@ export default function Layout() {
       window.open(import.meta.env.VITE_PRODUCTION_API_URL, '_blank');
     }
   }
+  const menuItems = useMemo(() => ([
+    { to: "/", label: "Inicio", icon: FiHome },
+    { to: "/products", label: "Productos", icon: FiBox },
+    { to: "/categories", label: "Categorias", icon: FiBox },
+    { to: "/sales", label: "Ventas", icon: FiBox },
+    { to: "/users", label: "Usuarios", icon: FiUser },
+    { to: "/promos", label: "Promociones", icon: FiBox },
+    { to: "/faq", label: "FAQ", icon: FiHelpCircle },
+    { to: "/business", label: "Negocio", icon: FiUser },
+    { to: "/colors", label: "Colores", icon: FiBox },
+  ]), []);
+  const isActive = (to: string) => location.pathname === to || location.pathname.startsWith(to + "/");
   return (
     <AppShell
       header={{ height: 60 }}
@@ -58,25 +72,57 @@ export default function Layout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md" style={{ background: 'var(--mantine-color-body)' }}>
-        <Stack gap="sm" onClick={close}>
-          {/* <ColorSchemeToggle /> */}
-          {utils.isMobile && (
-            <Group>
-            <ColorSchemeToggle />
-            <Button variant="light" size="xs" onClick={() => setChangeOpened(true)}>Cambiar contraseña</Button>
-            <Button variant="light" size="xs" onClick={() => auth.logout(false)}>Cerrar sesión</Button>
-          </Group>
-          )}
-          <Anchor component={Link} to="/" onClick={goToShop}>Ir a mi tienda</Anchor>
-          <Anchor component={Link} to="/">Inicio</Anchor>
-          <Anchor component={Link} to="/products">Productos</Anchor>
-          <Anchor component={Link} to="/categories">Categorias</Anchor>
-          <Anchor component={Link} to="/sales">Ventas</Anchor>
-          <Anchor component={Link} to="/users">Usuarios</Anchor>
-          <Anchor component={Link} to="/promos">Promociones</Anchor>
-          <Anchor component={Link} to="/faq">FAQ</Anchor>
-          <Anchor component={Link} to="/business">Negocio</Anchor>
-          <Anchor component={Link} to="/colors">Colores</Anchor>
+        <Stack gap="md" onClick={close} h="100%" justify="space-between">
+          <Stack gap="md">
+            <Paper p="md" radius="md" withBorder>
+              <Group align="center" justify="space-between">
+                <Group align="center">
+                  <Avatar src={data?.favicon || '/logo.png'} radius="xl" />
+                  <Stack gap={2}>
+                    {isPending ? (
+                      <Loader type="bars"/>
+                    ) : (
+                      <Text fw={600}>{data?.name || 'Gestión de mi tienda'}</Text>
+                    )}
+                    <Text size="xs" c="dimmed">{data?.description || 'Productos premium'}</Text>
+                  </Stack>
+                </Group>
+                <ColorSchemeToggle />
+              </Group>
+              <Button mt="md" fullWidth variant="default" leftSection={<FiExternalLink />} onClick={goToShop}>
+                Ir a mi tienda
+              </Button>
+              {utils.isMobile && (
+                <Group mt="md">
+                  <Button variant="light" size="xs" onClick={() => setChangeOpened(true)}>Cambiar contraseña</Button>
+                  <Button variant="light" size="xs" onClick={() => auth.logout(false)}>Cerrar sesión</Button>
+                </Group>
+              )}
+            </Paper>
+            <Text size="xs" fw={700} c="dimmed">MENÚ</Text>
+            <Stack gap="xs">
+              {menuItems.map(item => {
+                const Icon = item.icon;
+                const active = isActive(item.to);
+                return (
+                  <Button
+                    key={item.to}
+                    component={Link}
+                    to={item.to}
+                    variant={active ? "default" : "subtle"}
+                    radius="md"
+                    fullWidth
+                    justify="space-between"
+                    leftSection={<Icon />}
+                    style={active ? { background: 'var(--mantine-color-white)', color: 'var(--mantine-color-black)' } : undefined}
+                  >
+                    {item.label}
+                  </Button>
+                )
+              })}
+            </Stack>
+          </Stack>
+         
         </Stack>
       </AppShell.Navbar>
 
