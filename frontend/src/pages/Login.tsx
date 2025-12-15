@@ -1,17 +1,21 @@
 import { Box, Flex, Paper, Tabs, Title } from "@mantine/core";
 import LoginForm from "../components/Auth/LoginForm";
 import RegisterForm from "../components/Auth/RegisterForm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRegister } from "@/components/Api/AuthApi";
 import { showNotification } from "@mantine/notifications";
-import { useGetBusiness } from "@/components/Api/BusinessApi";
+import { getPublicBusiness, type BusinessData } from "@/components/Api/BusinessApi";
 
 
 export default function Login() {
   const [formType, setFormType] = useState<"register" | "login">("login");
   const registerHook = useRegister();
-  const { data } = useGetBusiness();
+  const [business, setBusiness] = useState<BusinessData | null>(null);
 
+  useEffect(() => {
+    getPublicBusiness().then(setBusiness);
+  }, []);
+  
   return (
     <Flex
       justify="center"
@@ -19,7 +23,7 @@ export default function Login() {
       style={{ height: "100vh" }}
     >
       <Box m="auto">
-        <Title mb="md">Bienvenido a {data?.name || "Tienda online"}</Title>
+        <Title mb="md">Bienvenido a {business?.name || "Tu tienda online"}</Title>
         <Paper withBorder p="md" radius="md">
           <Tabs defaultValue="login" value={formType} onChange={(v) => setFormType(v as "register" | "login")}>
             <Tabs.List>
