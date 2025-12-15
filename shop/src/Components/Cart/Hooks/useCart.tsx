@@ -3,6 +3,7 @@
 import { Products } from "@/Api/useProducts"
 import { useAppContext } from "@/providers/AppContext"
 import { showNotification } from "@mantine/notifications"
+import type { SelectedOption } from "@/providers/useCart"
 
 export function useCartActions() {
   const {
@@ -54,7 +55,7 @@ export function useCartActions() {
     }
   }
 
-  const addToCart = async (product_id: string, options: any = []) => {
+  const addToCart = async (product_id: string, options: SelectedOption[] = []) => {
     const productInfo = await validateProductStock(product_id)
     
     if (!productInfo) return

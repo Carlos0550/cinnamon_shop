@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { showNotification } from "@mantine/notifications"
 
+export type SelectedOption = { name: string; value: string }
+
 export type CartItem = {
     product_id: string,
     product_name: string,
@@ -8,7 +10,7 @@ export type CartItem = {
     quantity: number,
     image_url: string,
     price_changed: boolean,
-    options?: any,
+    options?: SelectedOption[],
 }
 
 export type Cart = {
@@ -17,22 +19,18 @@ export type Cart = {
     promo_code?: string
 }
 
-function areOptionsEqual(a: any, b: any) {
-  if (!a && !b) return true;
-  if (!a || !b) return false;
-  try {
-    const arrA = Array.isArray(a) ? a : JSON.parse(JSON.stringify(a));
-    const arrB = Array.isArray(b) ? b : JSON.parse(JSON.stringify(b));
-    if (!Array.isArray(arrA) || !Array.isArray(arrB)) return JSON.stringify(a) === JSON.stringify(b);
-    if (arrA.length !== arrB.length) return false;
-    
-    const sortedA = [...arrA].sort((x, y) => (x.name || "").localeCompare(y.name || ""));
-    const sortedB = [...arrB].sort((x, y) => (x.name || "").localeCompare(y.name || ""));
-    
-    return JSON.stringify(sortedA) === JSON.stringify(sortedB);
-  } catch {
-    return false;
+function areOptionsEqual(a?: SelectedOption[] | null, b?: SelectedOption[] | null) {
+  if (!a?.length && !b?.length) return true
+  if (!a || !b) return false
+  const sortedA = [...a].sort((x, y) => x.name.localeCompare(y.name))
+  const sortedB = [...b].sort((x, y) => x.name.localeCompare(y.name))
+  if (sortedA.length !== sortedB.length) return false
+  for (let i = 0; i < sortedA.length; i++) {
+    const ax = sortedA[i]
+    const bx = sortedB[i]
+    if (ax.name !== bx.name || ax.value !== bx.value) return false
   }
+  return true
 }
 
 export type OrderMethod = 'EN_LOCAL' | 'TRANSFERENCIA'
@@ -172,7 +170,7 @@ function useCart(baseUrl: string, token: string | null) {
         }
     }, [cart, token, baseUrl])
 
-    const updateQuantity = useCallback(async (product_id: string, quantity: number, options?: any) => {
+    const updateQuantity = useCallback(async (product_id: string, quantity: number, options?: SelectedOption[]) => {
         log('Updating quantity', { product_id, quantity, options })
         if (quantity <= 0) {
             // Remove item if quantity is 0 or less
@@ -276,7 +274,7 @@ function useCart(baseUrl: string, token: string | null) {
             const json = await res.json().catch(() => null)
             const serverCart = json?.cart
             if (serverCart && Array.isArray(serverCart.items)) {
-                const mappedItems: CartItem[] = serverCart.items.map((it: { productId: string; product?: { title?: string; price?: number; images?: string[] }; quantity?: number; price_has_changed?: boolean; selected_options?: any }) => ({ product_id: it.productId, product_name: it.product?.title || '', price: Number(it.product?.price) || 0, quantity: Number(it.quantity) || 1, image_url: Array.isArray(it.product?.images) ? (it.product?.images?.[0] || '') : '', price_changed: !!it.price_has_changed, options: it.selected_options || [] }))
+                const mappedItems: CartItem[] = serverCart.items.map((it: { productId: string; product?: { title?: string; price?: number; images?: string[] }; quantity?: number; price_has_changed?: boolean; selected_options?: SelectedOption[] }) => ({ product_id: it.productId, product_name: it.product?.title || '', price: Number(it.product?.price) || 0, quantity: Number(it.quantity) || 1, image_url: Array.isArray(it.product?.images) ? (it.product?.images?.[0] || '') : '', price_changed: !!it.price_has_changed, options: it.selected_options || [] }))
                 const total = mappedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
                 setCart({ items: mappedItems, total, promo_code: cart.promo_code })
             }

@@ -4,6 +4,7 @@ import { Button, Loader, Select, Stack, Group, Text } from "@mantine/core"
 import { useCartActions } from "@/Components/Cart/Hooks/useCart"
 import { useAppContext } from "@/providers/AppContext"
 import { FaCartPlus } from "react-icons/fa"
+import type { SelectedOption } from "@/providers/useCart"
 
 export default function AddToCartButton({ productId, options = [] }: { productId: string; options?: { name: string; values: string[] }[] }) {
   const {
@@ -13,7 +14,7 @@ export default function AddToCartButton({ productId, options = [] }: { productId
   } = useAppContext()
   const [isPending, startTransition] = useTransition()
   const [loading, setLoading] = useState(false)
-  const [selectedOptions, setSelectedOptions] = useState<any[]>([])
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([])
   
   useEffect(() => {
     if (options && options.length > 0) {

@@ -3,6 +3,7 @@ import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Ste
 import { FaMinus, FaPlus, FaUniversity, FaCopy, FaCheck } from 'react-icons/fa'
 import useCart from './useCart'
 import React from 'react'
+import type { SelectedOption } from '@/providers/useCart'
 
 type CartProps = {
   opened?: boolean
@@ -51,7 +52,7 @@ function Cart({ opened = true, onClose }: CartProps) {
                         <Text>{formatCurrency(item.price)}</Text>
                         {Array.isArray(item.options) && item.options.length > 0 && (
                           <Group gap="xs">
-                            {item.options.map((opt: any, idx: number) => (
+                            {item.options.map((opt: SelectedOption, idx: number) => (
                               <Badge key={idx} variant="light" color="gray">
                                 {`${opt?.name || ''}: ${opt?.value || ''}`}
                               </Badge>
