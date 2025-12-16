@@ -19,6 +19,26 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const json = await res.json().catch(() => null)
   const product: Products | null = (json?.data?.product || json?.data || json || null) as Products | null
 
+  const priceValidUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+  const shippingDetails = {
+    "@type": "OfferShippingDetails",
+    shippingDestination: { "@type": "DefinedRegion", addressCountry: "AR" },
+    shippingRate: { "@type": "MonetaryAmount", value: "0", currency: "ARS" },
+    deliveryTime: {
+      "@type": "ShippingDeliveryTime",
+      handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 2 },
+      transitTime: { "@type": "QuantitativeValue", minValue: 2, maxValue: 5 }
+    }
+  }
+  const merchantReturnPolicy = {
+    "@type": "MerchantReturnPolicy",
+    applicableCountry: "AR",
+    returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+    merchantReturnDays: 7,
+    returnFees: "https://schema.org/FreeReturn",
+    returnMethod: ["https://schema.org/ReturnInStore", "https://schema.org/ReturnByMail"]
+  }
+
   let similar: Products[] = []
   try {
     const categoryId = product?.category?.id
@@ -46,11 +66,19 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             description: product.description,
             image: Array.isArray(product.images) ? product.images : [],
             category: product.category?.title || undefined,
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: 0,
+              reviewCount: 0
+            },
             offers: typeof product.price === "number" ? {
               "@type": "Offer",
               price: product.price,
               priceCurrency: "ARS",
-              availability: typeof product.stock === "number" && product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+              availability: typeof product.stock === "number" && product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              priceValidUntil,
+              shippingDetails,
+              hasMerchantReturnPolicy: merchantReturnPolicy
             } : undefined
           })
         }}

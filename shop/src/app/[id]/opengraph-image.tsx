@@ -36,26 +36,47 @@ export default async function OG({ params }: { params: Promise<{ id: string }> }
         }}
       >
         {bizImage && (
-          <img
-            src={bizImage}
-            width={size.width}
-            height={size.height}
-            style={{ position: 'absolute', inset: 0, objectFit: 'cover', opacity: 0.25 }}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${bizImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.25
+            }}
           />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 16,
+              backgroundImage: `url(${siteUrl}/logo.png)`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          />
           <div style={{ fontSize: 48, fontWeight: 800, color: '#111' }}>Tienda Online</div>
         </div>
         <div style={{ marginTop: 24, fontSize: 56, fontWeight: 700, color: '#111' }}>{title}</div>
         <div style={{ marginTop: 8, fontSize: 28, color: '#444' }}>{cat}</div>
         {price && <div style={{ marginTop: 8, fontSize: 32, fontWeight: 600, color: '#0a7' }}>{price}</div>}
         {productImage && (
-          <img
-            src={productImage}
-            width={520}
-            height={520}
-            style={{ position: 'absolute', right: 48, top: 48, objectFit: 'cover', borderRadius: 24, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}
+          <div
+            style={{
+              position: 'absolute',
+              right: 48,
+              top: 48,
+              width: 520,
+              height: 520,
+              backgroundImage: `url(${productImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              borderRadius: 24,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+            }}
           />
         )}
         <div style={{ position: 'absolute', bottom: 32, right: 48, fontSize: 24, color: '#333' }}>{new URL(siteUrl).host}</div>

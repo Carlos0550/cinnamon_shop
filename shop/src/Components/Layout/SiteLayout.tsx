@@ -1,6 +1,6 @@
 "use client";
 import { useAppContext } from "@/providers/AppContext";
-import { AppShell, Burger, Group, Anchor, Stack, Flex, Text, Avatar, Button, useMantineColorScheme, ActionIcon, Box, Paper, Divider } from "@mantine/core";
+import { AppShell, Burger, Group, Stack, Flex, Text, Avatar, Button, useMantineColorScheme, ActionIcon, Box, Paper, Divider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import Link from "next/link";
 import LoginForm from "../Auth/LoginForm";

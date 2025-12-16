@@ -37,15 +37,28 @@ export default async function OG({ searchParams }: { searchParams?: { title?: st
           }}
       >
         {bizImage && (
-          <img
-            src={bizImage}
-            width={size.width}
-            height={size.height}
-            style={{ position: 'absolute', inset: 0, objectFit: 'cover', opacity: 0.25 }}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${bizImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.25
+            }}
           />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <img src={`${siteUrl}/logo.png`} width={80} height={80} style={{ borderRadius: 16 }} />
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 16,
+              backgroundImage: `url(${siteUrl}/logo.png)`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          />
           <div style={{ fontSize: 56, fontWeight: 800, color: '#111' }}>{bizName}</div>
         </div>
         <div style={{ marginTop: 24, fontSize: 32, color: '#333' }}>{bizDescription}</div>

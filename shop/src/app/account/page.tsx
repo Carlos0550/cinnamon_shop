@@ -1,14 +1,14 @@
 "use client";
 import { useGetProfile, useUpdateProfile, useUploadAvatar, useChangePassword } from '@/Api/useProfile';
 import { useAppContext } from '@/providers/AppContext';
-import { Avatar, Button, Grid, Group, Stack, Text, TextInput, Title, Tabs, Paper, Divider, FileButton, Loader, Badge, Select } from '@mantine/core';
+import { Avatar, Button, Grid, Group, Stack, Text, TextInput, Title, Tabs, Paper, Divider, FileButton, Loader, Select } from '@mantine/core';
 import { PasswordInput } from '@mantine/core';
 import { useEffect, useState, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { showNotification } from '@mantine/notifications';
 
 export default function AccountPage() {
-  const { auth, utils } = useAppContext();
+  const { auth } = useAppContext();
   const router = useRouter();
   useEffect(() => {
     if (!auth.isAuthenticated) {

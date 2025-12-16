@@ -3,7 +3,6 @@ import HomeComponent from "@/Components/Home/Home"
 import { ProductsResponse, Products } from "@/Api/useProducts"
 import { CategoriesResponse } from "@/Api/useCategories"
 import { getBusinessInfo } from "@/Api/useBusiness"
-import { BusinessData } from "@/Api/useBankInfo"
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams
