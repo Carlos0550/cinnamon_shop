@@ -6,6 +6,7 @@ import { Box, Flex, Title, Text, Container, Input, NativeSelect, Loader, Stack, 
 import { useInfiniteProducts, Products, ProductsResponse } from "@/Api/useProducts";
 import ProductsCards from "./sub-components/ProductsCards";
 import { Categories, CategoriesResponse, useCategories } from "@/Api/useCategories";
+import { BusinessData } from "@/Api/useBusiness";
 import CategoriesCards from "./sub-components/CategoriesCards";
 import { useAppContext } from "@/providers/AppContext";
 import { useEffect, useMemo, useState, useRef } from "react";
@@ -16,9 +17,10 @@ import CartWrapper from "../Cart/CartWrapper";
 type Props = {
   initialProducts?: ProductsResponse
   initialCategories?: CategoriesResponse
+  business?: BusinessData | null
 }
 
-export default function Home({ initialProducts, initialCategories }: Props) {
+export default function Home({ initialProducts, initialCategories, business }: Props) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -46,6 +48,14 @@ export default function Home({ initialProducts, initialCategories }: Props) {
         }
     } = useAppContext()
     
+    // SEO Title Logic
+    const h1Title = useMemo(() => {
+        if (business?.type && business?.city) {
+            return `Tienda online de ${business.type} en ${business.city}`;
+        }
+        return business?.name || "Tienda Online";
+    }, [business]);
+
   useEffect(() => {
     const next = new URLSearchParams(Array.from(searchParams.entries()))
     if (debouncedSearch && debouncedSearch.trim().length > 0) {
@@ -94,6 +104,20 @@ export default function Home({ initialProducts, initialCategories }: Props) {
     return (
         <Box >
             <Flex direction="column" justify={"center"}>
+                {/* SEO Hero Section */}
+                {!search && !selectedCategories[0] && (
+                    <Box mt={30} mb={10}>
+                        <Container size="xl">
+                            <Title order={1} mb="xs">{h1Title}</Title>
+                            {business?.description && (
+                                <Text size="lg" c="dimmed" mb="md" maw={800}>
+                                    {business.description}
+                                </Text>
+                            )}
+                        </Container>
+                    </Box>
+                )}
+
                 <Box my={30}>
                     <Container size="xl">
                         <Title order={2} mb="xs">Categorías</Title>

@@ -24,9 +24,9 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
 
       2. description  
         - Texto persuasivo y profesional orientado a conversión  
-        - Máximo 300 caracteres  
-        - Puede incluir entre 0 y 4 emojis (no más)  
-        - Destaca beneficios, sensación de calidad o motivos para comprar  
+        - Máximo 600 caracteres  
+        - Puede incluir entre 0 y 8 emojis (no más)  
+        - Destaca beneficios, sensación de calidad o motivos para comprar, ingredientes, formas de usar el producto
         - Evita palabras como “básico”, “común” o equivalentes
 
       3. options
@@ -49,8 +49,8 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
 
       **Validación interna obligatoria antes de responder (no la reveles):**  
       - Verifica que el título ≤ 50 caracteres y no tiene guiones ni emojis.  
-      - Verifica que la descripción ≤ 300 caracteres.  
-      - Verifica que la descripción contiene 0–4 emojis.  
+      - Verifica que la descripción ≤ 600 caracteres.  
+      - Verifica que la descripción contiene 0–8 emojis.  
       - Verifica que no se agregaron elementos no visibles.  
       - Verifica que el JSON es válido.  
       - Verifica que no se incluyó información sobre elementos biológicos humanos.  

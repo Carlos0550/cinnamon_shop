@@ -78,7 +78,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           })
         }}
       />
-      <HomeComponent initialProducts={productsData} initialCategories={categoriesData} />
+      <HomeComponent initialProducts={productsData} initialCategories={categoriesData} business={business} />
     </>
   )
 }
@@ -93,11 +93,33 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const businessName = business?.name || "Tienda Online";
   const bizDescription = business?.description || ''
   const businessImage = business?.business_image || `${siteUrl}/opengraph-image`;
-  const base = businessName;
   
-  const parts = [base]
+  const type = business?.type;
+  const city = business?.city;
+  
+  let baseTitle = businessName;
+  // Si tenemos tipo y ciudad, construimos un título SEO fuerte
+  if (type && city) {
+    baseTitle = `${type} en ${city}`;
+  } else if (type) {
+    baseTitle = type;
+  }
+
+  const parts = []
   if (titleQ) parts.push(`Buscar: ${titleQ}`)
   if (catQ) parts.push(`Categoría: ${catQ}`)
+  
+  // Si no hay búsqueda, usamos el título base como principal
+  // Si hay búsqueda, lo agregamos al final o dejamos que el layout lo maneje
+  if (parts.length === 0) {
+      parts.push(baseTitle);
+  } else {
+      // Si hay busqueda, dejamos solo la busqueda y el layout agregará el nombre del negocio
+      // O podemos forzarlo:
+      // parts.push(businessName) 
+      // Dejamos que el template del layout haga su trabajo: "%s | BusinessName"
+  }
+  
   const fullTitle = parts.join(" · ")
 
   const shouldIndex = !titleQ && !catQ;
