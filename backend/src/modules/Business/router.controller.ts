@@ -58,7 +58,12 @@ class BusinessController {
             if (!name || !city) {
                 return res.status(400).json({ error: "Nombre y ciudad son requeridos" });
             }
-            const description = await generateBusinessDescription(name, city, type);
+            let finalType: string | undefined = type;
+            if (!finalType) {
+                const current = await businessServices.getBusiness();
+                finalType = (current as any)?.type || undefined;
+            }
+            const description = await generateBusinessDescription(name, city, finalType);
             return res.json({ description });
         } catch (error) {
             console.error(error);
@@ -73,7 +78,7 @@ class BusinessController {
             return res.status(400).json({ error: "Los datos bancarios son requeridos" });
         }
 
-        if(!payload.name || !payload.email || !payload.phone || !payload.address || !payload.city || !payload.state) {
+        if(!payload.name || !payload.email || !payload.phone || !payload.city || !payload.state) {
             return res.status(400).json({ error: "Todos los campos son requeridos" });
         }
         const business = await businessServices.createBusiness(payload);
@@ -85,7 +90,7 @@ class BusinessController {
             const { id } = req.params as { id: string };
             const payload = req.body as BusinessDataRequest;
 
-            if(!payload.name || !payload.email || !payload.phone || !payload.address || !payload.city || !payload.state) {
+            if(!payload.name || !payload.email || !payload.phone  || !payload.city || !payload.state) {
                 return res.status(400).json({ error: "Todos los campos son requeridos" });
             }
 

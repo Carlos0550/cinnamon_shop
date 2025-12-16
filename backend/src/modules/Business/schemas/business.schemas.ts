@@ -8,6 +8,7 @@ export type BusinessDataRequest = {
     address: string
     city: string
     state: string
+    type?: string
     description?: string
     business_image?: string
     favicon?: string

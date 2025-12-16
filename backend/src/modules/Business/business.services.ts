@@ -8,13 +8,14 @@ class BusinessServices {
         const business_data: Prisma.BusinessDataCreateInput = {
             name: payload.name,
             email: payload.email,
-            phone: payload.phone,
-            address: payload.address,
-            city: payload.city,
-            state: payload.state,
-            description: payload.description,
-            business_image: payload.business_image,
-            favicon: payload.favicon,
+            phone: payload.phone || "",
+            address: payload.address || "",
+            city: payload.city || "",
+            state: payload.state || "",
+            type: payload.type || undefined,
+            description: payload.description || "",
+            business_image: payload.business_image || "",
+            favicon: payload.favicon || "",
             bankData: Array.isArray(payload.bankData) && payload.bankData.length > 0
                 ? {
                     create: payload.bankData.map(b => ({
@@ -48,13 +49,14 @@ class BusinessServices {
                 data: {
                     name: payload.name,
                     email: payload.email,
-                    phone: payload.phone,
-                    address: payload.address,
-                    city: payload.city,
-                    state: payload.state,
-                    description: payload.description,
-                    business_image: payload.business_image,
-                    favicon: payload.favicon,
+                    phone: payload.phone || "",
+                    address: payload.address || "",
+                    city: payload.city || "",
+                    state: payload.state || "",
+                    type: payload.type || undefined,
+                    description: payload.description || "",
+                    business_image: payload.business_image || "",
+                    favicon: payload.favicon || "",
                     bankData: Array.isArray(payload.bankData) && payload.bankData.length > 0
                         ? {
                             deleteMany: {},

@@ -176,22 +176,33 @@ Formato EXACTO:
 
 export const generateBusinessDescription = async (name: string, city: string, type: string = "e-commerce"): Promise<string> => {
   const systemPrompt = `
-    Eres un experto en copywriting y SEO para negocios digitales.
-    Tu tarea es generar una descripción atractiva, profesional y optimizada para SEO para un negocio.
-    
-    Reglas:
-    - La descripción debe tener entre 150 y 200 caracteres.
-    - Debe destacar la identidad del negocio.
-    - Debe incluir el nombre del negocio y su ubicación (si se proporciona).
-    - El tono debe ser profesional pero cercano.
-    - Debe estar optimizada para SEO (palabras clave relevantes).
-    - No uses emojis en exceso (máximo 1 o 2).
-    
-    Devuelve SOLO el texto de la descripción, sin comillas ni etiquetas adicionales.
-  `;
-  
-  const userPrompt = `Genera una descripción para un negocio llamado "${name}" ubicado en "${city}". Tipo de negocio: ${type}.`;
+    Eres un especialista senior en SEO local y redacción comercial para negocios digitales.
 
+    Tu tarea es generar una descripción profesional, clara y optimizada para SEO.
+
+    Reglas estrictas:
+    - La descripción DEBE tener entre 150 y 200 caracteres (ni más ni menos).
+    - Debe incluir el nombre del negocio de forma natural.
+    - Si se proporciona una ubicación válida, debe mencionarse una sola vez.
+    - Debe describir claramente qué ofrece el negocio y su propuesta de valor.
+    - Usa palabras clave relevantes para el tipo de negocio, integradas de forma natural (sin listas).
+    - Prioriza SEO local y términos transaccionales cuando aplique.
+    - Tono profesional y confiable.
+    - No uses emojis.
+    - No repitas frases genéricas ni relleno comercial vacío.
+
+    Devuelve SOLO el texto final, sin comillas, títulos ni etiquetas.
+    `;
+
+
+  
+  const userPrompt = `
+    Nombre del negocio: ${name}
+    Ubicación: ${city || "No especificada"}
+    Tipo de negocio: ${type || "No especificado"}
+
+    Genera la descripción cumpliendo estrictamente las reglas indicadas.
+    `;
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [

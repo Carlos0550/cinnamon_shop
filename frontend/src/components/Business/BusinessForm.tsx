@@ -1,7 +1,7 @@
 import { Button, Flex, Group, Stack, TextInput, Title, ActionIcon, Text, Divider, Paper, Textarea, Tooltip, FileInput, Image, Loader } from "@mantine/core";
 import Loading from "../Loader/Loading";
 import { useBusinessForm } from "./useBusinessForm";
-import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCity, FaBuilding, FaUniversity, FaCreditCard, FaTrash, FaPlus, FaSave, FaMagic, FaUpload, FaImage } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCity, FaBuilding, FaUniversity, FaCreditCard, FaTrash, FaPlus, FaSave, FaMagic, FaUpload, FaImage, FaBriefcase } from "react-icons/fa";
 
 export default function BusinessForm() {
   const { 
@@ -94,6 +94,15 @@ export default function BusinessForm() {
               leftSection={<FaBuilding size={14} />}
             />
           </Group>
+
+          <TextInput
+            label="Rubro / Tipo de negocio"
+            placeholder="Ej.: tienda de ropa, restaurante, servicios IT"
+            value={form.type || ""}
+            onChange={(e) => handleChange("type", e.currentTarget.value)}
+            error={errors.type}
+            leftSection={<FaBriefcase size={14} />}
+          />
 
           <Divider my="sm" label="Imágenes" labelPosition="center" />
 

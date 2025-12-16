@@ -251,6 +251,7 @@ model BusinessData {
   address   String
   city      String
   state     String
+  type      String?
   description String?
   business_image String?
   favicon        String?

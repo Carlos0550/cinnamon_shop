@@ -9,6 +9,7 @@ export interface FormErrors {
   address?: string;
   city?: string;
   state?: string;
+  type?: string;
   bankData?: {
     bank_name?: string;
     account_number?: string;
@@ -23,6 +24,7 @@ const INITIAL_STATE: BusinessData = {
   address: "",
   city: "",
   state: "",
+  type: "",
   description: "",
   business_image: "",
   favicon: "",
@@ -52,6 +54,7 @@ export function useBusinessForm() {
         address: data.address || "",
         city: data.city || "",
         state: data.state || "",
+        type: (data as any)?.type || "",
         description: data.description || "",
         business_image: data.business_image || "",
         favicon: data.favicon || "",
@@ -150,7 +153,7 @@ export function useBusinessForm() {
       notifications.show({ message: "Nombre y Ciudad son requeridos para generar descripción", color: "yellow" });
       return;
     }
-    const description = await generateDescriptionMutation.mutateAsync({ name: form.name, city: form.city });
+    const description = await generateDescriptionMutation.mutateAsync({ name: form.name, city: form.city, type: form.type });
     handleChange("description", description);
   };
 
