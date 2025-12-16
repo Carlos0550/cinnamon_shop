@@ -196,13 +196,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         description,
         url: canonical,
         type: "website",
-        images: [{ url: `${urlBase}/producto/${slug}/opengraph-image` }]
+        images: [{ url: (Array.isArray(product.images) && product.images[0]) ? product.images[0] : `${urlBase}/logo.png` }]
       },
       twitter: {
         card: "summary_large_image",
         title,
         description,
-        images: [`${urlBase}/producto/${slug}/opengraph-image`]
+        images: [(Array.isArray(product.images) && product.images[0]) ? product.images[0] : `${urlBase}/logo.png`]
       },
       robots: { index: true, follow: true }
     }
