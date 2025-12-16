@@ -48,10 +48,10 @@ export default function Home({ initialProducts, initialCategories, business }: P
         }
     } = useAppContext()
     
-    // SEO Title Logic
+
     const h1Title = useMemo(() => {
-        if (business?.type && business?.city) {
-            return `Tienda online de ${business.type} en ${business.city}`;
+        if (business?.type && business?.city && business?.name) {
+            return `Bienvenidos a ${business.name}`;
         }
         return business?.name || "Tienda Online";
     }, [business]);

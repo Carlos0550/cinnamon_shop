@@ -553,6 +553,7 @@ export default function SalesTable() {
               value={declineReason}
               onChange={(e) => setDeclineReason(e.currentTarget.value)}
               placeholder="Motivo..."
+              autosize
               minRows={3}
               data-autofocus
             />

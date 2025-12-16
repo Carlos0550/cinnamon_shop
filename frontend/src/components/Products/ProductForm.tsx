@@ -209,6 +209,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           placeholder="Ej: Es un labial rojo mate de larga duración, ideal para fiestas..."
           value={formValues.additionalContext}
           onChange={handleChangeValues}
+          autosize
           minRows={2}
           mb="md"
         />
@@ -273,7 +274,7 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
 
       {!fillWithAI && (
         <>
-          <Textarea name="description" label="Descripción" placeholder="Describe el producto" minRows={3} value={formValues.description} onChange={handleChangeValues} />
+          <Textarea name="description" label="Descripción" placeholder="Describe el producto" autosize minRows={3} value={formValues.description} onChange={handleChangeValues} />
           
           <Group>
             <TagsInput
@@ -435,11 +436,12 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
       </Group>
       <Modal opened={enhanceOpen} onClose={() => setEnhanceOpen(false)} title="Sugerencias de IA" fullScreen >
         <TextInput label="Título sugerido" value={enhanceTitle} onChange={(e) => setEnhanceTitle(e.currentTarget.value)} />
-          <TextInput
+          <Textarea
             label="Descripción sugerida"
             value={enhanceDescription}
             onChange={(e) => setEnhanceDescription(e.currentTarget.value)}
-            h={560}
+            autosize
+            minRows={4}
           />
           <Group justify="flex-end">
             <Button

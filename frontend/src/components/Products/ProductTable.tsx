@@ -222,14 +222,26 @@ function ProductTable({
                     >
                       Actualizar stock
                     </Button>
-                    {/* {p.state !== 'out_stock' && (
-                      <Button onClick={() => changeProductsStatus(p.id, 'out_stock')}
-                        loading={updateProductMutation.isPending && updatingId === p.id}
-                        disabled={updateProductMutation.isPending && updatingId === p.id}
-                      >
-                        Sin stock
-                      </Button>
-                    )} */}
+                    <Button size="xs" variant="outline" aria-label="Mejorar"
+                      onClick={() => {
+                        setSelected(p);
+                        setEnhanceOpen(true);
+                        setEnhanceTitle("");
+                        setEnhanceDescription("");
+                        setAdditionalContext("");
+                        enhanceMutation.mutate({ productId: p.id, imageUrls: Array.isArray(p.images) ? p.images : [], additionalContext }, {
+                          onSuccess: (resp) => {
+                            if (resp?.proposal) {
+                              setEnhanceTitle(resp.proposal.title || "");
+                              setEnhanceDescription(resp.proposal.description || "");
+                            }
+                          }
+                        });
+                      }}
+                      loading={enhanceMutation.isPending}
+                    >
+                      ✨ Mejorar
+                    </Button>
                   </Group>
                 </Stack>
               </Group>
@@ -424,6 +436,8 @@ function ProductTable({
             description="Ej: beneficios clave, materiales, ocasión de uso"
             value={additionalContext}
             onChange={(e) => setAdditionalContext(e.currentTarget.value)}
+            autosize
+            minRows={2}
           />
           <Group justify="flex-end">
             <Button
@@ -438,7 +452,7 @@ function ProductTable({
             </Button>
           </Group>
           <TextInput label="Título sugerido" value={enhanceTitle} onChange={(e) => setEnhanceTitle(e.currentTarget.value)} />
-          <Textarea label="Descripción sugerida" value={enhanceDescription} onChange={(e) => setEnhanceDescription(e.currentTarget.value)} minRows={4} />
+          <Textarea label="Descripción sugerida" value={enhanceDescription} onChange={(e) => setEnhanceDescription(e.currentTarget.value)} autosize minRows={4} />
           <Group justify="flex-end">
             <Button
               onClick={() => {

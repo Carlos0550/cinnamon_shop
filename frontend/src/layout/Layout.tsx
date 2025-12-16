@@ -84,7 +84,7 @@ export default function Layout() {
                     ) : (
                       <Text fw={600}>{data?.name || 'Gestión de mi tienda'}</Text>
                     )}
-                    <Text size="xs" c="dimmed">{data?.description || 'Productos premium'}</Text>
+              
                   </Stack>
                 </Group>
                 <ColorSchemeToggle />

@@ -160,6 +160,7 @@ export default function BusinessForm() {
               placeholder="Descripción breve del negocio (para SEO y metadatos)"
               value={form.description || ""}
               onChange={(e) => handleChange("description", e.currentTarget.value)}
+              autosize
               minRows={3}
              />
           </Stack>

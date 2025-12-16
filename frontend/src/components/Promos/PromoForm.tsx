@@ -245,7 +245,8 @@ export function PromoForm({ onClose, promo }: PromoFormProps) {
                             <Grid.Col span={12}>
                                 <Textarea
                                     label="Descripción (opcional)"
-                                    rows={4}
+                                    autosize
+                                    minRows={4}
                                     placeholder="Describe los detalles de la promoción"
                                     value={formValues.description}
                                     onChange={(e) => handleChange('description', e.target.value)}
