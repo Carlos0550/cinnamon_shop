@@ -1,9 +1,9 @@
 import { theme } from '@/theme';
-import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table, Select, Pagination, Modal } from '@mantine/core';
+import { Box, Flex, Paper, TextInput, Loader, Text, Button, ActionIcon, Badge, Group, Image, ScrollArea, Stack, Table, Select, Pagination, Modal, Textarea } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiEdit, FiEye, FiTrash} from 'react-icons/fi';
-import { useDeleteProduct, useGetAllProducts, useUpdateProductState, useUpdateProductStock, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
+import { useDeleteProduct, useGetAllProducts, useUpdateProductStock, useEnhanceProductContent, useUpdateProduct, type GetProductsParams, type Product, type ProductState } from '@/components/Api/ProductsApi';
 import ModalWrapper from '@/components/Common/ModalWrapper';
 import dummyImage from '@/assets/dummy_image.png';
 import ProductForm from './ProductForm';
@@ -15,7 +15,6 @@ function ProductTable({
   setAddOpened: (opened: boolean) => void;
 }) {
   const deleteProductMutation = useDeleteProduct();
-  const updateProductMutation = useUpdateProductState();
   const updateStockMutation = useUpdateProductStock();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [updatingId] = useState<string | null>(null);
@@ -40,6 +39,12 @@ function ProductTable({
   const [stockModalOpen, setStockModalOpen] = useState<boolean>(false);
   const [stockProductId, setStockProductId] = useState<string | null>(null);
   const [stockValue, setStockValue] = useState<string>("1");
+  const [enhanceOpen, setEnhanceOpen] = useState<boolean>(false);
+  const [enhanceTitle, setEnhanceTitle] = useState<string>("");
+  const [enhanceDescription, setEnhanceDescription] = useState<string>("");
+  const enhanceMutation = useEnhanceProductContent();
+  const updateProductDetailsMutation = useUpdateProduct();
+  const [additionalContext, setAdditionalContext] = useState<string>("");
 
   const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -92,7 +97,7 @@ function ProductTable({
 
   // const changeProductsStatus = (pr_id: string, status: ProductState) => {
   //   setUpdatingId(pr_id);
-  //   updateProductMutation.mutate(
+  //   updateProductStateMutation.mutate(
   //     { productId: pr_id, state: status },
   //     { onSettled: () => setUpdatingId(null) }
   //   );
@@ -212,8 +217,8 @@ function ProductTable({
                   </Group>
                   <Group gap="xs">
                     <Button onClick={() => openStockModal(p)}
-                      loading={updateProductMutation.isPending && updatingId === p.id}
-                      disabled={updateProductMutation.isPending && updatingId === p.id}
+                      loading={updateStockMutation.isPending && updatingId === p.id}
+                      disabled={updateStockMutation.isPending && updatingId === p.id}
                     >
                       Actualizar stock
                     </Button>
@@ -288,18 +293,38 @@ function ProductTable({
                           >
                             <FiTrash />
                           </ActionIcon>
-                          <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
-                            onClick={() => { setEditing(p); setViewOpened(true); }}
-                            loading={isLoading}
-                          >
-                            Editar
-                          </Button>
-                          <Button onClick={() => openStockModal(p)}
-                            loading={updateProductMutation.isPending && updatingId === p.id}
-                            disabled={updateProductMutation.isPending && updatingId === p.id}
-                          >
-                            Actualizar stock
-                          </Button>
+                    <Button size="xs" variant="light" leftSection={<FiEdit />} aria-label="Editar"
+                      onClick={() => { setEditing(p); setViewOpened(true); }}
+                      loading={isLoading}
+                    >
+                      Editar
+                    </Button>
+                    <Button size="xs" variant="outline" aria-label="Mejorar"
+                      onClick={() => {
+                        setSelected(p);
+                        setEnhanceOpen(true);
+                        setEnhanceTitle("");
+                        setEnhanceDescription("");
+                        setAdditionalContext("");
+                        enhanceMutation.mutate({ productId: p.id, imageUrls: Array.isArray(p.images) ? p.images : [], additionalContext }, {
+                          onSuccess: (resp) => {
+                            if (resp?.proposal) {
+                              setEnhanceTitle(resp.proposal.title || "");
+                              setEnhanceDescription(resp.proposal.description || "");
+                            }
+                          }
+                        });
+                      }}
+                      loading={enhanceMutation.isPending}
+                    >
+                      ✨ Mejorar
+                    </Button>
+                    <Button onClick={() => openStockModal(p)}
+                      loading={updateStockMutation.isPending && updatingId === p.id}
+                      disabled={updateStockMutation.isPending && updatingId === p.id}
+                    >
+                      Actualizar stock
+                    </Button>
                           {/* {p.state !== 'out_stock' && (
                             <Button onClick={() => changeProductsStatus(p.id, 'out_stock')}
                               loading={updateProductMutation.isPending && updatingId === p.id}
@@ -391,6 +416,56 @@ function ProductTable({
         )}
 
       </ModalWrapper>
+      <Modal opened={enhanceOpen} onClose={() => setEnhanceOpen(false)} title="Mejorar título y descripción" centered>
+        <Stack>
+          <Text size="sm" c="dimmed">La IA analizará las imágenes del producto para sugerir mejoras.</Text>
+          <Textarea
+            label="Contexto adicional (opcional)"
+            description="Ej: beneficios clave, materiales, ocasión de uso"
+            value={additionalContext}
+            onChange={(e) => setAdditionalContext(e.currentTarget.value)}
+          />
+          <Group justify="flex-end">
+            <Button
+              variant="light"
+              onClick={() => {
+                if (!selected) return;
+                enhanceMutation.mutate({ productId: selected.id, additionalContext });
+              }}
+              loading={enhanceMutation.isPending}
+            >
+              Re-generar sugerencias
+            </Button>
+          </Group>
+          <TextInput label="Título sugerido" value={enhanceTitle} onChange={(e) => setEnhanceTitle(e.currentTarget.value)} />
+          <Textarea label="Descripción sugerida" value={enhanceDescription} onChange={(e) => setEnhanceDescription(e.currentTarget.value)} minRows={4} />
+          <Group justify="flex-end">
+            <Button
+              onClick={() => {
+                if (!selected) return;
+                updateProductDetailsMutation.mutate({
+                  productId: selected.id,
+                  title: enhanceTitle || selected.title,
+                  description: enhanceDescription || selected.description || "",
+                  price: typeof selected.price === "number" ? selected.price : String(selected.price || ""),
+                  active: selected.active,
+                  category: selected.category?.id,
+                  images: [],
+                  existingImageUrls: Array.isArray(selected.images) ? selected.images : [],
+                  deletedImageUrls: [],
+                  state: selected.state,
+                  options: selected.options || [],
+                }, {
+                  onSuccess: () => setEnhanceOpen(false)
+                });
+              }}
+              loading={updateProductDetailsMutation.isPending}
+            >
+              Aplicar cambios
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Box>
   );
 }

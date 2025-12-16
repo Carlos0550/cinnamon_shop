@@ -460,3 +460,34 @@ export const useUpdateProductStock = () => {
     },
   });
 };
+
+// IA: mejora de título y descripción del producto (no actualiza, solo propone)
+export type EnhanceResponse = {
+  ok: boolean;
+  proposal?: { title: string; description: string; options?: { name: string; values: string[] }[] };
+  error?: string;
+};
+
+export const useEnhanceProductContent = () => {
+  const {
+    auth: { token },
+  } = useAppContext();
+  return useMutation({
+    mutationKey: ["enhanceProductContent"],
+    mutationFn: async ({ productId, additionalContext, imageUrls }: { productId: string; additionalContext?: string; imageUrls?: string[] }): Promise<EnhanceResponse> => {
+      const res = await fetch(`${baseUrl}/products/ai/enhance/${productId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ additionalContext, imageUrls }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || "Error mejorando contenido con IA");
+      }
+      return json as EnhanceResponse;
+    },
+  });
+};

@@ -85,7 +85,6 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
         ]
       }
     ],
-    max_tokens: 600,
     temperature: 0.0
   });
 
@@ -105,7 +104,7 @@ export const analyzeProductImages = async (imageUrls: string[], additionalContex
     const parsed = JSON.parse(jsonContent);
     
     const title = parsed.title?.substring(0, 50) || 'Producto Generado por IA';
-    const description = parsed.description?.substring(0, 300) || 'Descripción generada automáticamente por IA.';
+    const description = parsed.description?.substring(0, 700) || 'Descripción generada automáticamente por IA.';
     const options = Array.isArray(parsed.options) ? parsed.options : [];
 
     return { title, description, options };

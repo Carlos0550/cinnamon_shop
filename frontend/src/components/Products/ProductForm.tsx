@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select, Switch, Text } from "@mantine/core";
+import { Box, Button, Group, Stack, TextInput, Textarea, Badge, Image, TagsInput, Select, Switch, Text, Modal } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { useGetAllCategories } from "../Api/CategoriesApi";
 
-import { useSaveProduct, useUpdateProduct, type Product, type ProductState } from "../Api/ProductsApi";
+import { useSaveProduct, useUpdateProduct, useEnhanceProductContent, type Product, type ProductState } from "../Api/ProductsApi";
 
 export type ProductFormValues = {
   title: string;
@@ -46,6 +46,10 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
   const {data: categories = []} = useGetAllCategories();
   const saveProductMutation = useSaveProduct();
   const updateProductMutation = useUpdateProduct();
+  const enhanceMutation = useEnhanceProductContent();
+  const [enhanceOpen, setEnhanceOpen] = useState(false);
+  const [enhanceTitle, setEnhanceTitle] = useState("");
+  const [enhanceDescription, setEnhanceDescription] = useState("");
   const [fillWithAI, setFillWithAI] = useState(false);
   const [publishAutomatically, setPublishAutomatically] = useState(false);
   const [formValues, setFormValues] = useState<ProductFormValues>({
@@ -221,6 +225,30 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
             value={formValues.state}
             onChange={(value) => setFormValues(prev => ({ ...prev, state: (value as ProductState) || 'active' }))}
           />
+        </Group>
+      )}
+      {product && (
+        <Group justify="flex-end">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setEnhanceOpen(true);
+              setEnhanceTitle("");
+              setEnhanceDescription("");
+              const imgs = Array.isArray(formValues.existingImageUrls) ? formValues.existingImageUrls : [];
+              enhanceMutation.mutate({ productId: product.id, additionalContext: formValues.additionalContext, imageUrls: imgs }, {
+                onSuccess: (resp) => {
+                  if (resp?.proposal) {
+                    setEnhanceTitle(resp.proposal.title || "");
+                    setEnhanceDescription(resp.proposal.description || "");
+                  }
+                }
+              });
+            }}
+            loading={enhanceMutation.isPending}
+          >
+            ✨ Mejorar título y descripción
+          </Button>
         </Group>
       )}
 
@@ -405,6 +433,28 @@ export default function ProductForm({ product, onSuccess, onCancel }: ProductFor
           }
         </Button>
       </Group>
+      <Modal opened={enhanceOpen} onClose={() => setEnhanceOpen(false)} title="Sugerencias de IA" fullScreen >
+        <TextInput label="Título sugerido" value={enhanceTitle} onChange={(e) => setEnhanceTitle(e.currentTarget.value)} />
+          <TextInput
+            label="Descripción sugerida"
+            value={enhanceDescription}
+            onChange={(e) => setEnhanceDescription(e.currentTarget.value)}
+            h={560}
+          />
+          <Group justify="flex-end">
+            <Button
+              variant="light"
+              disabled={enhanceMutation.isPending}
+              onClick={() => {
+                enhanceMutation.mutate({ productId: product?.id || "", additionalContext: formValues.additionalContext });
+              }}
+              loading={enhanceMutation.isPending}
+            >
+              Re-generar
+            </Button>
+            
+          </Group>
+      </Modal>
     </Stack>
   );
 }

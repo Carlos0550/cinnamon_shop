@@ -7,6 +7,43 @@ import { CategoryStatus, ProductState } from "@prisma/client";
 import { UpdateCategoryStatusSchema, UpdateProductRequest, UpdateProductStatusSchema } from "./product.zod";
 import { analyzeProductImages } from "@/config/openai";
 class ProductServices {
+    async enhanceProductContent(req: Request, res: Response) {
+        try {
+            const { product_id } = req.params as unknown as { product_id: string };
+            const { additionalContext, imageUrls: bodyImageUrls } = req.body as { additionalContext?: string; imageUrls?: unknown };
+            const product = await prisma.products.findUnique({ where: { id: product_id } });
+            if (!product) {
+                return res.status(404).json({ ok: false, error: "Producto no encontrado" });
+            }
+            const providedUrls: string[] = Array.isArray(bodyImageUrls)
+                ? (bodyImageUrls as any[]).filter((u) => typeof u === "string" && u.length > 0)
+                : [];
+            const existingUrls: string[] = Array.isArray(product.images)
+                ? (product.images as any[]).filter((u) => typeof u === "string" && u.length > 0)
+                : [];
+            const imageUrls: string[] = providedUrls.length > 0 ? providedUrls : existingUrls;
+            if (!imageUrls.length) {
+                return res.status(400).json({ ok: false, error: "El producto no tiene imágenes para analizar" });
+            }
+            const context = [
+                additionalContext || "",
+                product.title ? `Título actual: ${product.title}` : "",
+                product.description ? `Descripción actual: ${product.description}` : "",
+            ].filter(Boolean).join("\n");
+            const ai = await analyzeProductImages(imageUrls, context || undefined);
+            return res.status(200).json({
+                ok: true,
+                proposal: {
+                    title: ai.title,
+                    description: ai.description,
+                    options: ai.options || []
+                }
+            });
+        } catch (error) {
+            console.error("enhanceProductContent error:", error);
+            return res.status(500).json({ ok: false, error: "Error al mejorar el contenido con IA" });
+        }
+    }
     async refreshAllProductsCache() {
         const products = await prisma.products.findMany({ include: { category: true } });
         await redis.set("products:all", JSON.stringify(products));

@@ -3,6 +3,8 @@ import { saveProduct, saveCategory, getAllProducts, updateProductController, cha
 import { uploadMultipleImages, handleImageUploadError, uploadSingleImage } from "../../middlewares/image.middleware";
 import { requireAuth, requireRole } from "@/middlewares/auth.middleware";
 import ProductServices from "./services/product.services";
+ 
+// Endpoint para mejora de título y descripción con IA
 
 const router = Router();
 const product_service = new ProductServices
@@ -56,6 +58,14 @@ router.patch(
     requireAuth,
     requireRole([1]),
     (req, res) => product_service.updateStock(req, res)
+)
+
+// AI: mejora de título y descripción del producto (no modifica hasta confirmar)
+router.post(
+    "/ai/enhance/:product_id",
+    requireAuth,
+    requireRole([1]),
+    (req, res) => product_service.enhanceProductContent(req, res)
 )
 
 //Public endpoints
