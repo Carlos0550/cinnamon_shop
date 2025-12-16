@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next'
+import { createProductSlug } from '@/utils/slugs'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
@@ -15,8 +16,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const res = await fetch(`${apiUrl}/products/public?limit=1000`, { next: { revalidate: 3600 } })
     const json = await res.json().catch(() => null)
     const products = Array.isArray(json?.data?.products) ? json.data.products : []
-    productRoutes = products.map((p: { id: string; updatedAt?: string }) => ({
-      url: `${siteUrl}/${p.id}`,
+    productRoutes = products.map((p: { id: string; title: string; updatedAt?: string }) => ({
+      url: `${siteUrl}/producto/${createProductSlug(p.title, p.id)}`,
       lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
       changeFrequency: 'weekly',
       priority: 0.8
@@ -27,4 +28,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [...staticRoutes, ...productRoutes]
 }
-

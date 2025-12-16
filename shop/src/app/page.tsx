@@ -3,6 +3,7 @@ import HomeComponent from "@/Components/Home/Home"
 import { ProductsResponse, Products } from "@/Api/useProducts"
 import { CategoriesResponse } from "@/Api/useCategories"
 import { getBusinessInfo } from "@/Api/useBusiness"
+import { createProductSlug } from "@/utils/slugs"
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams
@@ -44,7 +45,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     itemListElement: Array.isArray(products) ? products.map((p, idx) => ({
       "@type": "ListItem",
       position: idx + 1,
-      url: `${siteUrl}/${p.id}`,
+      url: `${siteUrl}/producto/${createProductSlug(p.title, p.id)}`,
       name: p.title,
       image: Array.isArray(p.images) ? p.images[0] : undefined
     })) : []
@@ -98,10 +99,13 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   if (titleQ) parts.push(`Buscar: ${titleQ}`)
   if (catQ) parts.push(`Categoría: ${catQ}`)
   const fullTitle = parts.join(" · ")
+
+  const shouldIndex = !titleQ && !catQ;
+
   return {
     title: fullTitle,
     description: titleQ ? `Resultados para "${titleQ}" en ${businessName}` : bizDescription,
-    robots: { index: true, follow: true },
+    robots: { index: shouldIndex, follow: true },
     alternates: { canonical: siteUrl },
     openGraph: {
       title: fullTitle,

@@ -1,12 +1,14 @@
 import { ImageResponse } from 'next/og'
+import { extractIdFromSlug } from '@/utils/slugs'
 
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 export const runtime = 'edge'
 export const alt = 'Producto | Tienda Online'
 
-export default async function OG({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function OG({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const id = extractIdFromSlug(slug)
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
   const bizImage = process.env.NEXT_PUBLIC_BUSINESS_IMAGE_URL || ''
