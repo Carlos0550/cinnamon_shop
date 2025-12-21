@@ -75,11 +75,11 @@ class BusinessController {
         const payload = req.body as BusinessDataRequest;
 
         if(!Array.isArray(payload.bankData) || payload.bankData.length === 0) {
-            return res.status(400).json({ error: "Los datos bancarios son requeridos" });
+            return res.status(400).json({ error: "Los datos bancarios no son válidos" });
         }
 
         if(!payload.name || !payload.email || !payload.phone || !payload.city || !payload.state) {
-            return res.status(400).json({ error: "Todos los campos son requeridos" });
+            return res.status(400).json({ error: "Todos los campos son requeridos: Nombre del negocio, email, teléfono, ciudad y estado/provincia" });
         }
         const business = await businessServices.createBusiness(payload);
         res.status(201).json(business);
@@ -91,7 +91,7 @@ class BusinessController {
             const payload = req.body as BusinessDataRequest;
 
             if(!payload.name || !payload.email || !payload.phone  || !payload.city || !payload.state) {
-                return res.status(400).json({ error: "Todos los campos son requeridos" });
+                return res.status(400).json({ error: "Todos los campos son requeridos: Nombre del negocio, email, teléfono, ciudad y estado/provincia" });
             }
 
             const business = await businessServices.updateBusiness(id, payload);
@@ -101,7 +101,7 @@ class BusinessController {
             if (error instanceof Error && error.message === "BUSINESS_NOT_FOUND") {
                 return res.status(404).json({ error: "Negocio no encontrado" });
             }
-            return res.status(500).json({ error: "Error al actualizar el negocio" });
+            return res.status(500).json({ error: "Error al actualizar los datos del negocio" });
         }
     }
 

@@ -1,7 +1,15 @@
 import OpenAI from 'openai';
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.openai_api_key;
+
+if (!OPENAI_API_KEY) {
+  console.error('❌ OPENAI_API_KEY no está configurada. Es obligatoria para el funcionamiento del sistema.');
+  console.error('   Configura OPENAI_API_KEY en tus variables de entorno.');
+  throw new Error('OPENAI_API_KEY is required. Please set OPENAI_API_KEY environment variable.');
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.openai_api_key,
+  apiKey: OPENAI_API_KEY,
 });
 
 export const analyzeProductImages = async (imageUrls: string[], additionalContext?: string): Promise<{ title: string; description: string; options: { name: string; values: string[] }[] }> => {

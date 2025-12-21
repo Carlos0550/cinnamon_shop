@@ -22,6 +22,8 @@ import swaggerUi from 'swagger-ui-express';
 import spec from './docs/openapi';
 import morgan from 'morgan';
 import { initProductsCacheSyncJob } from './jobs/productsCacheSync';
+import path from 'path';
+import fs from 'fs';
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -59,6 +61,56 @@ app.use("/api/cart", CartRouter)
 app.use("/api/orders", OrdersRouter)
 app.use("/api/business", BusinessRouter)
 app.use("/api", PaletteRouter)
+
+
+app.get(/^\/api\/storage\/([^\/]+)\/(.+)$/, async (req, res) => {
+  try {
+    const matches = req.url.match(/^\/api\/storage\/([^\/]+)\/(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ ok: false, error: 'invalid_path' });
+    }
+    const bucket = matches[1];
+    const filePath = matches[2];
+    
+    if (!bucket || !filePath) {
+      return res.status(400).json({ ok: false, error: 'invalid_path' });
+    }
+
+    if (filePath.includes('..') || bucket.includes('..')) {
+      return res.status(403).json({ ok: false, error: 'forbidden' });
+    }
+
+    const fullPath = path.join(process.cwd(), 'uploads', 'storage', bucket, filePath);
+    
+    try {
+      await fs.promises.access(fullPath);
+    } catch {
+      return res.status(404).json({ ok: false, error: 'file_not_found' });
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const contentTypes: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf',
+      '.txt': 'text/plain',
+    };
+    const contentType = contentTypes[ext] || 'application/octet-stream';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    
+    const fileStream = fs.createReadStream(fullPath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Error sirviendo archivo local:', error);
+    res.status(500).json({ ok: false, error: 'server_error' });
+  }
+});
+
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
 app.get('/docs.json', (_req, res) => res.json(spec));
 

@@ -80,6 +80,7 @@ export default function BusinessForm() {
             <TextInput 
               label="Ciudad" 
               placeholder="Ciudad"
+              required
               value={form.city} 
               onChange={(e) => handleChange("city", e.currentTarget.value)} 
               error={errors.city}
@@ -88,6 +89,7 @@ export default function BusinessForm() {
             <TextInput 
               label="Provincia/Estado" 
               placeholder="Estado"
+              required
               value={form.state} 
               onChange={(e) => handleChange("state", e.currentTarget.value)} 
               error={errors.state}
@@ -98,6 +100,7 @@ export default function BusinessForm() {
           <TextInput
             label="Rubro / Tipo de negocio"
             placeholder="Ej.: tienda de ropa, restaurante, servicios IT"
+            required
             value={form.type || ""}
             onChange={(e) => handleChange("type", e.currentTarget.value)}
             error={errors.type}
