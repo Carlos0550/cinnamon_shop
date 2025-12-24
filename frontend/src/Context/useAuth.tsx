@@ -3,6 +3,7 @@ import { showNotification } from "@mantine/notifications"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { fetchWithTimeout } from "@/Utils/fetchWithTimeout"
 
 export type Session = {
     id: string,
@@ -42,22 +43,19 @@ export function useAuth() {
     const { data: validationData, isLoading, error, refetch } = useQuery({
         queryKey: ['validateToken', token],
         queryFn: async () => {
-            console.log(token)
             if (!token) {
-                console.log("No token available")
                 throw new Error('No token available')
             }
 
-
-            const response = await fetch(baseUrl + '/validate-token', {
+            const response = await fetchWithTimeout(baseUrl + '/validate-token', {
                 method: 'GET',
                 headers: {
                     "Authorization": `Bearer ${token}`,
                 },
+                timeout: 5000,
             })
             
             if (!response.ok) {
-                console.log("Token validation failed:", response.status, response.statusText)
                 throw new Error('Token validation failed')
             }
             

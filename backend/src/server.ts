@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import '@/config/dayjs';
 import express from 'express';
 import cors from 'cors';
+import { validateEnvironmentVariables } from '@/config/env';
 import { prisma } from '@/config/prisma';
 import { pingRedis } from '@/config/redis';
 import UserRouter from '@/modules/User/routes';
@@ -25,10 +26,54 @@ import { initProductsCacheSyncJob } from './jobs/productsCacheSync';
 import path from 'path';
 import fs from 'fs';
 
+// Validar variables de entorno al inicio
+validateEnvironmentVariables();
+
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-app.use(cors());
+// Configurar CORS según entorno
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : isProduction
+  ? [] // En producción, debe especificarse ALLOWED_ORIGINS
+  : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:5174'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (mobile apps, Postman, etc.) solo en desarrollo
+    if (!origin) {
+      if (isProduction) {
+        return callback(new Error('CORS: Requests sin origin no permitidos en producción'));
+      }
+      return callback(null, true);
+    }
+    
+    // En producción, ALLOWED_ORIGINS es obligatorio
+    if (isProduction && allowedOrigins.length === 0) {
+      return callback(new Error('CORS: ALLOWED_ORIGINS debe configurarse en producción'));
+    }
+    
+    // Verificar si el origen está permitido
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else if (!isProduction) {
+      // En desarrollo, permitir cualquier origen localhost
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS: Origen no permitido'));
+      }
+    } else {
+      callback(new Error('CORS: Origen no permitido'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
   stream: {
@@ -39,13 +84,12 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
 
 app.get('/api/health', async (_req, res) => {
   try {
-    await prisma.$connect();
+    // Prisma maneja conexiones automáticamente, no necesitamos conectar/desconectar
+    await prisma.$queryRaw`SELECT 1`;
     const pong = await pingRedis();
     res.json({ ok: true, db: 'connected', redis: pong === 'PONG' ? 'connected' : 'unknown' });
   } catch (err) {
     res.status(500).json({ ok: false, error: 'health_check_failed' });
-  } finally {
-    await prisma.$disconnect();
   }
 });
 
@@ -113,6 +157,38 @@ app.get(/^\/api\/storage\/([^\/]+)\/(.+)$/, async (req, res) => {
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
 app.get('/docs.json', (_req, res) => res.json(spec));
+
+// Middleware global de manejo de errores
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error no manejado:', err);
+  
+  // Errores de CORS
+  if (err.message && err.message.includes('CORS')) {
+    return res.status(403).json({ ok: false, error: 'cors_error', message: err.message });
+  }
+  
+  // Errores de validación
+  if (err.name === 'ValidationError' || err.name === 'ZodError') {
+    return res.status(400).json({ ok: false, error: 'validation_error', message: err.message });
+  }
+  
+  // Errores de autenticación
+  if (err.status === 401 || err.name === 'UnauthorizedError') {
+    return res.status(401).json({ ok: false, error: 'unauthorized', message: err.message });
+  }
+  
+  // Error genérico
+  const status = err.status || err.statusCode || 500;
+  const message = process.env.NODE_ENV === 'production' 
+    ? 'Error interno del servidor' 
+    : err.message;
+  
+  res.status(status).json({ 
+    ok: false, 
+    error: 'internal_error',
+    message 
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);

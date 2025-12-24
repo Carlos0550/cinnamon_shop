@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { showNotification } from "@mantine/notifications"
+import { fetchWithTimeout } from "@/utils/fetchWithTimeout"
 
 export type SelectedOption = { name: string; value: string }
 
@@ -17,6 +18,8 @@ export type Cart = {
     items: CartItem[],
     total: number,
     promo_code?: string
+    discount?: number
+    promo_title?: string
 }
 
 function areOptionsEqual(a?: SelectedOption[] | null, b?: SelectedOption[] | null) {
@@ -52,14 +55,20 @@ export type CheckoutFormValues = {
 
 function useCart(baseUrl: string, token: string | null) {
     const [cart, setCart] = useState<Cart>(() => {
-        if (typeof window === 'undefined') return { items: [], total: 0, promo_code: "" }
+        if (typeof window === 'undefined') return { items: [], total: 0, promo_code: "", discount: 0 }
         try {
             const raw = localStorage.getItem('shop_cart')
-            if (!raw) return { items: [], total: 0, promo_code: "" }
+            if (!raw) return { items: [], total: 0, promo_code: "", discount: 0 }
             const parsed = JSON.parse(raw)
-            return { items: Array.isArray(parsed.items) ? parsed.items : [], total: Number(parsed.total) || 0, promo_code: parsed.promo_code || "" }
+            return { 
+                items: Array.isArray(parsed.items) ? parsed.items : [], 
+                total: Number(parsed.total) || 0, 
+                promo_code: parsed.promo_code || "",
+                discount: Number(parsed.discount) || 0,
+                promo_title: parsed.promo_title || ""
+            }
         } catch {
-            return { items: [], total: 0, promo_code: "" }
+            return { items: [], total: 0, promo_code: "", discount: 0 }
         }
     })
 
@@ -92,7 +101,8 @@ function useCart(baseUrl: string, token: string | null) {
         if (existingItem) {
             // If product already exists, increment quantity
             const updatedItems = cart.items.map(item => (item.product_id === product.product_id && areOptionsEqual(item.options, product.options)) ? { ...item, quantity: item.quantity + qtyToAdd } : item)
-            const newTotal = updatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            const newSubtotal = updatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            const newTotal = cart.discount ? Math.max(0, newSubtotal - cart.discount) : newSubtotal
             newCart = {
                 ...cart,
                 items: updatedItems,
@@ -113,10 +123,11 @@ function useCart(baseUrl: string, token: string | null) {
         if (token) {
             try {
                 log('Syncing add to server')
-                await fetch(`${baseUrl}/cart/items`, {
+                await fetchWithTimeout(`${baseUrl}/cart/items`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ product_id: product.product_id, quantity: qtyToAdd, options: product.options })
+                    body: JSON.stringify({ product_id: product.product_id, quantity: qtyToAdd, options: product.options }),
+                    timeout: 5000,
                 })
             } catch (e) {
                 log('Error syncing add', e)
@@ -127,7 +138,8 @@ function useCart(baseUrl: string, token: string | null) {
     const removeProductFromCart = useCallback(async (product_id: string) => {
         log('Removing product', product_id)
         const newItems = cart.items.filter(item => item.product_id !== product_id)
-        const newTotal = newItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+        const newSubtotal = newItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+        const newTotal = cart.discount ? Math.max(0, newSubtotal - cart.discount) : newSubtotal
         
         setCart({
             ...cart,
@@ -138,9 +150,10 @@ function useCart(baseUrl: string, token: string | null) {
         if (token) {
             try {
                 log('Syncing remove to server')
-                await fetch(`${baseUrl}/cart/items/${product_id}`, {
+                await fetchWithTimeout(`${baseUrl}/cart/items/${product_id}`, {
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
+                    timeout: 5000,
                 })
             } catch (e) {
                 log('Error syncing remove', e)
@@ -148,21 +161,79 @@ function useCart(baseUrl: string, token: string | null) {
         }
     }, [cart, token, baseUrl])
 
+    const validatePromoCode = useCallback(async (code: string, baseUrl: string) => {
+        if (!code || code.trim().length === 0) {
+            return { ok: false, error: 'code_required' }
+        }
+        try {
+            const items = cart.items.map(it => ({ product_id: it.product_id, quantity: it.quantity }))
+            const res = await fetchWithTimeout(`${baseUrl}/promos/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code.trim().toUpperCase(),
+                    items,
+                    total: cart.total
+                }),
+                timeout: 5000,
+            })
+            const json = await res.json()
+            if (!res.ok || !json.ok) {
+                return { ok: false, error: json.error || 'validation_failed' }
+            }
+            return { ok: true, ...json }
+        } catch (error) {
+            return { ok: false, error: 'network_error' }
+        }
+    }, [cart])
+
+    const applyPromoCode = useCallback(async (code: string, baseUrl: string) => {
+        const result = await validatePromoCode(code, baseUrl)
+        if (!result.ok) {
+            return result
+        }
+        const subtotal = cart.items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+        const discount = result.discount || 0
+        const newTotal = Math.max(0, subtotal - discount)
+        setCart({
+            ...cart,
+            promo_code: code.trim().toUpperCase(),
+            discount: discount,
+            promo_title: result.promo?.title || "",
+            total: newTotal
+        })
+        return { ok: true, ...result }
+    }, [cart, validatePromoCode])
+
+    const removePromoCode = useCallback(() => {
+        const originalTotal = cart.items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+        setCart({
+            ...cart,
+            promo_code: "",
+            discount: 0,
+            promo_title: "",
+            total: originalTotal
+        })
+    }, [cart])
+
     const clearCart = useCallback(async () => {
         log('Clearing cart')
         setCart({
             ...cart,
             items: [],
             total: 0,
-            promo_code: ""
+            promo_code: "",
+            discount: 0,
+            promo_title: ""
         })
 
         if (token) {
             try {
                 log('Syncing clear to server')
-                await fetch(`${baseUrl}/cart`, {
+                await fetchWithTimeout(`${baseUrl}/cart`, {
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
+                    timeout: 5000,
                 })
             } catch (e) {
                 log('Error syncing clear', e)
@@ -175,20 +246,22 @@ function useCart(baseUrl: string, token: string | null) {
         if (quantity <= 0) {
             // Remove item if quantity is 0 or less
             const items = cart.items.filter(item => !(item.product_id === product_id && (options ? areOptionsEqual(item.options, options) : true)))
-            const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            const newSubtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            const newTotal = cart.discount ? Math.max(0, newSubtotal - cart.discount) : newSubtotal
             setCart({
                 ...cart,
                 items,
-                total,
+                total: newTotal,
             })
 
             if (token) {
                 try {
                     log('Syncing remove (qty <= 0) to server')
-                    await fetch(`${baseUrl}/cart/items/${product_id}`, {
+                    await fetchWithTimeout(`${baseUrl}/cart/items/${product_id}`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ options })
+                        body: JSON.stringify({ options }),
+                        timeout: 5000,
                     })
                 } catch (e) {
                     log('Error syncing remove', e)
@@ -197,20 +270,22 @@ function useCart(baseUrl: string, token: string | null) {
         } else {
             // Update quantity if greater than 0
             const items = cart.items.map(item => (item.product_id === product_id && (options ? areOptionsEqual(item.options, options) : true)) ? { ...item, quantity } : item)
-            const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            const newSubtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+            const newTotal = cart.discount ? Math.max(0, newSubtotal - cart.discount) : newSubtotal
             setCart({
                 ...cart,
                 items,
-                total,
+                total: newTotal,
             })
 
             if (token) {
                 try {
                     log('Syncing update to server')
-                    await fetch(`${baseUrl}/cart/items/${product_id}`, {
+                    await fetchWithTimeout(`${baseUrl}/cart/items/${product_id}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ quantity, options })
+                        body: JSON.stringify({ quantity, options }),
+                        timeout: 5000,
                     })
                 } catch (e) {
                     log('Error syncing update', e)
@@ -234,6 +309,7 @@ function useCart(baseUrl: string, token: string | null) {
         const payload = {
             items,
             payment_method: formValues.orderMethod,
+            promo_code: cart.promo_code || undefined,
             customer: {
                 name: formValues.name,
                 email: formValues.email,
@@ -246,7 +322,12 @@ function useCart(baseUrl: string, token: string | null) {
             }
         }
         try {
-            const res = await fetch(`${baseUrl}/orders/create`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(payload) })
+            const res = await fetchWithTimeout(`${baseUrl}/orders/create`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, 
+                body: JSON.stringify(payload),
+                timeout: 15000,
+            })
             const json = await res.json().catch(() => null)
             if (!res.ok || !json?.ok) {
                 showNotification({ title: 'Pago fallido', message: 'No se pudo procesar la orden.', color: 'red', autoClose: 3000 })
@@ -268,15 +349,24 @@ function useCart(baseUrl: string, token: string | null) {
         const items = cart.items.map(it => ({ product_id: it.product_id, quantity: it.quantity, price: it.price, options: it.options }))
         try {
             if (items.length > 0) {
-                await fetch(`${baseUrl}/cart/merge`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ items }) })
+                await fetchWithTimeout(`${baseUrl}/cart/merge`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+                    body: JSON.stringify({ items }),
+                    timeout: 5000,
+                })
             }
-            const res = await fetch(`${baseUrl}/cart`, { headers: { Authorization: `Bearer ${token}` } })
+            const res = await fetchWithTimeout(`${baseUrl}/cart`, { 
+                headers: { Authorization: `Bearer ${token}` },
+                timeout: 5000,
+            })
             const json = await res.json().catch(() => null)
             const serverCart = json?.cart
             if (serverCart && Array.isArray(serverCart.items)) {
                 const mappedItems: CartItem[] = serverCart.items.map((it: { productId: string; product?: { title?: string; price?: number; images?: string[] }; quantity?: number; price_has_changed?: boolean; selected_options?: SelectedOption[] }) => ({ product_id: it.productId, product_name: it.product?.title || '', price: Number(it.product?.price) || 0, quantity: Number(it.quantity) || 1, image_url: Array.isArray(it.product?.images) ? (it.product?.images?.[0] || '') : '', price_changed: !!it.price_has_changed, options: it.selected_options || [] }))
-                const total = mappedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
-                setCart({ items: mappedItems, total, promo_code: cart.promo_code })
+                const subtotal = mappedItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
+                const total = cart.discount ? Math.max(0, subtotal - cart.discount) : subtotal
+                setCart({ items: mappedItems, total, promo_code: cart.promo_code, discount: cart.discount, promo_title: cart.promo_title })
             }
         } catch {}
     }, [cart])
@@ -290,7 +380,10 @@ function useCart(baseUrl: string, token: string | null) {
     clearCart,
     updateQuantity,
     syncWithServer,
-    processOrder
+    processOrder,
+    validatePromoCode,
+    applyPromoCode,
+    removePromoCode
   }
 }
 

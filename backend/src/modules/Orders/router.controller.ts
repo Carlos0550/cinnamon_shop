@@ -4,6 +4,7 @@ export function ensureCreatePayload(req: Request, res: Response, next: NextFunct
   const items = Array.isArray(req.body?.items) ? req.body.items : []
   const payment = String(req.body?.payment_method || "").trim()
   const customer = req.body?.customer || {}
+  const promo_code = req.body?.promo_code ? String(req.body.promo_code).trim().toUpperCase() : undefined
   if (items.length === 0) return res.status(400).json({ ok: false, error: "missing_items" })
   if (!payment) return res.status(400).json({ ok: false, error: "missing_payment_method" })
   const normalizedItems = items.map((it: any) => ({ product_id: String(it.product_id), quantity: Number(it.quantity) || 1, options: it?.options || [] }))
@@ -20,5 +21,6 @@ export function ensureCreatePayload(req: Request, res: Response, next: NextFunct
   ;(req as any).items = normalizedItems
   ;(req as any).payment_method = payment
   ;(req as any).customer = normalizedCustomer
+  ;(req as any).promo_code = promo_code
   next()
 }

@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import fs from 'fs/promises';
+import path from 'path';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.openai_api_key;
 
@@ -12,15 +14,88 @@ const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+/**
+ * Convierte una URL local a base64 para enviar directamente a OpenAI
+ */
+async function convertLocalUrlToBase64(url: string): Promise<string | null> {
+  try {
+    // Extraer la ruta del archivo de la URL
+    // Formato: http://localhost:3000/api/storage/images/products/product-xxx
+    // Ruta del archivo: uploads/storage/images/products/product-xxx
+    const urlMatch = url.match(/\/api\/storage\/(.+)$/);
+    if (!urlMatch) {
+      return null;
+    }
+
+    const filePath = urlMatch[1]; // images/products/product-xxx
+    const fullPath = path.join(process.cwd(), 'uploads', 'storage', filePath);
+
+    // Leer el archivo
+    const fileBuffer = await fs.readFile(fullPath);
+    
+    // Determinar el tipo MIME basado en la extensión
+    const ext = path.extname(fullPath).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+    };
+    const mimeType = mimeTypes[ext] || 'image/jpeg';
+
+    // Convertir a base64
+    const base64 = fileBuffer.toString('base64');
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error convirtiendo URL local a base64:', error);
+    return null;
+  }
+}
+
+/**
+ * Verifica si una URL es localhost
+ */
+function isLocalhostUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1' || urlObj.hostname.startsWith('192.168.') || urlObj.hostname.startsWith('10.');
+  } catch {
+    return false;
+  }
+}
+
 export const analyzeProductImages = async (imageUrls: string[], additionalContext?: string): Promise<{ title: string; description: string; options: { name: string; values: string[] }[] }> => {
   try {
-    const imageMessages = imageUrls.map(url => ({
-      type: "image_url" as const,
-      image_url: {
-        url: url,
-        detail: "high" as const
-      }
-    }));
+    // Procesar imágenes: convertir URLs locales a base64 en desarrollo
+    const imageMessages = await Promise.all(
+      imageUrls.map(async (url) => {
+        // En desarrollo, si es una URL localhost, convertir a base64
+        if (isDevelopment && isLocalhostUrl(url)) {
+          const base64Image = await convertLocalUrlToBase64(url);
+          if (base64Image) {
+            return {
+              type: "image_url" as const,
+              image_url: {
+                url: base64Image,
+                detail: "high" as const
+              }
+            };
+          }
+        }
+        
+        // Usar URL directamente (producción o URLs públicas)
+        return {
+          type: "image_url" as const,
+          image_url: {
+            url: url,
+            detail: "high" as const
+          }
+        };
+      })
+    );
     const systemPrompt = `
       Actúa como un generador experto de contenido para productos de e-commerce. Analiza exclusivamente las imágenes proporcionadas y produce tres campos:
 

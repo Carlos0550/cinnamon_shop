@@ -43,7 +43,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     // Adjuntar usuario al request
     (req as any).user = payload;
-    console.log(payload);
     next();
   } catch (error) {
     console.error('auth_middleware_error', error);

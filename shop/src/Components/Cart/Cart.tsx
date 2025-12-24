@@ -1,6 +1,9 @@
 'use client'
 import { Modal, Box, Stack, Group, Image, Text, ActionIcon, Divider, Button, Stepper, TextInput, Checkbox, Select, Loader, Alert, Card, CopyButton, Tooltip, Badge } from '@mantine/core'
-import { FaMinus, FaPlus, FaUniversity, FaCopy, FaCheck } from 'react-icons/fa'
+import { FaMinus, FaPlus, FaUniversity, FaCopy, FaCheck, FaTag, FaTimes } from 'react-icons/fa'
+import { useState } from 'react'
+import { showNotification } from '@mantine/notifications'
+import { useAppContext } from '@/providers/AppContext'
 import useCart from './useCart'
 import type { SelectedOption } from '@/providers/useCart'
 
@@ -28,10 +31,53 @@ function Cart({ opened = true, onClose }: CartProps) {
     setReceiptFile,
     businessData,
     isLoadingBankInfo,
-    bankInfoError
+    bankInfoError,
+    validatePromoCode,
+    applyPromoCode,
+    removePromoCode
   } = useCart(onClose);
 
+  const { utils } = useAppContext()
+  const [promoInput, setPromoInput] = useState('')
+  const [validatingPromo, setValidatingPromo] = useState(false)
+
   const formatCurrency = (n: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n)
+
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) {
+      showNotification({ title: 'Código requerido', message: 'Ingresa un código de promoción', color: 'yellow' })
+      return
+    }
+    setValidatingPromo(true)
+    const result = await applyPromoCode(promoInput, utils.baseUrl)
+    setValidatingPromo(false)
+    if (result.ok) {
+      showNotification({ title: 'Promoción aplicada', message: `Descuento de ${formatCurrency(result.discount || 0)} aplicado`, color: 'green' })
+      setPromoInput('')
+    } else {
+      const errorMessages: Record<string, string> = {
+        'promo_not_found': 'Código de promoción no encontrado',
+        'promo_inactive': 'Esta promoción no está activa',
+        'promo_expired': 'Esta promoción ha expirado',
+        'promo_not_started': 'Esta promoción aún no está disponible',
+        'promo_usage_limit_reached': 'Esta promoción alcanzó su límite de uso',
+        'promo_user_limit_reached': 'Ya has usado esta promoción el máximo de veces permitido',
+        'min_order_amount_not_met': `El monto mínimo de compra es ${formatCurrency((result as any).min_amount || 0)}`,
+        'promo_not_applicable_to_items': 'Esta promoción no aplica a los productos en tu carrito',
+        'network_error': 'Error de conexión. Intenta de nuevo.'
+      }
+      showNotification({ 
+        title: 'Código inválido', 
+        message: errorMessages[result.error] || 'El código de promoción no es válido', 
+        color: 'red' 
+      })
+    }
+  }
+
+  const handleRemovePromo = () => {
+    removePromoCode()
+    showNotification({ title: 'Promoción removida', message: 'El código de promoción fue removido', color: 'blue' })
+  }
 
   return (
     <Modal opened={opened} onClose={onClose} title="Mi carrito" size="lg">
@@ -82,15 +128,74 @@ function Cart({ opened = true, onClose }: CartProps) {
 
         <Divider my="md" />
 
-        <Group justify="space-between" align="center">
-          <Text fw={700}>Total: {formatCurrency(cart.total)}</Text>
-          <Group>
-            <Button variant="outline" color="red" onClick={clearCart}>Limpiar carrito</Button>
-            {!formValues.checkoutOpen && (
-                 <Button color="green" onClick={initShipping} disabled={cart.items.length === 0}>Continuar</Button>
+        {/* Código de promoción */}
+        {cart.items.length > 0 && (
+          <Box>
+            {cart.promo_code ? (
+              <Group justify="space-between" align="center" p="sm" style={{ border: '1px solid var(--mantine-color-green-6)', borderRadius: 8, backgroundColor: 'var(--mantine-color-green-0)' }}>
+                <Group gap="xs">
+                  <FaTag size={14} />
+                  <Text size="sm" fw={500}>{cart.promo_code}</Text>
+                  {cart.promo_title && <Text size="xs" c="dimmed">- {cart.promo_title}</Text>}
+                </Group>
+                <Group gap="xs">
+                  {cart.discount && cart.discount > 0 && (
+                    <Text size="sm" fw={600} c="green">-{formatCurrency(cart.discount)}</Text>
+                  )}
+                  <ActionIcon variant="subtle" color="red" size="sm" onClick={handleRemovePromo}>
+                    <FaTimes size={12} />
+                  </ActionIcon>
+                </Group>
+              </Group>
+            ) : (
+              <Group gap="xs" align="flex-end">
+                <TextInput
+                  placeholder="Código de promoción"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.currentTarget.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyPromo()}
+                  leftSection={<FaTag size={14} />}
+                  style={{ flex: 1 }}
+                  size="sm"
+                />
+                <Button 
+                  size="sm" 
+                  onClick={handleApplyPromo} 
+                  loading={validatingPromo}
+                  disabled={!promoInput.trim() || validatingPromo}
+                >
+                  Aplicar
+                </Button>
+              </Group>
             )}
+          </Box>
+        )}
+
+        <Divider my="md" />
+
+        <Stack gap="xs">
+          {cart.discount && cart.discount > 0 && (
+            <Group justify="space-between">
+              <Text size="sm" c="dimmed">Subtotal:</Text>
+              <Text size="sm" c="dimmed">{formatCurrency(cart.items.reduce((acc, item) => acc + item.price * item.quantity, 0))}</Text>
+            </Group>
+          )}
+          {cart.discount && cart.discount > 0 && (
+            <Group justify="space-between">
+              <Text size="sm" c="green">Descuento:</Text>
+              <Text size="sm" fw={600} c="green">-{formatCurrency(cart.discount)}</Text>
+            </Group>
+          )}
+          <Group justify="space-between" align="center">
+            <Text fw={700} size="lg">Total: {formatCurrency(cart.total)}</Text>
+            <Group>
+              <Button variant="outline" color="red" onClick={clearCart}>Limpiar carrito</Button>
+              {!formValues.checkoutOpen && (
+                   <Button color="green" onClick={initShipping} disabled={cart.items.length === 0}>Continuar</Button>
+              )}
+            </Group>
           </Group>
-        </Group>
+        </Stack>
       </Box>
       {formValues.checkoutOpen && (
         <Box mt="md">

@@ -7,11 +7,12 @@ import PaletteServices from "@/modules/Palettes/services/palette.services"
 import { PaymentMethod } from "@prisma/client"
 import fs from 'fs'
 import { uploadToBucket } from '@/config/supabase'
+import PromoServices from "@/modules/Promos/services/promo.services"
 type OrderItemInput = { product_id: string; quantity: number; options?: any }
 type CustomerInput = { name: string; email: string; phone?: string; street?: string; postal_code?: string; city?: string; province?: string; pickup?: boolean }
 
 export default class OrdersServices {
-  async createOrder(userId: number | undefined, items: OrderItemInput[], paymentMethod: string, customer: CustomerInput) {
+  async createOrder(userId: number | undefined, items: OrderItemInput[], paymentMethod: string, customer: CustomerInput, promo_code?: string) {
     const productIds = items.map(i => String(i.product_id))
     const products = await prisma.products.findMany({ where: { id: { in: productIds } } })
     const productsMap = new Map(products.map(p => [p.id, p]))
@@ -28,20 +29,58 @@ export default class OrdersServices {
       }
     }).filter(i => i !== null) as { id: string, title: string, price: number, quantity: number, options: any }[]
 
-    const total = snapshot.reduce((acc, it) => acc + Number(it.price) * Number(it.quantity), 0)
+    const subtotal = snapshot.reduce((acc, it) => acc + Number(it.price) * Number(it.quantity), 0)
+    
+    // Calcular descuento de promoción
+    const { discount, promo_id } = await PromoServices.calculateDiscount(
+      promo_code,
+      subtotal,
+      items,
+      userId
+    )
+    
+    const total = Math.max(0, subtotal - discount)
 
     const paymentNormalized: PaymentMethod = (String(paymentMethod).toUpperCase() === 'EN_LOCAL') ? 'EFECTIVO' : (String(paymentMethod).toUpperCase() as PaymentMethod)
+    
+    // Construir data base
+    const orderData: any = {
+      total,
+      subtotal,
+      discount: discount > 0 ? discount : undefined,
+      promo_code: promo_code && promo_id ? promo_code : undefined,
+      payment_method: paymentNormalized,
+      items: snapshot as any,
+      buyer_email: customer.email || undefined,
+      buyer_phone: customer.phone || undefined,
+      buyer_name: customer.name || undefined,
+    }
+
+    // Agregar relación con usuario si existe
+    if (userId && Number.isInteger(userId)) {
+      orderData.user = { connect: { id: userId } }
+    }
+
+    // Agregar relación con promoción si existe
+    if (promo_id) {
+      orderData.promo = { connect: { id: promo_id } }
+    }
+
     const order = await prisma.orders.create({
-      data: {
-        total,
-        payment_method: paymentNormalized,
-        items: snapshot as any,
-        buyer_email: customer.email || undefined,
-        buyer_phone: customer.phone || undefined,
-        buyer_name: customer.name || undefined,
-        ...(userId && Number.isInteger(userId) ? { user: { connect: { id: userId } } } : {}),
-      }
+      data: orderData
     })
+
+    // Incrementar usage_count de la promoción si se aplicó
+    if (promo_id && promo_code) {
+      try {
+        await prisma.promos.update({
+          where: { id: promo_id },
+          data: { usage_count: { increment: 1 } }
+        })
+      } catch (err) {
+        console.error('Error incrementando usage_count de promoción:', err)
+      }
+    }
 
     if (userId && Number.isInteger(userId)) {
       await prisma.user.update({ where: { id: userId }, data: {

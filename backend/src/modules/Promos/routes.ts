@@ -8,6 +8,8 @@ const router = Router();
 
 router.post("/", requireAuth, uploadSingleImage("image"), (req: any, res: any) => promo_services.createPromo(req,res))
 router.get("/", (req: any, res: any) => promo_services.getPromos(req,res))
+router.get("/public", (req: any, res: any) => promo_services.getPublicPromos(req,res))
+router.post("/validate", (req: any, res: any) => promo_services.validatePromo(req,res))
 router.put("/:id", requireAuth, uploadSingleImage("image"), (req: any, res: any) => promo_services.updatePromo(req,res))
 router.patch("/:id/active", requireAuth, (req: any, res: any) => promo_services.togglePromoActive(req,res))
 router.delete("/:id", requireAuth, (req: any, res: any) => promo_services.deletePromo(req,res))

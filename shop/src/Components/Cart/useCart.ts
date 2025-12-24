@@ -5,7 +5,7 @@ import { CheckoutFormValues } from "@/providers/useCart";
 
 export default function useCart(onClose: () => void) {
     const {
-        cart: { cart, clearCart, updateQuantity, formValues, setFormValues, processOrder },
+        cart: { cart, clearCart, updateQuantity, formValues, setFormValues, processOrder, validatePromoCode, applyPromoCode, removePromoCode },
         auth,
         utils,
     } = useAppContext();
@@ -133,6 +133,9 @@ export default function useCart(onClose: () => void) {
         setReceiptFile,
         businessData,
         isLoadingBankInfo,
-        bankInfoError
+        bankInfoError,
+        validatePromoCode,
+        applyPromoCode,
+        removePromoCode
     };
 }

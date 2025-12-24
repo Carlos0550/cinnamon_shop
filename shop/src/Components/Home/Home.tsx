@@ -8,6 +8,7 @@ import ProductsCards from "./sub-components/ProductsCards";
 import { Categories, CategoriesResponse, useCategories } from "@/Api/useCategories";
 import { BusinessData } from "@/Api/useBusiness";
 import CategoriesCards from "./sub-components/CategoriesCards";
+import PromosBanner from "./sub-components/PromosBanner";
 import { useAppContext } from "@/providers/AppContext";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useDebouncedValue } from "@mantine/hooks";
@@ -117,6 +118,9 @@ export default function Home({ initialProducts, initialCategories, business }: P
                         </Container>
                     </Box>
                 )}
+
+                {/* Promociones destacadas */}
+                {!search && !selectedCategories[0] && <PromosBanner />}
 
                 <Box my={30}>
                     <Container size="xl">

@@ -3,13 +3,14 @@ import { baseUrl } from ".";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppContext } from "@/Context/AppContext";
+import { fetchWithTimeout } from "@/Utils/fetchWithTimeout";
 
 
 export const useCreateUser = () => {
   return useMutation({
     mutationKey: ["createUser"],
     mutationFn: async ({ name, email, role_id }: { name: string, email: string, role_id: string }) => {
-      const response = await fetch(`${baseUrl}/new`, {
+      const response = await fetchWithTimeout(`${baseUrl}/new`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -19,6 +20,7 @@ export const useCreateUser = () => {
           email,
           role_id,
         }),
+        timeout: 10000,
       });
 
       const data = await response.json();
@@ -43,11 +45,12 @@ export const useGetUsers = (page: number, limit: number, search?: string, type: 
         search: search || "",
         type: type || 'user',
       }).toString();
-      const response = await fetch(`${baseUrl}/users?${queryString}`, {
+      const response = await fetchWithTimeout(`${baseUrl}/users?${queryString}`, {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
       const data = await response.json();
@@ -61,7 +64,7 @@ export const useLogin = () => {
   return useMutation({
     mutationKey: ["login"],
     mutationFn: async ({ email, password }: { email: string, password: string }) => {
-      const response = await fetch(`${baseUrl}/admin/login`, {
+      const response = await fetchWithTimeout(`${baseUrl}/admin/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -70,9 +73,9 @@ export const useLogin = () => {
           email,
           password,
         }),
+        timeout: 10000,
       });
       const data = await response.json();
-      console.log(data)
       if (!response.ok) {
         showNotification({
           title: "Error al iniciar sesión",
@@ -91,7 +94,7 @@ export const useRegister = () => {
   return useMutation({
     mutationKey: ["register"],
     mutationFn: async ({ name, email, password }: { name: string, email: string, password: string }) => {
-      const response = await fetch(`${baseUrl}/admin/register`, {
+      const response = await fetchWithTimeout(`${baseUrl}/admin/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -101,6 +104,7 @@ export const useRegister = () => {
           email,
           password,
         }),
+        timeout: 10000,
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({} as any));
@@ -120,11 +124,12 @@ export const useDisableUser = () => {
   return useMutation({
     mutationKey: ["disableUser"],
     mutationFn: async ({ id, type }: { id: string; type: 'user' | 'admin' }) => {
-      const res = await fetch(`${baseUrl}/users/${id}/disable?type=${type}`, {
+      const res = await fetchWithTimeout(`${baseUrl}/users/${id}/disable?type=${type}`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
         },
+        timeout: 10000,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -145,11 +150,12 @@ export const useEnableUser = () => {
   return useMutation({
     mutationKey: ["enableUser"],
     mutationFn: async ({ id, type }: { id: string; type: 'user' | 'admin' }) => {
-      const res = await fetch(`${baseUrl}/users/${id}/enable?type=${type}`, {
+      const res = await fetchWithTimeout(`${baseUrl}/users/${id}/enable?type=${type}`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
         },
+        timeout: 10000,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -170,11 +176,12 @@ export const useDeleteUser = () => {
   return useMutation({
     mutationKey: ["deleteUser"],
     mutationFn: async ({ id, type }: { id: string; type: 'user' | 'admin' }) => {
-      const res = await fetch(`${baseUrl}/users/${id}?type=${type}`, {
+      const res = await fetchWithTimeout(`${baseUrl}/users/${id}?type=${type}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`,
         },
+        timeout: 10000,
       });
       const data = await res.json();
       if (!res.ok) {

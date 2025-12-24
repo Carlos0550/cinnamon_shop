@@ -5,6 +5,13 @@ import { prisma } from "@/config/prisma";
 import { Request, Response } from "express";
 import { PromoType } from "@prisma/client";
 
+type ValidatePromoRequest = {
+  code: string;
+  items?: Array<{ product_id: string; quantity: number }>;
+  total?: number;
+  user_id?: number;
+};
+
 class PromoServices {
   async createPromo(req: Request, res: Response) {
     let imageStoragePath: string | null = null;
@@ -312,6 +319,257 @@ class PromoServices {
     } catch (error) {
       console.log(error)
       return res.status(500).json({ ok: false, error: "Error al eliminar la promoción" });
+    }
+  }
+
+  /**
+   * Valida un código de promoción y calcula el descuento aplicable
+   */
+  async validatePromo(req: Request, res: Response) {
+    try {
+      const { code, items = [], total = 0, user_id } = req.body as ValidatePromoRequest;
+
+      if (!code || typeof code !== 'string' || code.trim().length === 0) {
+        return res.status(400).json({ ok: false, error: 'code_required' });
+      }
+
+      const promo = await prisma.promos.findUnique({
+        where: { code: code.trim().toUpperCase() },
+        include: { categories: true, products: true }
+      });
+
+      if (!promo) {
+        return res.status(404).json({ ok: false, error: 'promo_not_found' });
+      }
+
+      // Validar que esté activa
+      if (!promo.is_active) {
+        return res.status(400).json({ ok: false, error: 'promo_inactive' });
+      }
+
+      // Validar fechas
+      const now = dayjs.tz();
+      if (promo.start_date && dayjs(promo.start_date).isAfter(now)) {
+        return res.status(400).json({ ok: false, error: 'promo_not_started' });
+      }
+      if (promo.end_date && dayjs(promo.end_date).isBefore(now)) {
+        return res.status(400).json({ ok: false, error: 'promo_expired' });
+      }
+
+      // Validar límite de uso global
+      if (promo.usage_limit && promo.usage_count >= promo.usage_limit) {
+        return res.status(400).json({ ok: false, error: 'promo_usage_limit_reached' });
+      }
+
+      // Validar límite por usuario
+      if (user_id && promo.per_user_limit) {
+        const userUsageCount = await prisma.orders.count({
+          where: {
+            userId: user_id,
+            promo_code: promo.code
+          }
+        });
+        if (userUsageCount >= promo.per_user_limit) {
+          return res.status(400).json({ ok: false, error: 'promo_user_limit_reached' });
+        }
+      }
+
+      // Validar monto mínimo de orden
+      if (promo.min_order_amount && total < promo.min_order_amount) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'min_order_amount_not_met',
+          min_amount: promo.min_order_amount 
+        });
+      }
+
+      // Validar productos/categorías aplicables
+      if (items.length > 0) {
+        const productIds = items.map(i => i.product_id);
+        const products = await prisma.products.findMany({
+          where: { id: { in: productIds } },
+          include: { category: true }
+        });
+
+        let hasApplicableProduct = false;
+
+        if (promo.all_products) {
+          hasApplicableProduct = true;
+        } else if (promo.all_categories) {
+          hasApplicableProduct = products.some(p => p.categoryId !== null);
+        } else {
+          const promoProductIds = promo.products.map(p => p.id);
+          const promoCategoryIds = promo.categories.map(c => c.id);
+          
+          hasApplicableProduct = products.some(p => 
+            promoProductIds.includes(p.id) || 
+            (p.categoryId && promoCategoryIds.includes(p.categoryId))
+          );
+        }
+
+        if (!hasApplicableProduct) {
+          return res.status(400).json({ ok: false, error: 'promo_not_applicable_to_items' });
+        }
+      }
+
+      // Calcular descuento
+      let discount = 0;
+      if (promo.type === PromoType.percentage) {
+        discount = total * (promo.value / 100);
+        if (promo.max_discount && discount > promo.max_discount) {
+          discount = promo.max_discount;
+        }
+      } else {
+        discount = promo.value;
+        if (discount > total) {
+          discount = total;
+        }
+      }
+
+      return res.status(200).json({
+        ok: true,
+        promo: {
+          id: promo.id,
+          code: promo.code,
+          title: promo.title,
+          type: promo.type,
+          value: promo.value,
+          max_discount: promo.max_discount,
+        },
+        discount: Math.round(discount * 100) / 100,
+        final_total: Math.round((total - discount) * 100) / 100
+      });
+    } catch (error) {
+      console.error('Error validando promoción:', error);
+      return res.status(500).json({ ok: false, error: 'validation_error' });
+    }
+  }
+
+  /**
+   * Obtiene promociones públicas activas (para mostrar en home)
+   */
+  async getPublicPromos(req: Request, res: Response) {
+    try {
+      const now = dayjs.tz();
+      const promos = await prisma.promos.findMany({
+        where: {
+          is_active: true,
+          show_in_home: true,
+          AND: [
+            {
+              OR: [
+                { start_date: null },
+                { start_date: { lte: now.toDate() } }
+              ]
+            },
+            {
+              OR: [
+                { end_date: null },
+                { end_date: { gte: now.toDate() } }
+              ]
+            }
+          ]
+        },
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          description: true,
+          image: true,
+          type: true,
+          value: true,
+          max_discount: true,
+          min_order_amount: true,
+          end_date: true,
+        },
+        orderBy: {
+          created_at: 'desc'
+        },
+        take: 10
+      });
+
+      return res.status(200).json({ ok: true, promos });
+    } catch (error) {
+      console.error('Error obteniendo promociones públicas:', error);
+      return res.status(500).json({ ok: false, error: 'error_fetching_promos' });
+    }
+  }
+
+  /**
+   * Calcula el descuento aplicable para un total y código de promoción
+   */
+  static async calculateDiscount(
+    code: string | null | undefined,
+    subtotal: number,
+    items?: Array<{ product_id: string; quantity: number }>,
+    userId?: number
+  ): Promise<{ discount: number; promo_id: string | null }> {
+    if (!code || code.trim().length === 0) {
+      return { discount: 0, promo_id: null };
+    }
+
+    try {
+      const promo = await prisma.promos.findUnique({
+        where: { code: code.trim().toUpperCase() },
+        include: { categories: true, products: true }
+      });
+
+      if (!promo || !promo.is_active) {
+        return { discount: 0, promo_id: null };
+      }
+
+      // Validar fechas
+      const now = dayjs.tz();
+      if (promo.start_date && dayjs(promo.start_date).isAfter(now)) {
+        return { discount: 0, promo_id: null };
+      }
+      if (promo.end_date && dayjs(promo.end_date).isBefore(now)) {
+        return { discount: 0, promo_id: null };
+      }
+
+      // Validar límites
+      if (promo.usage_limit && promo.usage_count >= promo.usage_limit) {
+        return { discount: 0, promo_id: null };
+      }
+
+      if (userId && promo.per_user_limit) {
+        const userUsageCount = await prisma.orders.count({
+          where: {
+            userId,
+            promo_code: promo.code
+          }
+        });
+        if (userUsageCount >= promo.per_user_limit) {
+          return { discount: 0, promo_id: null };
+        }
+      }
+
+      // Validar monto mínimo
+      if (promo.min_order_amount && subtotal < promo.min_order_amount) {
+        return { discount: 0, promo_id: null };
+      }
+
+      // Calcular descuento
+      let discount = 0;
+      if (promo.type === PromoType.percentage) {
+        discount = subtotal * (promo.value / 100);
+        if (promo.max_discount && discount > promo.max_discount) {
+          discount = promo.max_discount;
+        }
+      } else {
+        discount = promo.value;
+        if (discount > subtotal) {
+          discount = subtotal;
+        }
+      }
+
+      return { 
+        discount: Math.round(discount * 100) / 100, 
+        promo_id: promo.id 
+      };
+    } catch (error) {
+      console.error('Error calculando descuento:', error);
+      return { discount: 0, promo_id: null };
     }
   }
 }

@@ -1,5 +1,6 @@
 import { Box, Grid, Text, Select, Card, Group, Stack, Badge, ActionIcon, Divider, Paper, Loader, Button, TextInput, Switch, Textarea } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
+import { showNotification } from "@mantine/notifications";
 import dayjs from "dayjs";
 import { useState, useMemo, useEffect } from "react";
 import { FiTrash, FiShoppingCart } from "react-icons/fi";
@@ -147,11 +148,30 @@ export function SalesForm({ onClose, sale }: Props) {
         }
     }, [formValue.payment_method])
 
+    const resetForm = () => {
+        setFormValue(prev => ({
+            payment_method: "EFECTIVO",
+            source: "CAJA",
+            product_ids: [],
+            total: 0,
+            tax: 0,
+            loadedManually: true,
+            manualProducts: [],
+            payment_methods: [{ method: "EFECTIVO", amount: 0 }],
+            sale_date: prev.sale_date,
+        }))
+        setManualText("");
+        setSelectedProducts([]);
+        setSearchTitle("");
+        setSelectValue(null);
+        setManualInvalidCount(0);
+    }
+
     useEffect(() => {
-        if (saveSale.isSuccess || updateSale.isSuccess) {
+        if (updateSale.isSuccess) {
             onClose();
         }
-    }, [saveSale.isSuccess, updateSale.isSuccess])
+    }, [updateSale.isSuccess])
 
     useEffect(() => {
         const primary = formValue.payment_methods?.[0]?.method;
@@ -368,14 +388,19 @@ export function SalesForm({ onClose, sale }: Props) {
                         </Stack>
                     </Grid.Col>
                     <Button
-                        disabled={(saveSale.isPending || updateSale.isPending) || manualInvalid}
-                        loading={saveSale.isPending || updateSale.isPending}
+                        disabled={(sale ? updateSale.isPending : false) || manualInvalid}
+                        loading={sale ? updateSale.isPending : false}
                         onClick={() => {
                             const payload = { ...formValue, total: finalTotal };
                             if (sale) {
                                 updateSale.mutate({ id: sale.id, request: payload });
                             } else {
+                                showNotification({
+                                    message: "Guardando venta en segundo plano...",
+                                    color: "blue",
+                                });
                                 saveSale.mutate(payload);
+                                resetForm();
                             }
                         }}
                     >{sale ? 'Guardar cambios' : 'Guardar venta'}</Button>

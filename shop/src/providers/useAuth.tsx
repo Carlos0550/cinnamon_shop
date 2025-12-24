@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { fetchWithTimeout } from "@/utils/fetchWithTimeout";
 
 type AuthProps = {
   email: string;
@@ -24,8 +25,9 @@ export function useAuth() {
     (async () => {
       try {
         setState((s) => ({ ...s, loading: true }));
-        const res = await fetch(`${baseUrl}/shop/validate-token`, {
+        const res = await fetchWithTimeout(`${baseUrl}/shop/validate-token`, {
           headers: { Authorization: `Bearer ${token}` },
+          timeout: 5000,
         });
         if (!res.ok) throw new Error('invalid_token');
         const data = await res.json();
@@ -46,10 +48,11 @@ export function useAuth() {
 
   const signIn = useCallback(async (email: string, password: string) => {
     setState((s) => ({ ...s, loading: true }));
-    const res = await fetch(`${baseUrl}/shop/login`, {
+    const res = await fetchWithTimeout(`${baseUrl}/shop/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      timeout: 10000,
     });
     if (!res.ok) {
       setState((s) => ({ ...s, loading: false }));
@@ -72,10 +75,11 @@ export function useAuth() {
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
     setState((s) => ({ ...s, loading: true }));
-    const res = await fetch(`${baseUrl}/shop/register`, {
+    const res = await fetchWithTimeout(`${baseUrl}/shop/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
+      timeout: 10000,
     });
     if (!res.ok) {
       setState((s) => ({ ...s, loading: false }));

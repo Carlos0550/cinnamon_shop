@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate",
+    "migration:generate": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/generate-migration.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:sales": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-sales.ts",
     "seed:users": "ts-node-dev --transpile-only -r tsconfig-paths/register scripts/seed-users.ts",
