@@ -42,20 +42,20 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir requests sin origin (mobile apps, Postman, etc.) solo en desarrollo
+
     if (!origin) {
-      if (isProduction) {
-        return callback(new Error('CORS: Requests sin origin no permitidos en producción'));
+
+      if (isProduction && allowedOrigins.length === 0) {
+
+        return callback(null, true);
       }
       return callback(null, true);
     }
     
-    // En producción, ALLOWED_ORIGINS es obligatorio
     if (isProduction && allowedOrigins.length === 0) {
       return callback(new Error('CORS: ALLOWED_ORIGINS debe configurarse en producción'));
     }
     
-    // Verificar si el origen está permitido
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else if (!isProduction) {
