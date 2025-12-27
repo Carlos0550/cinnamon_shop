@@ -26,41 +26,34 @@ import { initProductsCacheSyncJob } from './jobs/productsCacheSync';
 import path from 'path';
 import fs from 'fs';
 
-// Validar variables de entorno al inicio
 validateEnvironmentVariables();
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// Configurar CORS según entorno
 const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
   : isProduction
-  ? [] // En producción, debe especificarse ALLOWED_ORIGINS
+  ? [] 
   : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:5174'];
 
-// Log de configuración CORS al iniciar
 console.log(`🔒 CORS configurado - Producción: ${isProduction}, Orígenes permitidos: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : '(ninguno configurado)'}`);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir requests sin origin (Postman, curl, server-to-server)
     if (!origin) {
       return callback(null, true);
     }
     
-    // En producción sin ALLOWED_ORIGINS configurado, rechazar
     if (isProduction && allowedOrigins.length === 0) {
       console.warn(`⚠️ CORS: Rechazando origen ${origin} - ALLOWED_ORIGINS no configurado`);
       return callback(new Error('CORS: ALLOWED_ORIGINS debe configurarse en producción'));
     }
     
-    // Verificar si el origen está permitido
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else if (!isProduction) {
-      // En desarrollo, permitir cualquier origen localhost
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
         callback(null, true);
       } else {
@@ -87,7 +80,6 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
 
 app.get('/api/health', async (_req, res) => {
   try {
-    // Prisma maneja conexiones automáticamente, no necesitamos conectar/desconectar
     await prisma.$queryRaw`SELECT 1`;
     const pong = await pingRedis();
     res.json({ ok: true, db: 'connected', redis: pong === 'PONG' ? 'connected' : 'unknown' });

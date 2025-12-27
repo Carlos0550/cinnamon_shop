@@ -11,22 +11,11 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      // MinIO (nuevo storage)
+      // Cualquier servicio en Railway (MinIO, etc.)
       {
         protocol: 'https',
-        hostname: 'bucket-production-892b.up.railway.app',
+        hostname: '**.up.railway.app',
         pathname: '/**',
-      },
-      // Supabase (legacy - puedes eliminar después de migrar)
-      {
-        protocol: 'https',
-        hostname: 'ngnhndkqglbuggomkjnt.supabase.co',
-        pathname: '/storage/v1/object/public/images/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'hppzpqbqqpaemamrewzj.supabase.co',
-        pathname: '/storage/v1/object/public/images/**',
       },
     ],
   },
