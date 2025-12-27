@@ -40,22 +40,23 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? [] // En producción, debe especificarse ALLOWED_ORIGINS
   : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:5174'];
 
+// Log de configuración CORS al iniciar
+console.log(`🔒 CORS configurado - Producción: ${isProduction}, Orígenes permitidos: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : '(ninguno configurado)'}`);
+
 app.use(cors({
   origin: (origin, callback) => {
-
+    // Permitir requests sin origin (Postman, curl, server-to-server)
     if (!origin) {
-
-      if (isProduction && allowedOrigins.length === 0) {
-
-        return callback(null, true);
-      }
       return callback(null, true);
     }
     
+    // En producción sin ALLOWED_ORIGINS configurado, rechazar
     if (isProduction && allowedOrigins.length === 0) {
+      console.warn(`⚠️ CORS: Rechazando origen ${origin} - ALLOWED_ORIGINS no configurado`);
       return callback(new Error('CORS: ALLOWED_ORIGINS debe configurarse en producción'));
     }
     
+    // Verificar si el origen está permitido
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else if (!isProduction) {
@@ -63,9 +64,11 @@ app.use(cors({
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
         callback(null, true);
       } else {
+        console.warn(`⚠️ CORS: Origen no permitido en desarrollo: ${origin}`);
         callback(new Error('CORS: Origen no permitido'));
       }
     } else {
+      console.warn(`⚠️ CORS: Origen no permitido: ${origin}. Permitidos: ${allowedOrigins.join(', ')}`);
       callback(new Error('CORS: Origen no permitido'));
     }
   },
