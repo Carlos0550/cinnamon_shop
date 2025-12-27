@@ -3,7 +3,7 @@ import SalesServices from "./services/sales.services";
 import { SaleRequest, SalesSummaryRequest } from "./services/schemas/sales.schemas";
 import { requireAuth, requireRole } from "@/middlewares/auth.middleware";
 import { prisma } from "@/config/prisma";
-import { createSignedUrl } from "@/config/supabase";
+import { createSignedUrl } from "@/config/minio";
 
 export const saveSale = async (req: Request, res: Response) => {
     try {

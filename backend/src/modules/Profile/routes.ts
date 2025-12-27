@@ -4,7 +4,7 @@ import { uploadSingleImage, handleImageUploadError } from '@/middlewares/image.m
 import ProfileServices from './services/profile.services';
 import { validateUpdatePayload } from './router.controller';
 import fs from 'fs';
-import { uploadImage } from '@/config/supabase';
+import { uploadImage } from '@/config/minio';
 
 const router = Router();
 const service = new ProfileServices();

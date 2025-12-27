@@ -6,7 +6,7 @@ import BusinessServices from "@/modules/Business/business.services"
 import PaletteServices from "@/modules/Palettes/services/palette.services"
 import { PaymentMethod } from "@prisma/client"
 import fs from 'fs'
-import { uploadToBucket } from '@/config/supabase'
+import { uploadToBucket } from '@/config/minio'
 import PromoServices from "@/modules/Promos/services/promo.services"
 type OrderItemInput = { product_id: string; quantity: number; options?: any }
 type CustomerInput = { name: string; email: string; phone?: string; street?: string; postal_code?: string; city?: string; province?: string; pickup?: boolean }

@@ -1,7 +1,7 @@
 import { prisma } from "@/config/prisma";
 import { BusinessDataRequest } from "./schemas/business.schemas";
 import { Prisma } from "@prisma/client";
-import { getPublicUrlFor } from "@/config/supabase";
+import { getPublicUrlFor } from "@/config/minio";
 
 class BusinessServices {
     async createBusiness(payload: BusinessDataRequest) {

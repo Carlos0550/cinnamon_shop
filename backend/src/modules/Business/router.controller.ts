@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { BusinessDataRequest } from "./schemas/business.schemas";
 import businessServices from "./business.services";
 import { generateBusinessDescription } from "@/config/openai";
-import { uploadToBucket, getPublicUrlFor } from "@/config/supabase";
+import { uploadToBucket, getPublicUrlFor } from "@/config/minio";
 import fs from "fs";
 
 class BusinessController {

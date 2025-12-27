@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { uploadImage, deleteImage } from "@/config/supabase";
+import { uploadImage, deleteImage } from "@/config/minio";
 import fs from "fs";
 import { prisma } from "@/config/prisma";
 import { redis } from "@/config/redis";

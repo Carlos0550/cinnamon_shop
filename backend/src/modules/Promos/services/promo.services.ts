@@ -1,4 +1,4 @@
-import { deleteImage, uploadImage } from "@/config/supabase";
+import { deleteImage, uploadImage } from "@/config/minio";
 import { PromoRequest } from "./promo.schemas";
 import dayjs from "@/config/dayjs";
 import { prisma } from "@/config/prisma";
